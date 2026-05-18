@@ -13,6 +13,7 @@ env/
 # Environment variables
 .env
 .env.*
+backend/.env
 
 # FastAPI / local runtime
 *.log
@@ -20,6 +21,10 @@ env/
 # Uploaded files
 backend/app/storage/uploads/*
 !backend/app/storage/uploads/.gitkeep
+
+# Generated chunks
+backend/app/storage/chunks/*
+!backend/app/storage/chunks/.gitkeep
 
 # Test and tooling caches
 .pytest_cache/
