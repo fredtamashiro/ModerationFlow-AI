@@ -1,4 +1,5 @@
 from typing import Any, TypedDict
+from app.config import get_settings
 
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
@@ -63,28 +64,29 @@ def answer_not_found(state: ManualGraphState) -> ManualGraphState:
 
 def generate_answer(state: ManualGraphState) -> ManualGraphState:
     prompt = f"""
-Você é um assistente especializado em responder perguntas com base em manuais automotivos.
+    Você é um assistente especializado em responder perguntas com base em manuais automotivos.
 
-Responda à pergunta do usuário usando apenas as informações presentes no contexto abaixo.
+    Responda à pergunta do usuário usando apenas as informações presentes no contexto abaixo.
 
-Regras:
-- Não invente informações.
-- Se o contexto não tiver a resposta, diga que não encontrou essa informação no manual.
-- Seja claro e objetivo.
-- Quando possível, mencione a página usada como fonte.
+    Regras:
+    - Não invente informações.
+    - Se o contexto não tiver a resposta, diga que não encontrou essa informação no manual.
+    - Seja claro e objetivo.
+    - Quando possível, mencione a página usada como fonte.
 
-Contexto:
-{state["context"]}
+    Contexto:
+    {state["context"]}
 
-Pergunta:
-{state["question"]}
-"""
+    Pergunta:
+    {state["question"]}
+    """
+
+    settings = get_settings()
 
     llm = ChatOpenAI(
-        model="gpt-4o-mini",
+        model=settings.openai_chat_model,
         temperature=0,
     )
-
     response = llm.invoke(prompt)
 
     return {
@@ -94,6 +96,12 @@ Pergunta:
 
 
 def format_sources(state: ManualGraphState) -> ManualGraphState:
+    if not state["has_context"]:
+        return {
+            **state,
+            "sources": [],
+        }
+
     sources = []
 
     for chunk in state["chunks"]:
@@ -148,6 +156,8 @@ def answer_question_with_manual_graph(
 
     graph = create_manual_graph()
 
+    settings = get_settings()
+
     result = graph.invoke(
         {
             "collection_name": collection_name,
@@ -159,7 +169,7 @@ def answer_question_with_manual_graph(
             "sources": [],
             "has_context": False,
             "min_score": None,
-            "max_relevance_score": 1.2,
+            "max_relevance_score": settings.max_relevance_score,
         }
     )
 

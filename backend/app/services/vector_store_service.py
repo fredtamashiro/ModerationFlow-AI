@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any
+from app.config import get_settings
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
@@ -65,8 +66,10 @@ def index_chunks_in_vectorstore(chunks_file: str) -> dict[str, Any]:
 
     VECTORSTORE_DIR.mkdir(parents=True, exist_ok=True)
 
+    settings = get_settings()
+
     embeddings = OpenAIEmbeddings(
-        model="text-embedding-3-small",
+        model=settings.openai_embedding_model,
     )
 
     collection_name = f"manual_{chunks_payload['document_id'].replace('-', '_')}"
@@ -102,10 +105,12 @@ def search_similar_chunks(
     if k <= 0:
         raise ValueError("O parâmetro k deve ser maior que zero.")
 
-    embeddings = OpenAIEmbeddings(
-        model="text-embedding-3-small",
-    )
+    settings = get_settings()
 
+    embeddings = OpenAIEmbeddings(
+        model=settings.openai_embedding_model,
+    )
+    
     vectorstore = Chroma(
         collection_name=collection_name,
         embedding_function=embeddings,
