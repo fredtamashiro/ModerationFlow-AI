@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 
 import { uploadDocument } from "@/services/api";
 
@@ -9,6 +9,7 @@ type DocumentUploadProps = {
 };
 
 export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState("");
@@ -33,6 +34,9 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
       await uploadDocument(selectedFile);
 
       setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       setMessage("Manual enviado e indexado com sucesso.");
       onUploadSuccess();
     } catch {
@@ -51,6 +55,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
 
       <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-3 md:flex-row">
         <input
+          ref={fileInputRef}
           type="file"
           accept="application/pdf"
           onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}

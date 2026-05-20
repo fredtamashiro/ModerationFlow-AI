@@ -8,16 +8,22 @@ type DocumentChatProps = {
   documentId: string;
 };
 
+type ChatMessage = ChatResponse & {
+  id: string;
+};
+
 export function DocumentChat({ documentId }: DocumentChatProps) {
   const [question, setQuestion] = useState("");
-  const [response, setResponse] = useState<ChatResponse | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!question.trim()) {
+    const trimmedQuestion = question.trim();
+
+    if (!trimmedQuestion) {
       setErrorMessage("Digite uma pergunta.");
       return;
     }
@@ -25,15 +31,22 @@ export function DocumentChat({ documentId }: DocumentChatProps) {
     try {
       setIsLoading(true);
       setErrorMessage("");
-      setResponse(null);
 
       const result = await askQuestion({
         documentId,
-        question,
+        question: trimmedQuestion,
         k: 4,
       });
 
-      setResponse(result);
+      setMessages((currentMessages) => [
+        {
+          ...result,
+          id: crypto.randomUUID(),
+        },
+        ...currentMessages,
+      ]);
+
+      setQuestion("");
     } catch {
       setErrorMessage("Não foi possível obter uma resposta.");
     } finally {
@@ -64,43 +77,56 @@ export function DocumentChat({ documentId }: DocumentChatProps) {
         <p className="mt-3 text-sm text-red-400">{errorMessage}</p>
       )}
 
-      {response && (
-        <div className="mt-5 space-y-4">
-          <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
-              Resposta
-            </p>
-            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-200">
-              {response.answer}
-            </p>
-          </div>
-
-          {response.sources.length > 0 && (
-            <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                Fontes
-              </p>
-
-              <div className="mt-3 space-y-3">
-                {response.sources.map((source, index) => (
-                  <div
-                    key={`${source.page}-${source.chunk_index}-${index}`}
-                    className="rounded-lg border border-slate-800 p-3"
-                  >
-                    <div className="mb-2 flex flex-wrap gap-3 text-xs text-slate-500">
-                      <span>Página: {source.page}</span>
-                      <span>Chunk: {source.chunk_index}</span>
-                      <span>Score: {source.score.toFixed(4)}</span>
-                    </div>
-
-                    <p className="text-xs leading-5 text-slate-400">
-                      {source.preview}
-                    </p>
-                  </div>
-                ))}
+      {messages.length > 0 && (
+        <div className="mt-5 space-y-5">
+          {messages.map((message) => (
+            <div key={message.id} className="space-y-3">
+              <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">
+                  Pergunta
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-200">
+                  {message.question}
+                </p>
               </div>
+
+              <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">
+                  Resposta
+                </p>
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-200">
+                  {message.answer}
+                </p>
+              </div>
+
+              {message.sources.length > 0 && (
+                <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Fontes
+                  </p>
+
+                  <div className="mt-3 space-y-3">
+                    {message.sources.map((source, index) => (
+                      <div
+                        key={`${source.page}-${source.chunk_index}-${index}`}
+                        className="rounded-lg border border-slate-800 p-3"
+                      >
+                        <div className="mb-2 flex flex-wrap gap-3 text-xs text-slate-500">
+                          <span>Página: {source.page}</span>
+                          <span>Chunk: {source.chunk_index}</span>
+                          <span>Score: {source.score.toFixed(4)}</span>
+                        </div>
+
+                        <p className="text-xs leading-5 text-slate-400">
+                          {source.preview}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       )}
     </div>
