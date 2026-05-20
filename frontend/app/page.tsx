@@ -1,4 +1,5 @@
 import { fetchDocuments } from "@/services/api";
+import { DocumentChat } from "@/components/document-chat";
 
 export default async function Home() {
   const data = await fetchDocuments();
@@ -54,6 +55,8 @@ export default async function Home() {
                   <p className="mt-3 break-all text-xs text-slate-600">
                     ID: {document.document_id}
                   </p>
+
+                  <DocumentChat documentId={document.document_id} />
                 </article>
               ))}
             </div>

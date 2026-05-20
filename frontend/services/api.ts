@@ -32,3 +32,40 @@ export async function fetchDocuments(): Promise<DocumentsResponse> {
 
   return response.json();
 }
+
+export type ChatSource = {
+  page: number;
+  chunk_index: number;
+  score: number;
+  preview: string;
+};
+
+export type ChatResponse = {
+  question: string;
+  answer: string;
+  sources: ChatSource[];
+};
+
+export async function askQuestion(params: {
+  documentId: string;
+  question: string;
+  k?: number;
+}): Promise<ChatResponse> {
+  const response = await fetch(`${API_URL}/chat/ask`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      document_id: params.documentId,
+      question: params.question,
+      k: params.k ?? 4,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Erro ao enviar pergunta.");
+  }
+
+  return response.json();
+}
