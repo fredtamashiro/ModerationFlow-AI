@@ -69,3 +69,25 @@ export async function askQuestion(params: {
 
   return response.json();
 }
+
+export type IngestDocumentResponse = {
+  message: string;
+  document: DocumentItem;
+  vectorstore_dir: string;
+};
+
+export async function uploadDocument(file: File): Promise<IngestDocumentResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_URL}/documents/ingest`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Erro ao enviar documento.");
+  }
+
+  return response.json();
+}
