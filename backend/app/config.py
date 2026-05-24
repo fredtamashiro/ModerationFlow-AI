@@ -11,7 +11,10 @@ class Settings(BaseSettings):
     openai_chat_model: str = "gpt-4o-mini"
     openai_chat_temperature: float = 1
     openai_embedding_model: str = "text-embedding-3-small"
+    
     max_relevance_score: float = 1.2
+    max_display_source_score: float = 1.0
+    display_source_score_margin: float = 0.15
 
     class Config:
         env_file = Path(__file__).resolve().parents[1] / ".env"

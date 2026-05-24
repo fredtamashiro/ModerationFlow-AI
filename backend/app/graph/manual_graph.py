@@ -190,9 +190,29 @@ def format_sources(state: ManualGraphState) -> ManualGraphState:
             "sources": [],
         }
 
+    settings = get_settings()
+
+    chunks = state["chunks"]
+
+    if not chunks:
+        return {
+            **state,
+            "sources": [],
+        }
+
+    best_score = min(chunk["score"] for chunk in chunks)
+
+    max_allowed_score = min(
+        settings.max_display_source_score,
+        best_score + settings.display_source_score_margin,
+    )
+
     sources = []
 
-    for chunk in state["chunks"]:
+    for chunk in chunks:
+        if chunk["score"] > max_allowed_score:
+            continue
+
         metadata = chunk["metadata"]
 
         sources.append(

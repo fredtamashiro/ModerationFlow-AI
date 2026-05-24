@@ -51,6 +51,7 @@ export type ChatSource = {
   matched_query?: string;
   preview: string;
 };
+
 export type ChatResponse = {
   question: string;
   answer: string;
