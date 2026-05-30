@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
+    """Representa a pergunta feita para um documento registrado."""
     document_id: str = Field(
         ...,
         description="ID do documento/manual ingerido.",
@@ -26,11 +27,13 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
+    """Representa a resposta do chat enviada para o cliente."""
     question: str
     answer: str
     sources: list[dict[str, Any]]
 
 class ChatByCollectionRequest(BaseModel):
+    """Representa a pergunta feita diretamente para uma collection vetorial."""
     collection_name: str = Field(
         ...,
         description="Nome da collection no Chroma.",

@@ -35,6 +35,7 @@ router = APIRouter(
 
 
 def ensure_path_inside_directory(path_value: str, base_dir: Path, label: str) -> str:
+    """Garante que um caminho recebido pela API esta dentro da pasta permitida."""
     path = Path(path_value).resolve()
 
     try:
@@ -47,6 +48,7 @@ def ensure_path_inside_directory(path_value: str, base_dir: Path, label: str) ->
 
 @router.get("")
 def list_documents():
+    """Lista todos os documentos ja ingeridos e registrados."""
     documents = list_registered_documents()
 
     return {
@@ -63,6 +65,7 @@ def ingest_document(
     chunk_overlap: int = Form(200),
     _auth: None = Depends(require_api_key),
 ):
+    """Faz upload, extrai texto, cria chunks, indexa e registra o documento."""
     try:
         theme = find_theme_by_id(theme_id)
 
@@ -126,6 +129,7 @@ def upload_document(
     file: UploadFile = File(...),
     _auth: None = Depends(require_api_key),
 ):
+    """Salva o PDF enviado, sem processar chunks nem indexar no vector store."""
     try:
         saved_file = save_uploaded_file(file)
 
@@ -143,6 +147,7 @@ def extract_document_text(
     file_path: str,
     _auth: None = Depends(require_api_key),
 ):
+    """Extrai o texto de um PDF ja salvo e retorna uma previa das paginas."""
     try:
         safe_file_path = ensure_path_inside_directory(
             path_value=file_path,
@@ -182,6 +187,7 @@ def chunk_document(
     chunk_overlap: int = 200,
     _auth: None = Depends(require_api_key),
 ):
+    """Divide o texto de um PDF em chunks para consulta posterior."""
     try:
         safe_file_path = ensure_path_inside_directory(
             path_value=file_path,
@@ -231,6 +237,7 @@ def process_document(
     chunk_overlap: int = 200,
     _auth: None = Depends(require_api_key),
 ):
+    """Extrai texto, gera chunks e salva o arquivo JSON de chunks."""
     try:
         safe_file_path = ensure_path_inside_directory(
             path_value=file_path,
@@ -272,6 +279,7 @@ def index_document_chunks(
     chunks_file: str,
     _auth: None = Depends(require_api_key),
 ):
+    """Indexa um arquivo de chunks no vector store."""
     try:
         safe_chunks_file = ensure_path_inside_directory(
             path_value=chunks_file,
@@ -300,6 +308,7 @@ def search_document_chunks(
     k: int = 4,
     _auth: None = Depends(require_api_key),
 ):
+    """Busca no vector store os chunks mais parecidos com a pergunta."""
     try:
         results = search_similar_chunks(
             collection_name=collection_name,
@@ -338,6 +347,7 @@ def enrich_document_chunks(
     limit: int = 10,
     offset: int = 0,
 ):
+    """Enriquece uma parte dos chunks com informacoes adicionais geradas por IA."""
     try:
         result = enrich_chunks_file(
             chunks_file=chunks_file,
@@ -365,6 +375,7 @@ def index_enriched_document_chunks(
     enriched_chunks_file: str,
     register_as_active: bool = False,
 ):
+    """Indexa chunks enriquecidos e opcionalmente os ativa para uso no chat."""
     try:
         result = index_enriched_chunks_in_vectorstore(enriched_chunks_file)
 
@@ -402,6 +413,7 @@ def enrich_document_chunks_batch(
     batch_size: int = 5,
     theme_id: str = "generic_pdf",
 ):
+    """Enriquece chunks em lotes menores para controlar custo e tempo de execucao."""
     try:
         result = enrich_chunks_file_in_batches(
             chunks_file=chunks_file,
@@ -434,6 +446,7 @@ def enrich_all_document_chunks(
     batch_size: int = 10,
     theme_id: str = "generic_pdf",
 ):
+    """Enriquece todos os chunks de um documento usando o tema informado."""
     try:
         result = enrich_all_chunks_file(
             chunks_file=chunks_file,

@@ -4,6 +4,7 @@ from app.api.dependencies import require_api_key
 from app.graph.manual_graph import answer_question_with_manual_graph
 from app.schemas.chat import ChatByCollectionRequest, ChatRequest, ChatResponse
 from app.services.document_registry_service import find_registered_document_by_id
+from app.services.theme_service import format_theme_rules, get_theme_or_default
 
 router = APIRouter(
     prefix="/chat",
@@ -16,6 +17,7 @@ def ask_question(
     payload: ChatRequest,
     _auth: None = Depends(require_api_key),
 ):
+    """Responde uma pergunta usando o documento registrado pelo document_id."""
     try:
         document = find_registered_document_by_id(payload.document_id)
 
@@ -29,6 +31,10 @@ def ask_question(
 
         primary_collection_name = original_collection_name
 
+        theme = get_theme_or_default(document.get("theme_id"))
+        query_rules = format_theme_rules(theme, "query_rules")
+        answer_rules = format_theme_rules(theme, "answer_rules")
+
         if document.get("retrieval_mode") == "enriched" and document.get(
             "enriched_collection_name"
         ):
@@ -38,6 +44,10 @@ def ask_question(
             collection_name=primary_collection_name,
             question=payload.question,
             k=payload.k,
+            theme_id=theme["theme_id"],
+            theme_name=theme["name"],
+            query_rules=query_rules,
+            answer_rules=answer_rules,
         )
 
         should_try_fallback = (
@@ -50,6 +60,10 @@ def ask_question(
                 collection_name=original_collection_name,
                 question=payload.question,
                 k=payload.k,
+                theme_id=theme["theme_id"],
+                theme_name=theme["name"],
+                query_rules=query_rules,
+                answer_rules=answer_rules,
             )
 
         return ChatResponse(
@@ -63,6 +77,7 @@ def ask_question(
 
 @router.post("/ask-by-collection", response_model=ChatResponse)
 def ask_question_by_collection(payload: ChatByCollectionRequest):
+    """Responde uma pergunta usando diretamente o nome da collection vetorial."""
     try:
         result = answer_question_with_manual_graph(
             collection_name=payload.collection_name,

@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """Centraliza as configuracoes da aplicacao lidas do ambiente."""
     openai_api_key: str
     app_api_key: str | None = None
 
@@ -17,6 +18,7 @@ class Settings(BaseSettings):
     display_source_score_margin: float = 0.15
 
     class Config:
+        """Configura como o Pydantic carrega variaveis do arquivo .env."""
         env_file = Path(__file__).resolve().parents[1] / ".env"
         extra = "ignore"
 

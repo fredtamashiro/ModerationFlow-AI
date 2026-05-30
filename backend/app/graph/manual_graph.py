@@ -5,12 +5,15 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 
 from app.services.rag_service import build_context_from_chunks
+from app.services.theme_service import format_theme_rules, get_theme_or_default
 from app.services.vector_store_service import search_similar_chunks
 
 import json
 
 
 class ManualGraphState(TypedDict):
+    """Define os dados compartilhados entre as etapas do fluxo do LangGraph."""
+
     collection_name: str
     question: str
     rewritten_question: str
@@ -23,9 +26,15 @@ class ManualGraphState(TypedDict):
     has_context: bool
     min_score: float | None
     max_relevance_score: float
+    theme_id: str | None
+    theme_name: str | None
+    query_rules: str
+    answer_rules: str
 
 
 def create_chat_model() -> ChatOpenAI:
+    """Cria o cliente do modelo de chat usando as configuracoes da aplicacao."""
+
     settings = get_settings()
 
     return ChatOpenAI(
@@ -35,6 +44,8 @@ def create_chat_model() -> ChatOpenAI:
 
 
 def rewrite_query(state: ManualGraphState) -> ManualGraphState:
+    """Reescreve a pergunta para melhorar a busca semantica no vector store."""
+
     prompt = f"""
     Você é um assistente especializado em melhorar perguntas para busca semântica em manuais automotivos.
 
@@ -65,6 +76,8 @@ def rewrite_query(state: ManualGraphState) -> ManualGraphState:
     }
 
 def retrieve_context(state: ManualGraphState) -> ManualGraphState:
+    """Busca os chunks mais relevantes e monta o contexto usado pela resposta."""
+
     search_queries = state.get("search_queries") or [
         state.get("rewritten_question") or state["question"]
     ]
@@ -123,12 +136,16 @@ def retrieve_context(state: ManualGraphState) -> ManualGraphState:
     }
 
 def should_generate_answer(state: ManualGraphState) -> str:
+    """Decide se ha contexto suficiente para responder ou se deve falhar com seguranca."""
+
     if state["has_context"]:
         return "generate_answer"
 
     return "answer_not_found"
 
 def answer_not_found(state: ManualGraphState) -> ManualGraphState:
+    """Define a resposta padrao quando nenhum contexto relevante foi encontrado."""
+
     return {
         **state,
         "answer": (
@@ -138,39 +155,29 @@ def answer_not_found(state: ManualGraphState) -> ManualGraphState:
     }
 
 def generate_answer(state: ManualGraphState) -> ManualGraphState:
+    """Gera a resposta final com base apenas no contexto recuperado do manual."""
+
     prompt = f"""
-Você é um assistente especializado em responder perguntas com base em manuais automotivos.
+Você é um assistente especializado em responder perguntas com base exclusivamente no contexto recuperado.
 
-Responda à pergunta do usuário usando apenas as informações presentes no contexto abaixo.
+Responda à pergunta do usuário usando apenas o contexto abaixo.
 
-Você receberá:
-- A pergunta original do usuário
-- Uma pergunta reescrita para melhorar a busca semântica
-- Trechos recuperados do manual
-
-Regras:
+Regras gerais:
 - Não invente informações.
 - Não use conhecimento externo.
-- Se o contexto trouxer termos equivalentes ou relacionados, use-os para responder.
-- Se o usuário usar uma expressão informal, sinônimo ou termo aproximado, relacione com os termos técnicos encontrados no manual.
-- Se o contexto não tiver nenhuma informação útil, diga que não encontrou essa informação no manual.
-- Quando a informação existir de forma indireta, explique isso claramente.
+- Se a resposta não estiver no contexto, diga que não encontrou essa informação no documento.
+- Quando houver limitação, ambiguidade ou informação indireta, explique isso.
 - Seja claro e objetivo.
-- Quando possível, mencione a página usada como fonte.
+- Cite páginas quando elas estiverem disponíveis no contexto.
 
-Exemplos de equivalência:
-- "internet embarcada" pode estar relacionada a conexão de dados móveis, WLAN, serviços conectados, aplicativos online ou central multimídia conectada.
-- "farol" pode estar relacionado a luz, iluminação, farol baixo, farol alto ou luz de posição.
-- "celular" pode estar relacionado a Bluetooth, Android Auto, Apple CarPlay, chamadas ou conectividade.
+Regras específicas do tema para resposta:
+{state.get("answer_rules") or "Nenhuma regra específica de resposta foi configurada."}
 
-Contexto recuperado do manual:
-{state["context"]}
-
-Pergunta original do usuário:
+Pergunta:
 {state["question"]}
 
-Pergunta otimizada para busca:
-{state["rewritten_question"]}
+Contexto:
+{state["context"]}
 """
 
     llm = create_chat_model()
@@ -184,6 +191,8 @@ Pergunta otimizada para busca:
 
 
 def format_sources(state: ManualGraphState) -> ManualGraphState:
+    """Formata os chunks usados como fontes para retornar ao frontend."""
+
     if not state["has_context"]:
         return {
             **state,
@@ -231,6 +240,8 @@ def format_sources(state: ManualGraphState) -> ManualGraphState:
     }
 
 def create_manual_graph():
+    """Monta o fluxo do LangGraph que orquestra a resposta do chat."""
+
     graph = StateGraph(ManualGraphState)
 
     graph.add_node("rewrite_query", rewrite_query)
@@ -264,13 +275,23 @@ def answer_question_with_manual_graph(
     collection_name: str,
     question: str,
     k: int = 4,
+    theme_id: str | None = None,
+    theme_name: str | None = None,
+    query_rules: str = "",
+    answer_rules: str = "",
 ) -> dict[str, Any]:
+    """Ponto de entrada usado pela API para responder uma pergunta sobre um manual."""
+
     if not question.strip():
         raise ValueError("A pergunta não pode estar vazia.")
 
     graph = create_manual_graph()
-
     settings = get_settings()
+    theme = get_theme_or_default(theme_id)
+    resolved_theme_id = theme_id or theme["theme_id"]
+    resolved_theme_name = theme_name or theme["name"]
+    resolved_query_rules = query_rules or format_theme_rules(theme, "query_rules")
+    resolved_answer_rules = answer_rules or format_theme_rules(theme, "answer_rules")
 
     result = graph.invoke(
         {
@@ -286,6 +307,10 @@ def answer_question_with_manual_graph(
             "has_context": False,
             "min_score": None,
             "max_relevance_score": settings.max_relevance_score,
+            "theme_id": resolved_theme_id,
+            "theme_name": resolved_theme_name,
+            "query_rules": resolved_query_rules,
+            "answer_rules": resolved_answer_rules,
         }
     )
 
@@ -296,34 +321,25 @@ def answer_question_with_manual_graph(
     }
 
 def generate_search_queries(state: ManualGraphState) -> ManualGraphState:
+    """Cria consultas alternativas para aumentar a chance de encontrar bons chunks."""
+
     prompt = f"""
-Você é um assistente especializado em melhorar buscas semânticas em manuais automotivos.
+Você é um assistente especializado em melhorar buscas semânticas em documentos PDF.
 
 A partir da pergunta original do usuário, gere uma lista de consultas alternativas para busca vetorial.
 
-Regras:
+Regras gerais:
 - Retorne apenas um JSON válido.
 - O JSON deve ser uma lista de strings.
 - Gere entre 4 e 8 consultas.
 - Preserve a intenção original da pergunta.
 - Inclua sinônimos, termos técnicos e formas alternativas de perguntar.
 - Não responda à pergunta.
-- Não invente informações sobre o veículo.
-- As consultas devem ajudar a encontrar trechos relevantes no manual.
+- Não invente informações sobre o documento.
+- As consultas devem ajudar a encontrar trechos relevantes no documento.
 
-Regras específicas:
-- Se a pergunta envolver internet embarcada, conectividade, chip, eSIM, modem ou dados móveis, gere consultas relacionadas a:
-  - internet embarcada
-  - conexão de dados móveis
-  - modem próprio do veículo
-  - chip ou eSIM
-  - serviços conectados
-  - central multimídia
-  - Wi-Fi
-  - Rede e Internet
-  - serviços online
-- Se a pergunta envolver farol ou luz, gere consultas relacionadas a iluminação, farol baixo, farol alto, luz de posição e luz automática.
-- Se a pergunta envolver celular, gere consultas relacionadas a Bluetooth, Android Auto, Apple CarPlay, integração de dispositivos móveis e central multimídia.
+Regras específicas do tema para busca:
+{state.get("query_rules") or "Nenhuma regra específica de busca foi configurada."}
 
 Pergunta original:
 {state["question"]}

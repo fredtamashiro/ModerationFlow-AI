@@ -11,6 +11,7 @@ _REGISTRY_LOCK = Lock()
 
 
 def load_documents_registry() -> list[dict[str, Any]]:
+    """Carrega do disco a lista de documentos ja registrados."""
     if not REGISTRY_FILE.exists():
         return []
 
@@ -27,6 +28,7 @@ def load_documents_registry() -> list[dict[str, Any]]:
 
 
 def _write_documents_registry(documents: list[dict[str, Any]]) -> None:
+    """Grava o registry em disco usando arquivo temporario para evitar corrupcao."""
     REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     temp_file = REGISTRY_FILE.with_name(f"{REGISTRY_FILE.name}.{uuid4()}.tmp")
@@ -38,11 +40,13 @@ def _write_documents_registry(documents: list[dict[str, Any]]) -> None:
 
 
 def save_documents_registry(documents: list[dict[str, Any]]) -> None:
+    """Salva a lista completa de documentos protegendo a escrita com lock."""
     with _REGISTRY_LOCK:
         _write_documents_registry(documents)
 
 
 def register_document(document_data: dict[str, Any]) -> dict[str, Any]:
+    """Adiciona um documento processado ao registry local da aplicacao."""
     registered_document = {
         "document_id": document_data["document_id"],
         "collection_name": document_data["collection_name"],
@@ -72,10 +76,12 @@ def register_document(document_data: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_registered_documents() -> list[dict[str, Any]]:
+    """Retorna todos os documentos registrados."""
     return load_documents_registry()
 
 
 def find_registered_document_by_id(document_id: str) -> dict[str, Any] | None:
+    """Busca um documento registrado pelo seu document_id."""
     documents = load_documents_registry()
 
     for document in documents:
@@ -88,6 +94,7 @@ def update_registered_document(
     document_id: str,
     updates: dict[str, Any],
 ) -> dict[str, Any]:
+    """Atualiza campos de um documento ja registrado."""
     documents = load_documents_registry()
 
     for index, document in enumerate(documents):
