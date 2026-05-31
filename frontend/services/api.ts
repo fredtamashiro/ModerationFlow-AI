@@ -51,9 +51,10 @@ export type ChatSource = {
   chunk_index: number;
   score: number;
   matched_query?: string;
+  relevance_score?: number;
+  relevance_reason?: string;
   preview: string;
 };
-
 export type ChatResponse = {
   question: string;
   answer: string;

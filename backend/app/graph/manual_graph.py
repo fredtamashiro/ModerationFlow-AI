@@ -135,6 +135,143 @@ def retrieve_context(state: ManualGraphState) -> ManualGraphState:
         "min_score": min_score,
     }
 
+def grade_retrieved_chunks(state: ManualGraphState) -> ManualGraphState:
+    """Avalia se os chunks recuperados ajudam diretamente a responder a pergunta."""
+
+    chunks = state.get("chunks") or []
+
+    if not chunks:
+        return state
+
+    payload = []
+
+    for index, chunk in enumerate(chunks):
+        metadata = chunk["metadata"]
+
+        payload.append(
+            {
+                "chunk_index": metadata.get("chunk_index", index),
+                "page": metadata.get("page"),
+                "content": chunk["content"][:1500],
+                "score": chunk.get("score"),
+                "matched_query": chunk.get("matched_query"),
+            }
+        )
+
+    prompt = f"""
+Voce e um avaliador de relevancia de trechos recuperados de documentos.
+
+Avalie se cada chunk ajuda diretamente a responder a pergunta do usuario.
+
+Regras:
+- Retorne apenas JSON valido.
+- O JSON deve ser uma lista de objetos.
+- Nao responda a pergunta, apenas avalie a relevancia dos chunks.
+- Marque como relevante apenas chunks que ajudem diretamente a responder a pergunta.
+- Chunks de indice, sumario, capa, rodape ou assunto lateral devem ser marcados como irrelevantes.
+- Se a pergunta pedir uma informacao especifica e o chunk so mencionar tema parecido, mas nao ajudar diretamente, marque como irrelevante.
+- Use as regras do tema quando disponiveis.
+
+Formato obrigatorio:
+[
+  {{
+    "chunk_index": 123,
+    "page": 10,
+    "is_relevant": true,
+    "relevance_score": 0.85,
+    "reason": "Ajuda a responder porque..."
+  }}
+]
+
+Tema:
+{state.get("theme_name") or "Nenhum tema informado."}
+
+Regras especificas do tema para busca:
+{state.get("query_rules") or "Nenhuma regra especifica de busca foi configurada."}
+
+Regras especificas do tema para resposta:
+{state.get("answer_rules") or "Nenhuma regra especifica de resposta foi configurada."}
+
+Pergunta:
+{state["question"]}
+
+Chunks:
+{json.dumps(payload, ensure_ascii=False)}
+"""
+
+    settings = get_settings()
+
+    llm = ChatOpenAI(
+        model=settings.openai_chat_model,
+        temperature=settings.openai_chat_temperature,
+    )
+
+    response = llm.invoke(prompt)
+    raw_content = response.content.strip()
+
+    if raw_content.startswith("```"):
+        raw_content = raw_content.strip("`").strip()
+        if raw_content.startswith("json"):
+            raw_content = raw_content[4:].strip()
+
+    try:
+        grades = json.loads(raw_content)
+    except json.JSONDecodeError:
+        grades = []
+
+    if not isinstance(grades, list):
+        grades = []
+
+    grades_by_key = {}
+
+    for grade in grades:
+        if not isinstance(grade, dict):
+            continue
+
+        chunk_index = grade.get("chunk_index")
+        page = grade.get("page")
+
+        grades_by_key[(str(chunk_index), str(page))] = grade
+
+    filtered_chunks = []
+
+    for index, chunk in enumerate(chunks):
+        metadata = chunk["metadata"]
+        chunk_index = metadata.get("chunk_index", index)
+        page = metadata.get("page")
+        grade = grades_by_key.get((str(chunk_index), str(page)))
+
+        if not grade or grade.get("is_relevant") is not True:
+            continue
+
+        enriched_metadata = {
+            **metadata,
+            "relevance_score": grade.get("relevance_score"),
+            "relevance_reason": grade.get("reason"),
+        }
+
+        filtered_chunks.append(
+            {
+                **chunk,
+                "metadata": enriched_metadata,
+            }
+        )
+
+    if not filtered_chunks:
+        return {
+            **state,
+            "chunks": [],
+            "context": "",
+            "has_context": False,
+        }
+
+    return {
+        **state,
+        "chunks": filtered_chunks,
+        "context": build_context_from_chunks(filtered_chunks),
+        "has_context": True,
+    }
+
 def should_generate_answer(state: ManualGraphState) -> str:
     """Decide se ha contexto suficiente para responder ou se deve falhar com seguranca."""
 
@@ -224,15 +361,21 @@ def format_sources(state: ManualGraphState) -> ManualGraphState:
 
         metadata = chunk["metadata"]
 
-        sources.append(
-            {
-                "page": metadata.get("page"),
-                "chunk_index": metadata.get("chunk_index"),
-                "score": chunk["score"],
-                "matched_query": chunk.get("matched_query"),
-                "preview": chunk["content"][:300],
-            }
-        )
+        source = {
+            "page": metadata.get("page"),
+            "chunk_index": metadata.get("chunk_index"),
+            "score": chunk["score"],
+            "matched_query": chunk.get("matched_query"),
+            "preview": chunk["content"][:300],
+        }
+
+        if "relevance_score" in metadata:
+            source["relevance_score"] = metadata.get("relevance_score")
+
+        if "relevance_reason" in metadata:
+            source["relevance_reason"] = metadata.get("relevance_reason")
+
+        sources.append(source)
 
     return {
         **state,
@@ -247,6 +390,7 @@ def create_manual_graph():
     graph.add_node("rewrite_query", rewrite_query)
     graph.add_node("generate_search_queries", generate_search_queries)
     graph.add_node("retrieve_context", retrieve_context)
+    graph.add_node("grade_retrieved_chunks", grade_retrieved_chunks)
     graph.add_node("generate_answer", generate_answer)
     graph.add_node("answer_not_found", answer_not_found)
     graph.add_node("format_sources", format_sources)
@@ -255,9 +399,10 @@ def create_manual_graph():
 
     graph.add_edge("rewrite_query", "generate_search_queries")
     graph.add_edge("generate_search_queries", "retrieve_context")
+    graph.add_edge("retrieve_context", "grade_retrieved_chunks")
 
     graph.add_conditional_edges(
-        "retrieve_context",
+        "grade_retrieved_chunks",
         should_generate_answer,
         {
             "generate_answer": "generate_answer",

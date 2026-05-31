@@ -115,11 +115,23 @@ export function DocumentChat({ documentId }: DocumentChatProps) {
                           <span>Página: {source.page}</span>
                           <span>Chunk: {source.chunk_index}</span>
                           <span>Score: {source.score.toFixed(4)}</span>
+
+                          {source.relevance_score !== undefined && (
+                            <span>
+                              Relevância: {source.relevance_score.toFixed(2)}
+                            </span>
+                          )}
                         </div>
 
                         {source.matched_query && (
                           <p className="mb-2 text-xs text-blue-300">
                             Query usada: {source.matched_query}
+                          </p>
+                        )}
+
+                        {source.relevance_reason && (
+                          <p className="mb-2 text-xs leading-5 text-emerald-300">
+                            Motivo da relevância: {source.relevance_reason}
                           </p>
                         )}
 
