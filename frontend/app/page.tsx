@@ -10,7 +10,6 @@ export default function Home() {
             Assistente inteligente para consulta de manuais automotivos.
           </p>
         </header>
-
         <DocumentsPanel />
       </div>
     </main>

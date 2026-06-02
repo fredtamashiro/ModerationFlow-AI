@@ -104,10 +104,33 @@ def run_smart_ingest_job(
             },
         )
 
+        def update_enrichment_progress(
+            processed_chunks: int,
+            total_chunks: int,
+        ) -> None:
+            enrichment_progress = 30 + int((processed_chunks / total_chunks) * 50)
+
+            update_processing_job(
+                job_id,
+                {
+                    "progress": min(enrichment_progress, 80),
+                    "current_step": (
+                        f"Enriquecendo chunks com IA "
+                        f"({processed_chunks}/{total_chunks})"
+                    ),
+                    "partial_result": {
+                        "chunks_file": saved_chunks["chunks_file"],
+                        "total_chunks": saved_chunks["total_chunks"],
+                        "processed_chunks": processed_chunks,
+                    },
+                },
+            )
+
         enriched_chunks = enrich_all_chunks_file(
             chunks_file=saved_chunks["chunks_file"],
             batch_size=batch_size,
             theme_id=theme_id,
+            progress_callback=update_enrichment_progress,
         )
 
         update_processing_job(

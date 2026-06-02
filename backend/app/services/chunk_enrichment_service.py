@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -356,6 +357,7 @@ def enrich_all_chunks_file(
     chunks_file: str,
     batch_size: int = 10,
     theme_id: str | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> dict[str, Any]:
     if batch_size <= 0:
         raise ValueError("batch_size deve ser maior que zero.")
@@ -368,39 +370,51 @@ def enrich_all_chunks_file(
         raise ValueError("Nenhum chunk encontrado para enriquecer.")
 
     enrichment_run_id = str(uuid4())
-
-    enriched_chunks = []
-
-    for start in range(0, len(chunks), batch_size):
-        batch = chunks[start : start + batch_size]
-        enriched_batch = enrich_chunk_batch(batch, theme_id=theme["theme_id"])
-        enriched_chunks.extend(enriched_batch)
+    document_id = chunks_payload["document_id"]
 
     ENRICHED_CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
-
-    document_id = chunks_payload["document_id"]
 
     output_path = (
         ENRICHED_CHUNKS_DIR
         / f"{document_id}_enriched_full_{enrichment_run_id}.json"
     )
 
-    payload = {
-        "document_id": document_id,
-        "source_file_path": chunks_payload.get("source_file_path"),
-        "original_chunks_file": chunks_file,
-        "total_original_chunks": len(chunks),
-        "total_enriched_chunks": len(enriched_chunks),
-        "enrichment_mode": "full",
-        "enrichment_run_id": enrichment_run_id,
-        "batch_size": batch_size,
-        "chunks": enriched_chunks,
-        "theme_id": theme["theme_id"],
-        "theme_name": theme["name"],
-    }
+    enriched_chunks = []
 
-    with output_path.open("w", encoding="utf-8") as file:
-        json.dump(payload, file, ensure_ascii=False, indent=2)
+    def save_partial_payload() -> None:
+        payload = {
+            "document_id": document_id,
+            "source_file_path": chunks_payload.get("source_file_path"),
+            "original_chunks_file": chunks_file,
+            "total_original_chunks": len(chunks),
+            "total_enriched_chunks": len(enriched_chunks),
+            "enrichment_mode": "full",
+            "enrichment_run_id": enrichment_run_id,
+            "batch_size": batch_size,
+            "theme_id": theme["theme_id"],
+            "theme_name": theme["name"],
+            "status": (
+                "completed"
+                if len(enriched_chunks) == len(chunks)
+                else "processing"
+            ),
+            "chunks": enriched_chunks,
+        }
+
+        with output_path.open("w", encoding="utf-8") as file:
+            json.dump(payload, file, ensure_ascii=False, indent=2)
+
+    for start in range(0, len(chunks), batch_size):
+        batch = chunks[start : start + batch_size]
+        enriched_batch = enrich_chunk_batch(batch, theme_id=theme["theme_id"])
+        enriched_chunks.extend(enriched_batch)
+        save_partial_payload()
+        processed_chunks = min(start + batch_size, len(chunks))
+
+        if progress_callback:
+            progress_callback(processed_chunks, len(chunks))
+
+    save_partial_payload()
 
     return {
         "document_id": document_id,

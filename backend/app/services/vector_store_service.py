@@ -11,6 +11,8 @@ from langchain_openai import OpenAIEmbeddings
 
 VECTORSTORE_DIR = Path("app/storage/vectorstore")
 OPENAI_API_KEY_PLACEHOLDER = "sua_chave_aqui"
+EMBEDDING_BATCH_MAX_DOCUMENTS = 100
+EMBEDDING_BATCH_MAX_CHARS = 200_000
 
 
 def load_chunks_from_json(chunks_file: str) -> dict[str, Any]:
@@ -45,6 +47,31 @@ def create_documents_from_chunks(chunks_payload: dict[str, Any]) -> list[Documen
         )
 
     return documents
+
+
+def add_documents_in_embedding_batches(
+    vectorstore: Chroma,
+    documents: list[Document],
+) -> None:
+    batch = []
+    batch_chars = 0
+
+    for document in documents:
+        document_chars = len(document.page_content)
+
+        if batch and (
+            len(batch) >= EMBEDDING_BATCH_MAX_DOCUMENTS
+            or batch_chars + document_chars > EMBEDDING_BATCH_MAX_CHARS
+        ):
+            vectorstore.add_documents(batch)
+            batch = []
+            batch_chars = 0
+
+        batch.append(document)
+        batch_chars += document_chars
+
+    if batch:
+        vectorstore.add_documents(batch)
 
 
 def validate_openai_api_key() -> str:
@@ -92,7 +119,7 @@ def index_chunks_in_vectorstore(chunks_file: str) -> dict[str, Any]:
     )
 
     try:
-        vectorstore.add_documents(documents)
+        add_documents_in_embedding_batches(vectorstore, documents)
     except Exception as error:
         raise ValueError(
             f"Falha ao indexar chunks no vector store: {error}"
@@ -268,7 +295,12 @@ def index_enriched_chunks_in_vectorstore(enriched_chunks_file: str) -> dict[str,
         persist_directory=str(VECTORSTORE_DIR),
     )
 
-    vectorstore.add_documents(documents)
+    try:
+        add_documents_in_embedding_batches(vectorstore, documents)
+    except Exception as error:
+        raise ValueError(
+            f"Falha ao indexar chunks enriquecidos no vector store: {error}"
+        ) from error
 
     return {
         "document_id": document_id,

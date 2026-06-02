@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { DocumentChat } from "@/components/document-chat";
 import { DocumentUpload } from "@/components/document-upload";
+import { SmartDocumentUpload } from "@/components/smart-document-upload";
 import { DocumentItem, fetchDocuments } from "@/services/api";
 
 export function DocumentsPanel() {
@@ -40,6 +41,7 @@ export function DocumentsPanel() {
 
   return (
     <>
+      <SmartDocumentUpload onCompleted={loadDocuments} />
       <DocumentUpload onUploadSuccess={loadDocuments} />
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
