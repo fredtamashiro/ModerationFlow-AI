@@ -6,6 +6,7 @@ from fastapi import UploadFile
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 
+from app.config import get_settings
 from app.services.text_cleaning_service import clean_extracted_text
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,19 @@ def save_uploaded_file(file: UploadFile) -> dict:
 
     if file_extension != ".pdf":
         raise ValueError("Apenas arquivos PDF são permitidos.")
+
+    settings = get_settings()
+    max_file_size_bytes = settings.max_upload_file_size_mb * 1024 * 1024
+
+    file.file.seek(0, 2)
+    file_size_bytes = file.file.tell()
+    file.file.seek(0)
+
+    if file_size_bytes > max_file_size_bytes:
+        raise ValueError(
+            "Arquivo PDF muito grande. "
+            f"O limite é de {settings.max_upload_file_size_mb} MB."
+        )
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 

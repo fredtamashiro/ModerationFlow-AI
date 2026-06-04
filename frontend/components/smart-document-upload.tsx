@@ -8,6 +8,7 @@ import {
   Info,
   Loader2,
   UploadCloud,
+  X,
 } from "lucide-react";
 
 import {
@@ -31,10 +32,16 @@ import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
 
 type SmartDocumentUploadProps = {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
   onCompleted?: () => void;
 };
 
-export function SmartDocumentUpload({ onCompleted }: SmartDocumentUploadProps) {
+export function SmartDocumentUpload({
+  isOpen,
+  onOpenChange,
+  onCompleted,
+}: SmartDocumentUploadProps) {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [selectedThemeId, setSelectedThemeId] = useState("generic_pdf");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -137,19 +144,38 @@ export function SmartDocumentUpload({ onCompleted }: SmartDocumentUploadProps) {
     totalChunks !== undefined &&
     totalChunks !== null;
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Importar documento</CardTitle>
-        <CardDescription>
-          Envie um PDF e escolha um tema para o processamento inteligente.
-        </CardDescription>
-      </CardHeader>
+  if (!isOpen) {
+    return null;
+  }
 
-      <CardContent>
-      <form onSubmit={handleSubmit} className="space-y-4">
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm">
+      <Card className="max-h-[90vh] w-full max-w-2xl overflow-auto p-0">
+        <CardHeader className="mb-0 border-b border-slate-200 p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle>Importar documento</CardTitle>
+              <CardDescription>
+                Envie um PDF e escolha um tema para o processamento inteligente.
+              </CardDescription>
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              aria-label="Fechar modal de importação"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-300">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
             Tema do documento
           </label>
 
@@ -175,7 +201,7 @@ export function SmartDocumentUpload({ onCompleted }: SmartDocumentUploadProps) {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-300">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
             Arquivo PDF
           </label>
 
@@ -209,7 +235,7 @@ export function SmartDocumentUpload({ onCompleted }: SmartDocumentUploadProps) {
       </form>
 
       {errorMessage && (
-        <Alert className="mt-3 border-red-900/60 bg-red-950/30 text-red-300">
+        <Alert className="mt-4 border-red-200 bg-red-50 text-red-700">
           <span className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             {errorMessage}
@@ -218,19 +244,19 @@ export function SmartDocumentUpload({ onCompleted }: SmartDocumentUploadProps) {
       )}
 
       {job && (
-        <div className="mt-5 rounded-lg border border-slate-800 bg-slate-950 p-4">
+        <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">
                 Status do processamento
               </p>
-              <p className="mt-1 flex items-center gap-2 text-sm text-slate-200">
-                <Info className="h-4 w-4 text-blue-400" />
+              <p className="mt-1 flex items-center gap-2 text-sm text-slate-700">
+                <Info className="h-4 w-4 text-blue-600" />
                 {job.current_step}
               </p>
             </div>
 
-            <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
               {job.status}
             </span>
           </div>
@@ -258,7 +284,7 @@ export function SmartDocumentUpload({ onCompleted }: SmartDocumentUploadProps) {
                       !currentShowTechnicalDetails,
                   )
                 }
-                className="text-xs font-medium text-blue-400 hover:text-blue-300"
+                className="text-xs font-medium text-blue-600 hover:text-blue-500"
               >
                 {showTechnicalDetails
                   ? "Ocultar detalhes técnicos"
@@ -266,7 +292,7 @@ export function SmartDocumentUpload({ onCompleted }: SmartDocumentUploadProps) {
               </button>
 
               {showTechnicalDetails && (
-                <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-400">
+                <pre className="mt-3 max-h-40 overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600">
                   {JSON.stringify(job.partial_result, null, 2)}
                 </pre>
               )}
@@ -274,28 +300,29 @@ export function SmartDocumentUpload({ onCompleted }: SmartDocumentUploadProps) {
           )}
 
           {job.status === "completed" && job.result?.document && (
-            <div className="mt-3 rounded-lg border border-emerald-900/60 bg-emerald-950/30 p-3">
-              <p className="flex items-center gap-2 text-sm text-emerald-300">
+            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <p className="flex items-center gap-2 text-sm text-emerald-700">
                 <CheckCircle2 className="h-4 w-4" />
                 Documento processado com sucesso.
               </p>
-              <p className="mt-1 text-xs text-emerald-400">
+              <p className="mt-1 text-xs text-emerald-700">
                 {job.result.document.original_filename}
               </p>
             </div>
           )}
 
           {job.status === "failed" && (
-            <div className="mt-3 rounded-lg border border-red-900/60 bg-red-950/30 p-3">
-              <p className="text-sm text-red-300">O processamento falhou.</p>
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+              <p className="text-sm text-red-700">O processamento falhou.</p>
               {job.error && (
-                <p className="mt-1 text-xs text-red-400">{job.error}</p>
+                <p className="mt-1 text-xs text-red-700">{job.error}</p>
               )}
             </div>
           )}
         </div>
       )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

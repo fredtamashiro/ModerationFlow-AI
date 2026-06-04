@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { FileText, MessageCircle, Plus, Trash2 } from "lucide-react";
 
 import { DocumentChat } from "@/components/document-chat";
 import { SmartDocumentUpload } from "@/components/smart-document-upload";
@@ -18,6 +18,10 @@ export function DocumentsPanel() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [activeChatDocumentId, setActiveChatDocumentId] = useState<string | null>(
+    null,
+  );
   const [selectedQuestionsByDocument, setSelectedQuestionsByDocument] =
     useState<Record<string, SelectedQuestion>>({});
 
@@ -69,6 +73,7 @@ export function DocumentsPanel() {
     documentId: string,
     suggestedQuestion: string,
   ) {
+    setActiveChatDocumentId(documentId);
     setSelectedQuestionsByDocument((currentQuestions) => ({
       ...currentQuestions,
       [documentId]: {
@@ -80,31 +85,53 @@ export function DocumentsPanel() {
 
   return (
     <>
-      <SmartDocumentUpload onCompleted={loadDocuments} />
+      <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+            SmartDocs IA
+          </h1>
+          <p className="mt-2 text-slate-600">
+            Assistente inteligente para consulta de documentos em PDF.
+          </p>
+        </div>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
+        <Button type="button" onClick={() => setIsImportOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Importar documento
+        </Button>
+      </header>
+
+      <SmartDocumentUpload
+        isOpen={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onCompleted={loadDocuments}
+      />
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-6">
-          <h2 className="text-xl font-semibold">Manuais cadastrados</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="text-xl font-semibold text-slate-950">
+            Documentos cadastrados
+          </h2>
+          <p className="text-sm text-slate-500">
             Total de documentos: {documents.length}
           </p>
         </div>
 
         {isLoading && (
-          <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center text-slate-400">
+          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
             Carregando documentos...
           </div>
         )}
 
         {errorMessage && (
-          <div className="rounded-xl border border-red-900 bg-red-950/40 p-8 text-center text-red-300">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center text-red-700">
             {errorMessage}
           </div>
         )}
 
         {!isLoading && !errorMessage && documents.length === 0 && (
-          <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center text-slate-400">
-            Nenhum manual cadastrado ainda.
+          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+            Nenhum documento cadastrado ainda.
           </div>
         )}
 
@@ -113,13 +140,56 @@ export function DocumentsPanel() {
             {documents.map((document) => (
               <article
                 key={document.document_id}
-                className="rounded-xl border border-slate-800 bg-slate-950 p-5"
+                className="rounded-xl border border-slate-200 bg-slate-50 p-5"
               >
-                <h3 className="font-medium text-slate-100">
-                  {document.original_filename}
-                </h3>
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h3 className="flex items-center gap-2 font-semibold text-slate-950">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      {document.original_filename}
+                    </h3>
 
-                <div className="mt-3 grid gap-2 text-sm text-slate-400 md:grid-cols-3">
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {document.document_type && (
+                        <Badge className="border-blue-200 bg-blue-50 text-blue-700">
+                          {document.document_type}
+                        </Badge>
+                      )}
+
+                      {document.theme_name && <Badge>{document.theme_name}</Badge>}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setActiveChatDocumentId((currentDocumentId) =>
+                          currentDocumentId === document.document_id
+                            ? null
+                            : document.document_id,
+                        )
+                      }
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      Conversar
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={() => handleDeleteDocument(document.document_id)}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Apagar
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
                   <p>
                     <span className="text-slate-500">Páginas:</span>{" "}
                     {document.total_pages}
@@ -136,24 +206,12 @@ export function DocumentsPanel() {
                   </p>
                 </div>
 
-                {document.document_type && (
-                  <p className="mt-2 text-xs text-blue-300">
-                    Tipo: {document.document_type}
-                  </p>
-                )}
-
-                {document.theme_name && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Tema: {document.theme_name}
-                  </p>
-                )}
-
                 {document.document_summary && (
-                  <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
                       Resumo automático
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-300">
+                    <p className="mt-2 text-sm leading-6 text-slate-700">
                       {document.document_summary}
                     </p>
                   </div>
@@ -167,11 +225,7 @@ export function DocumentsPanel() {
 
                     <div className="mt-2 flex flex-wrap gap-2">
                       {document.main_topics.map((topic) => (
-                        <Badge
-                          key={topic}
-                        >
-                          {topic}
-                        </Badge>
+                        <Badge key={topic}>{topic}</Badge>
                       ))}
                     </div>
                   </div>
@@ -195,7 +249,7 @@ export function DocumentsPanel() {
                                 suggestedQuestion,
                               )
                             }
-                            className="block w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-left text-sm text-slate-300 transition hover:border-blue-900/70 hover:bg-blue-950/20 hover:text-blue-200"
+                            className="block w-full rounded-lg border border-slate-200 bg-white p-3 text-left text-sm text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
                           >
                             {suggestedQuestion}
                           </button>
@@ -206,12 +260,12 @@ export function DocumentsPanel() {
 
                 {document.summary_limitations &&
                   document.summary_limitations.length > 0 && (
-                    <div className="mt-3 rounded-lg border border-yellow-900/50 bg-yellow-950/20 p-3">
-                      <p className="text-xs uppercase tracking-wide text-yellow-500">
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-amber-700">
                         Limitações identificadas
                       </p>
 
-                      <ul className="mt-2 list-inside list-disc space-y-1 text-xs leading-5 text-yellow-200/80">
+                      <ul className="mt-2 list-inside list-disc space-y-1 text-xs leading-5 text-amber-800">
                         {document.summary_limitations.map((limitation) => (
                           <li key={limitation}>{limitation}</li>
                         ))}
@@ -219,31 +273,21 @@ export function DocumentsPanel() {
                     </div>
                   )}
 
-                <p className="mt-3 break-all text-xs text-slate-600">
+                <p className="mt-3 break-all text-xs text-slate-400">
                   ID: {document.document_id}
                 </p>
 
-                <div className="mt-4 flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => handleDeleteDocument(document.document_id)}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Apagar
-                  </Button>
-                </div>
-
-                <DocumentChat
-                  documentId={document.document_id}
-                  initialQuestion={
-                    selectedQuestionsByDocument[document.document_id]?.question
-                  }
-                  initialQuestionRequestId={
-                    selectedQuestionsByDocument[document.document_id]?.requestId
-                  }
-                />
+                {activeChatDocumentId === document.document_id && (
+                  <DocumentChat
+                    documentId={document.document_id}
+                    initialQuestion={
+                      selectedQuestionsByDocument[document.document_id]?.question
+                    }
+                    initialQuestionRequestId={
+                      selectedQuestionsByDocument[document.document_id]?.requestId
+                    }
+                  />
+                )}
               </article>
             ))}
           </div>

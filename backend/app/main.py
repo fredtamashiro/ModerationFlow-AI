@@ -7,8 +7,8 @@ from app.api.routes.themes import router as themes_router
 from app.api.routes.processing_jobs import router as processing_jobs_router
 
 app = FastAPI(
-    title="AutoManual AI",
-    description="API para consulta inteligente de manuais automotivos usando IA.",
+    title="SmartDocs IA",
+    description="API para consulta inteligente de documentos em PDF usando IA.",
     version="0.1.0",
 )
 
@@ -28,7 +28,7 @@ app.add_middleware(
 def health_check():
     return {
         "status": "ok",
-        "message": "AutoManual AI API is running",
+        "message": "SmartDocs IA API is running",
     }
 
 

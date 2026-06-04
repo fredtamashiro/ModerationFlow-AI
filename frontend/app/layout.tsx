@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AutoManual AI",
-  description: "Assistente inteligente para consulta de manuais automotivos.",
+  title: "SmartDocs IA",
+  description: "Assistente inteligente para consulta de documentos em PDF.",
 };
 
 export default function RootLayout({

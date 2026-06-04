@@ -9,7 +9,7 @@ export function Alert({
   return (
     <div
       className={cn(
-        "rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-slate-300",
+        "rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700",
         className,
       )}
       {...props}

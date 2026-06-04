@@ -1,4 +1,4 @@
-from typing import Any, TypedDict
+﻿from typing import Any, TypedDict
 from app.config import get_settings
 
 from langchain_openai import ChatOpenAI
@@ -47,19 +47,19 @@ def rewrite_query(state: ManualGraphState) -> ManualGraphState:
     """Reescreve a pergunta para melhorar a busca semantica no vector store."""
 
     prompt = f"""
-    Você é um assistente especializado em melhorar perguntas para busca semântica em manuais automotivos.
+Você é um assistente especializado em melhorar perguntas para busca semântica em documentos PDF.
 
-    Reescreva a pergunta do usuário para melhorar a recuperação de informações em um banco vetorial.
+Reescreva a pergunta do usuário para melhorar a recuperação de informações em um banco vetorial.
 
-    Regras:
-    - Preserve a intenção original da pergunta.
-    - Inclua sinônimos e termos relacionados quando fizer sentido.
-    - Não responda à pergunta.
-    - Retorne apenas a pergunta reescrita, sem explicações.
+Regras:
+- Preserve a intenção original da pergunta.
+- Inclua sinônimos e termos relacionados quando fizer sentido.
+- Não responda à pergunta.
+- Retorne apenas a pergunta reescrita, sem explicações.
 
-    Pergunta original:
-    {state["question"]}
-    """
+Pergunta original:
+{state["question"]}
+"""
 
     llm = create_chat_model()
 
@@ -102,7 +102,7 @@ def retrieve_context(state: ManualGraphState) -> ManualGraphState:
 
             existing_chunk = candidates_by_key.get(key)
 
-            # Como o score do Chroma é distância, menor é melhor
+            # Como o score do Chroma é distância, menor é melhor.
             if existing_chunk is None or chunk["score"] < existing_chunk["score"]:
                 candidates_by_key[key] = {
                     **chunk,
@@ -286,7 +286,7 @@ def answer_not_found(state: ManualGraphState) -> ManualGraphState:
     return {
         **state,
         "answer": (
-            "Não encontrei informações suficientemente relevantes no manual "
+            "Não encontrei informações suficientemente relevantes no documento "
             "para responder essa pergunta com segurança."
         ),
     }
@@ -295,17 +295,30 @@ def generate_answer(state: ManualGraphState) -> ManualGraphState:
     """Gera a resposta final com base apenas no contexto recuperado do manual."""
 
     prompt = f"""
-Você é um assistente especializado em responder perguntas com base exclusivamente no contexto recuperado.
+Você é um assistente especializado em responder perguntas com base exclusivamente no contexto recuperado de documentos.
 
 Responda à pergunta do usuário usando apenas o contexto abaixo.
 
 Regras gerais:
+- Responda em linguagem natural, clara e profissional.
+- Comece diretamente pela resposta. Não use frases como "Resposta objetiva:", "Com base no contexto" ou "Segundo os trechos".
 - Não invente informações.
-- Não use conhecimento externo.
-- Se a resposta não estiver no contexto, diga que não encontrou essa informação no documento.
-- Quando houver limitação, ambiguidade ou informação indireta, explique isso.
-- Seja claro e objetivo.
-- Cite páginas quando elas estiverem disponíveis no contexto.
+- Se a resposta não estiver no contexto, diga claramente que não encontrou essa informação no documento.
+- Quando fizer uma inferência, identifique explicitamente com "Inferência:".
+- Não use expressões como "Fonte 1", "Fonte 2" ou "Fonte 3" no texto da resposta final.
+- Ao citar evidências, cite apenas páginas, usando o formato "(p. 3)" ou "(p. 3 e 8)".
+- Se a mesma informação vier de várias fontes, agrupe as páginas em uma única citação.
+- Não mencione "chunk" na resposta final para o usuário.
+- Use linhas em branco entre seções para melhorar a leitura.
+- Use títulos curtos e naturais.
+- Para perguntas com múltiplas partes, organize com subtítulos.
+- Use lista numerada para hierarquias, etapas, prioridades ou procedimentos.
+- Use bullets para grupos de itens.
+- Para observações, exceções e limitações, use parágrafos curtos.
+- Se houver uma limitação importante, adicione no final um parágrafo curto no formato:
+  "**Limitação:** o documento não apresenta..."
+- Quando houver limitação, ambiguidade ou informação indireta, explique isso de forma curta.
+- Evite respostas longas demais quando a pergunta for simples.
 
 Regras específicas do tema para resposta:
 {state.get("answer_rules") or "Nenhuma regra específica de resposta foi configurada."}

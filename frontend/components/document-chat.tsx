@@ -1,7 +1,11 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { askQuestion, ChatResponse } from "@/services/api";
 
 type DocumentChatProps = {
@@ -25,39 +29,42 @@ export function DocumentChat({
   const [errorMessage, setErrorMessage] = useState("");
   const lastInitialQuestionRequestId = useRef<number | undefined>(undefined);
 
-  const submitQuestion = useCallback(async (questionToSubmit: string) => {
-    const trimmedQuestion = questionToSubmit.trim();
+  const submitQuestion = useCallback(
+    async (questionToSubmit: string) => {
+      const trimmedQuestion = questionToSubmit.trim();
 
-    if (!trimmedQuestion) {
-      setErrorMessage("Digite uma pergunta.");
-      return;
-    }
+      if (!trimmedQuestion) {
+        setErrorMessage("Digite uma pergunta.");
+        return;
+      }
 
-    try {
-      setIsLoading(true);
-      setErrorMessage("");
+      try {
+        setIsLoading(true);
+        setErrorMessage("");
 
-      const result = await askQuestion({
-        documentId,
-        question: trimmedQuestion,
-        k: 4,
-      });
+        const result = await askQuestion({
+          documentId,
+          question: trimmedQuestion,
+          k: 4,
+        });
 
-      setMessages((currentMessages) => [
-        {
-          ...result,
-          id: crypto.randomUUID(),
-        },
-        ...currentMessages,
-      ]);
+        setMessages((currentMessages) => [
+          {
+            ...result,
+            id: crypto.randomUUID(),
+          },
+          ...currentMessages,
+        ]);
 
-      setQuestion("");
-    } catch {
-      setErrorMessage("Não foi possível obter uma resposta.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [documentId]);
+        setQuestion("");
+      } catch {
+        setErrorMessage("Não foi possível obter uma resposta.");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [documentId],
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -79,52 +86,92 @@ export function DocumentChat({
   }, [initialQuestion, initialQuestionRequestId, submitQuestion]);
 
   return (
-    <div className="mt-5 rounded-xl border border-slate-800 bg-slate-900 p-4">
+    <div className="mt-5 rounded-xl border border-blue-100 bg-white p-4">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 md:flex-row">
-        <input
+        <Input
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
-          placeholder="Ex: Como ligo a luz do veículo?"
-          className="min-h-11 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-4 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-blue-500"
+          placeholder="Digite sua pergunta sobre este documento"
+          className="min-h-11 flex-1"
         />
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" disabled={isLoading}>
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
           {isLoading ? "Perguntando..." : "Perguntar"}
-        </button>
+        </Button>
       </form>
 
       {errorMessage && (
-        <p className="mt-3 text-sm text-red-400">{errorMessage}</p>
+        <p className="mt-3 text-sm text-red-700">{errorMessage}</p>
       )}
 
       {messages.length > 0 && (
         <div className="mt-5 space-y-5">
           {messages.map((message) => (
             <div key={message.id} className="space-y-3">
-              <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-500">
                   Pergunta
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-200">
+                <p className="mt-2 text-sm leading-6 text-slate-700">
                   {message.question}
                 </p>
               </div>
 
-              <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-500">
                   Resposta
                 </p>
-                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-200">
-                  {message.answer}
-                </p>
+                <div className="mt-2 text-sm leading-6 text-slate-700">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ children }) => (
+                        <h1 className="mb-2 mt-4 text-lg font-semibold text-slate-950">
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="mb-2 mt-4 text-base font-semibold text-slate-950">
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="mb-2 mt-4 text-sm font-semibold text-slate-950">
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children }) => (
+                        <p className="mb-3 last:mb-0">{children}</p>
+                      ),
+                      ul: ({ children }) => (
+                        <ul className="mb-3 list-outside list-disc space-y-1 pl-5 marker:text-slate-500">
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="mb-3 list-outside list-decimal space-y-1 pl-5 marker:text-slate-500">
+                          {children}
+                        </ol>
+                      ),
+                      li: ({ children }) => (
+                        <li className="pl-1 [&>p]:mb-1 [&>p]:inline">
+                          {children}
+                        </li>
+                      ),
+                      strong: ({ children }) => (
+                        <strong className="font-semibold text-slate-950">
+                          {children}
+                        </strong>
+                      ),
+                    }}
+                  >
+                    {message.answer}
+                  </ReactMarkdown>
+                </div>
               </div>
 
               {message.sources.length > 0 && (
-                <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-wide text-slate-500">
                     Fontes
                   </p>
@@ -133,7 +180,7 @@ export function DocumentChat({
                     {message.sources.map((source, index) => (
                       <div
                         key={`${source.page}-${source.chunk_index}-${index}`}
-                        className="rounded-lg border border-slate-800 p-3"
+                        className="rounded-lg border border-slate-200 bg-white p-3"
                       >
                         <div className="mb-2 flex flex-wrap gap-3 text-xs text-slate-500">
                           <span>Página: {source.page}</span>
@@ -148,18 +195,18 @@ export function DocumentChat({
                         </div>
 
                         {source.matched_query && (
-                          <p className="mb-2 text-xs text-blue-300">
+                          <p className="mb-2 text-xs text-blue-700">
                             Query usada: {source.matched_query}
                           </p>
                         )}
 
                         {source.relevance_reason && (
-                          <p className="mb-2 text-xs leading-5 text-emerald-300">
+                          <p className="mb-2 text-xs leading-5 text-emerald-700">
                             Motivo da relevância: {source.relevance_reason}
                           </p>
                         )}
 
-                        <p className="text-xs leading-5 text-slate-400">
+                        <p className="text-xs leading-5 text-slate-600">
                           {source.preview}
                         </p>
                       </div>

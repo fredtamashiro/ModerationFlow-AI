@@ -26,7 +26,7 @@ def enrich_single_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
     llm = create_chat_model()
 
     prompt = f"""
-Você é um assistente especializado em análise de chunks para sistemas RAG com manuais automotivos.
+Você é um assistente especializado em análise de chunks para sistemas RAG com documentos em PDF.
 
 Analise o chunk abaixo e retorne apenas um JSON válido, sem markdown e sem explicações.
 
@@ -191,7 +191,7 @@ def enrich_chunk_batch(
     theme_rules = format_theme_rules(theme, "enrichment_rules")
 
     prompt = f"""
-Você é um assistente especializado em análise de chunks para sistemas RAG com manuais automotivos.
+Você é um assistente especializado em análise de chunks para sistemas RAG com documentos em PDF.
 
 Analise a lista de chunks abaixo e retorne apenas um JSON válido, sem markdown e sem explicações.
 

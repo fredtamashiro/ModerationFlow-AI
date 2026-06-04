@@ -45,7 +45,7 @@ def answer_question_with_rag(
     context = build_context_from_chunks(chunks)
 
     prompt = f"""
-Você é um assistente especializado em responder perguntas com base em manuais automotivos.
+Você é um assistente especializado em responder perguntas com base em documentos em PDF.
 
 Responda à pergunta do usuário usando apenas as informações presentes no contexto abaixo.
 

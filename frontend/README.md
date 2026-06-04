@@ -1,6 +1,6 @@
-# AutoManual AI
+# SmartDocs IA
 
-Assistente inteligente para consulta de manuais automotivos em PDF usando IA Generativa, RAG, LangChain, LangGraph e uma interface web em Next.js.
+Assistente inteligente para consulta de documentos em PDF usando IA Generativa, RAG, LangChain, LangGraph e uma interface web em Next.js.
 
 O projeto permite fazer upload de um manual em PDF, processar o conteúdo, gerar embeddings, indexar os trechos em um banco vetorial local e realizar perguntas em linguagem natural com respostas baseadas no conteúdo do manual.
 
@@ -22,7 +22,7 @@ Este projeto foi criado como estudo prático de Engenharia de IA aplicada, com f
 
 ## Funcionalidades
 
-- Upload de manuais automotivos em PDF
+- Upload de documentos em PDF
 - Extração e limpeza de texto do PDF
 - Divisão do conteúdo em chunks
 - Persistência dos chunks em JSON
