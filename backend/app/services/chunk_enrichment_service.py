@@ -1,16 +1,18 @@
 import json
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 from langchain_openai import ChatOpenAI
+from sqlalchemy import bindparam, text
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.config import get_settings
+from app.database.database import SessionLocal
 from app.services.vector_store_service import load_chunks_from_json
 from app.services.theme_service import format_theme_rules, get_theme_or_default
 
-ENRICHED_CHUNKS_DIR = Path("app/storage/enriched_chunks")
+DB_ENRICHED_CHUNKS_URI_PREFIX = "db://enriched_chunks/"
 
 
 def create_chat_model() -> ChatOpenAI:
@@ -119,13 +121,12 @@ def enrich_chunks_file(
     for chunk in selected_chunks:
         enriched_chunks.append(enrich_single_chunk(chunk))
 
-    ENRICHED_CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
-
     document_id = chunks_payload["document_id"]
-    output_path = ENRICHED_CHUNKS_DIR / f"{document_id}_enriched_preview.json"
+    enrichment_run_id = str(uuid4())
 
     payload = {
         "document_id": document_id,
+        "enrichment_run_id": enrichment_run_id,
         "source_file_path": chunks_payload.get("source_file_path"),
         "original_chunks_file": chunks_file,
         "total_original_chunks": len(chunks),
@@ -136,12 +137,11 @@ def enrich_chunks_file(
         "chunks": enriched_chunks,
     }
 
-    with output_path.open("w", encoding="utf-8") as file:
-        json.dump(payload, file, ensure_ascii=False, indent=2)
+    enriched_chunks_reference = save_enriched_chunks_payload_to_db(payload)
 
     return {
         "document_id": document_id,
-        "enriched_chunks_file": str(output_path),
+        "enriched_chunks_file": enriched_chunks_reference,
         "total_original_chunks": len(chunks),
         "total_enriched_chunks": len(enriched_chunks),
         "offset": offset,
@@ -169,6 +169,129 @@ def build_embedding_content(enriched_chunk: dict[str, Any]) -> str:
             f"Conteúdo original: {original_content}",
         ]
     ).strip()
+
+
+def save_enriched_chunks_payload_to_db(payload: dict[str, Any]) -> str:
+    document_id = payload["document_id"]
+    enrichment_run_id = payload.get("enrichment_run_id") or str(uuid4())
+    enriched_chunks_reference = (
+        f"{DB_ENRICHED_CHUNKS_URI_PREFIX}{document_id}/{enrichment_run_id}"
+    )
+
+    with SessionLocal() as db:
+        db.execute(
+            text(
+                """
+                UPDATE smartdocs.documents
+                SET
+                    enriched_chunks_file = :enriched_chunks_file,
+                    total_chunks = :total_chunks,
+                    theme_id = :theme_id,
+                    theme_name = :theme_name,
+                    updated_at = NOW()
+                WHERE id = CAST(:document_id AS UUID)
+                """
+            ),
+            {
+                "document_id": document_id,
+                "enriched_chunks_file": enriched_chunks_reference,
+                "total_chunks": payload.get("total_original_chunks", 0),
+                "theme_id": payload.get("theme_id"),
+                "theme_name": payload.get("theme_name"),
+            },
+        )
+
+        insert_query = text(
+            """
+            INSERT INTO smartdocs.enriched_chunks (
+                id,
+                document_id,
+                chunk_id,
+                chunk_index,
+                page,
+                content,
+                is_valid,
+                quality_score,
+                title,
+                summary,
+                category,
+                keywords,
+                possible_questions,
+                warnings,
+                embedding_content,
+                metadata
+            )
+            VALUES (
+                CAST(:id AS UUID),
+                CAST(:document_id AS UUID),
+                (
+                    SELECT id
+                    FROM smartdocs.chunks
+                    WHERE document_id = CAST(:document_id AS UUID)
+                      AND chunk_index = :chunk_index
+                ),
+                :chunk_index,
+                :page,
+                :content,
+                :is_valid,
+                :quality_score,
+                :title,
+                :summary,
+                :category,
+                :keywords,
+                :possible_questions,
+                :warnings,
+                :embedding_content,
+                :metadata
+            )
+            ON CONFLICT (document_id, chunk_index) DO UPDATE SET
+                chunk_id = EXCLUDED.chunk_id,
+                page = EXCLUDED.page,
+                content = EXCLUDED.content,
+                is_valid = EXCLUDED.is_valid,
+                quality_score = EXCLUDED.quality_score,
+                title = EXCLUDED.title,
+                summary = EXCLUDED.summary,
+                category = EXCLUDED.category,
+                keywords = EXCLUDED.keywords,
+                possible_questions = EXCLUDED.possible_questions,
+                warnings = EXCLUDED.warnings,
+                embedding_content = EXCLUDED.embedding_content,
+                metadata = EXCLUDED.metadata
+            """
+        ).bindparams(
+            bindparam("keywords", type_=JSONB),
+            bindparam("possible_questions", type_=JSONB),
+            bindparam("warnings", type_=JSONB),
+            bindparam("metadata", type_=JSONB),
+        )
+
+        for chunk in payload.get("chunks", []):
+            enrichment = chunk.get("enrichment", {})
+            db.execute(
+                insert_query,
+                {
+                    "id": str(uuid4()),
+                    "document_id": document_id,
+                    "chunk_index": chunk["chunk_index"],
+                    "page": chunk.get("page"),
+                    "content": chunk["content"],
+                    "is_valid": enrichment.get("is_valid", True),
+                    "quality_score": enrichment.get("quality_score", 0),
+                    "title": enrichment.get("title"),
+                    "summary": enrichment.get("summary"),
+                    "category": enrichment.get("category"),
+                    "keywords": enrichment.get("keywords", []),
+                    "possible_questions": enrichment.get("possible_questions", []),
+                    "warnings": enrichment.get("warnings", []),
+                    "embedding_content": chunk["embedding_content"],
+                    "metadata": chunk.get("metadata", {}),
+                },
+            )
+
+        db.commit()
+
+    return enriched_chunks_reference
 
 def enrich_chunk_batch(
     chunks: list[dict[str, Any]],
@@ -312,15 +435,8 @@ def enrich_chunks_file_in_batches(
         enriched_batch = enrich_chunk_batch(batch, theme_id=theme_id)
         enriched_chunks.extend(enriched_batch)
 
-    ENRICHED_CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
-
     document_id = chunks_payload["document_id"]
     enrichment_run_id = str(uuid4())
-
-    output_path = (
-        ENRICHED_CHUNKS_DIR
-        / f"{document_id}_enriched_offset_{offset}_limit_{limit}_{enrichment_run_id}.json"
-    )
 
     payload = {
         "document_id": document_id,
@@ -338,13 +454,12 @@ def enrich_chunks_file_in_batches(
         "theme_name": theme["name"],
     }
 
-    with output_path.open("w", encoding="utf-8") as file:
-        json.dump(payload, file, ensure_ascii=False, indent=2)
+    enriched_chunks_reference = save_enriched_chunks_payload_to_db(payload)
 
     return {
         "document_id": document_id,
         "enrichment_run_id": enrichment_run_id,
-        "enriched_chunks_file": str(output_path),
+        "enriched_chunks_file": enriched_chunks_reference,
         "total_original_chunks": len(chunks),
         "total_enriched_chunks": len(enriched_chunks),
         "offset": offset,
@@ -370,15 +485,11 @@ def enrich_all_chunks_file(
         raise ValueError("Nenhum chunk encontrado para enriquecer.")
 
     enrichment_run_id = str(uuid4())
-    ENRICHED_CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
-
     document_id = chunks_payload["document_id"]
-    output_path = (
-        ENRICHED_CHUNKS_DIR
-        / f"{document_id}_enriched_full_{enrichment_run_id}.json"
-    )
-
     enriched_chunks = []
+    enriched_chunks_reference = (
+        f"{DB_ENRICHED_CHUNKS_URI_PREFIX}{document_id}/{enrichment_run_id}"
+    )
 
     def save_partial_payload() -> None:
         payload = {
@@ -400,8 +511,8 @@ def enrich_all_chunks_file(
             "chunks": enriched_chunks,
         }
 
-        with output_path.open("w", encoding="utf-8") as file:
-            json.dump(payload, file, ensure_ascii=False, indent=2)
+        nonlocal enriched_chunks_reference
+        enriched_chunks_reference = save_enriched_chunks_payload_to_db(payload)
 
     for start in range(0, len(chunks), batch_size):
         batch = chunks[start : start + batch_size]
@@ -417,7 +528,7 @@ def enrich_all_chunks_file(
 
     return {
         "document_id": document_id,
-        "enriched_chunks_file": str(output_path),
+        "enriched_chunks_file": enriched_chunks_reference,
         "total_original_chunks": len(chunks),
         "total_enriched_chunks": len(enriched_chunks),
         "enrichment_mode": "full",

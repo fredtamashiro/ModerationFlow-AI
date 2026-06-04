@@ -3,8 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.chat import router as chat_router
 from app.api.routes.documents import router as documents_router
-from app.api.routes.themes import router as themes_router
+from app.api.routes.health import router as health_router
 from app.api.routes.processing_jobs import router as processing_jobs_router
+from app.api.routes.themes import router as themes_router
 
 app = FastAPI(
     title="SmartDocs IA",
@@ -34,5 +35,6 @@ def health_check():
 
 app.include_router(chat_router)
 app.include_router(documents_router)
+app.include_router(health_router)
 app.include_router(themes_router)
 app.include_router(processing_jobs_router)

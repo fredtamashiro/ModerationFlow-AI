@@ -418,11 +418,14 @@ def index_document_chunks(
 ):
     """Indexa um arquivo de chunks no vector store."""
     try:
-        safe_chunks_file = ensure_path_inside_directory(
-            path_value=chunks_file,
-            base_dir=CHUNKS_DIR,
-            label="chunks_file",
-        )
+        if chunks_file.startswith("db://chunks/"):
+            safe_chunks_file = chunks_file
+        else:
+            safe_chunks_file = ensure_path_inside_directory(
+                path_value=chunks_file,
+                base_dir=CHUNKS_DIR,
+                label="chunks_file",
+            )
 
         result = index_chunks_in_vectorstore(safe_chunks_file)
 

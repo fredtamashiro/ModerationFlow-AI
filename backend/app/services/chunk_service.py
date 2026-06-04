@@ -1,11 +1,14 @@
-import json
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from sqlalchemy import bindparam, text
+from sqlalchemy.dialects.postgresql import JSONB
 
-CHUNKS_DIR = Path("app/storage/chunks")
+from app.database.database import SessionLocal
+
+DB_CHUNKS_URI_PREFIX = "db://chunks/"
 
 
 def split_text_into_chunks(
@@ -76,25 +79,103 @@ def save_chunks_to_json(
     if not chunks:
         raise ValueError("Nenhum chunk foi gerado para salvar.")
 
-    CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
-
     document_id = str(uuid4())
-    output_filename = f"{document_id}.json"
-    output_path = CHUNKS_DIR / output_filename
+    chunks_reference = f"{DB_CHUNKS_URI_PREFIX}{document_id}"
+    source_path = Path(source_file_path)
 
-    payload = {
-        "document_id": document_id,
-        "source_file_path": source_file_path,
-        "chunk_strategy": "recursive_character",
-        "total_chunks": len(chunks),
-        "chunks": chunks,
-    }
+    with SessionLocal() as db:
+        db.execute(
+            text(
+                """
+                INSERT INTO smartdocs.documents (
+                    id,
+                    original_filename,
+                    stored_filename,
+                    file_path,
+                    total_chunks,
+                    chunks_file,
+                    status
+                )
+                VALUES (
+                    CAST(:document_id AS UUID),
+                    :original_filename,
+                    :stored_filename,
+                    :file_path,
+                    :total_chunks,
+                    :chunks_file,
+                    :status
+                )
+                ON CONFLICT (id) DO UPDATE SET
+                    file_path = EXCLUDED.file_path,
+                    total_chunks = EXCLUDED.total_chunks,
+                    chunks_file = EXCLUDED.chunks_file,
+                    updated_at = NOW()
+                """
+            ),
+            {
+                "document_id": document_id,
+                "original_filename": source_path.name,
+                "stored_filename": source_path.name,
+                "file_path": source_file_path,
+                "total_chunks": len(chunks),
+                "chunks_file": chunks_reference,
+                "status": "processing",
+            },
+        )
 
-    with output_path.open("w", encoding="utf-8") as file:
-        json.dump(payload, file, ensure_ascii=False, indent=2)
+        insert_chunk_query = text(
+            """
+            INSERT INTO smartdocs.chunks (
+                id,
+                document_id,
+                chunk_index,
+                page,
+                content,
+                char_count,
+                chunk_strategy,
+                metadata
+            )
+            VALUES (
+                CAST(:id AS UUID),
+                CAST(:document_id AS UUID),
+                :chunk_index,
+                :page,
+                :content,
+                :char_count,
+                :chunk_strategy,
+                :metadata
+            )
+            ON CONFLICT (document_id, chunk_index) DO UPDATE SET
+                page = EXCLUDED.page,
+                content = EXCLUDED.content,
+                char_count = EXCLUDED.char_count,
+                chunk_strategy = EXCLUDED.chunk_strategy,
+                metadata = EXCLUDED.metadata
+            """
+        ).bindparams(bindparam("metadata", type_=JSONB))
+
+        for chunk in chunks:
+            db.execute(
+                insert_chunk_query,
+                {
+                    "id": str(uuid4()),
+                    "document_id": document_id,
+                    "chunk_index": chunk["chunk_index"],
+                    "page": chunk.get("page"),
+                    "content": chunk["content"],
+                    "char_count": chunk.get("char_count"),
+                    "chunk_strategy": chunk.get(
+                        "chunk_strategy",
+                        "recursive_character",
+                    ),
+                    "metadata": chunk.get("metadata", {}),
+                },
+            )
+
+        db.commit()
 
     return {
         "document_id": document_id,
-        "chunks_file": str(output_path),
+        "chunks_file": chunks_reference,
         "total_chunks": len(chunks),
     }

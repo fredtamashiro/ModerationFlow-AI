@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     max_display_source_score: float = 1.0
     display_source_score_margin: float = 0.15
     max_upload_file_size_mb: int = 10
+    database_url: str = "postgresql://smartdocs:smartdocs@postgres:5432/smartdocs"
 
     class Config:
         """Configura como o Pydantic carrega variaveis do arquivo .env."""

@@ -6,6 +6,11 @@ from threading import Lock
 from typing import Any
 from uuid import uuid4
 
+from sqlalchemy import bindparam, text
+from sqlalchemy.dialects.postgresql import JSONB
+
+from app.database.database import SessionLocal
+
 REGISTRY_FILE = Path("app/storage/documents_registry.json")
 _REGISTRY_LOCK = Lock()
 
@@ -91,7 +96,73 @@ def register_document(document_data: dict[str, Any]) -> dict[str, Any]:
 
         _write_documents_registry(documents)
 
+    update_document_in_database(document_data)
+
     return registered_document
+
+
+def update_document_in_database(document_data: dict[str, Any]) -> None:
+    query = text(
+        """
+        UPDATE smartdocs.documents
+        SET
+            original_filename = :original_filename,
+            stored_filename = :stored_filename,
+            file_path = :file_path,
+            collection_name = :collection_name,
+            enriched_collection_name = :enriched_collection_name,
+            retrieval_mode = :retrieval_mode,
+            theme_id = :theme_id,
+            theme_name = :theme_name,
+            total_pages = :total_pages,
+            total_chars = :total_chars,
+            total_chunks = :total_chunks,
+            chunks_file = :chunks_file,
+            enriched_chunks_file = :enriched_chunks_file,
+            document_summary = :document_summary,
+            document_type = :document_type,
+            main_topics = :main_topics,
+            suggested_questions = :suggested_questions,
+            summary_limitations = :summary_limitations,
+            status = :status,
+            updated_at = NOW()
+        WHERE id = CAST(:document_id AS UUID)
+        """
+    ).bindparams(
+        bindparam("main_topics", type_=JSONB),
+        bindparam("suggested_questions", type_=JSONB),
+        bindparam("summary_limitations", type_=JSONB),
+    )
+
+    with SessionLocal() as db:
+        db.execute(
+            query,
+            {
+                "document_id": document_data["document_id"],
+                "original_filename": document_data["original_filename"],
+                "stored_filename": document_data["stored_filename"],
+                "file_path": document_data["file_path"],
+                "collection_name": document_data.get("collection_name"),
+                "enriched_collection_name": document_data.get(
+                    "enriched_collection_name"
+                ),
+                "retrieval_mode": document_data.get("retrieval_mode", "enriched"),
+                "theme_id": document_data.get("theme_id"),
+                "theme_name": document_data.get("theme_name"),
+                "total_pages": document_data.get("total_pages", 0),
+                "total_chars": document_data.get("total_chars", 0),
+                "total_chunks": document_data.get("total_chunks", 0),
+                "chunks_file": document_data.get("chunks_file"),
+                "enriched_chunks_file": document_data.get("enriched_chunks_file"),
+                "document_summary": document_data.get("document_summary"),
+                "document_type": document_data.get("document_type"),
+                "main_topics": document_data.get("main_topics", []),
+                "suggested_questions": document_data.get("suggested_questions", []),
+                "summary_limitations": document_data.get("summary_limitations", []),
+                "status": document_data.get("status", "active"),
+            },
+        )
+        db.commit()
 
 
 def list_registered_documents() -> list[dict[str, Any]]:
