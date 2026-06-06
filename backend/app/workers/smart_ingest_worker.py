@@ -11,9 +11,15 @@ from app.services.processing_job_service import (
     STATUS_COMPLETED,
     STATUS_FAILED,
     STATUS_PROCESSING,
+    get_processing_job,
     update_processing_job,
 )
 from app.services.theme_service import find_theme_by_id
+from app.services.usage_log_service import (
+    EVENT_SMART_INGEST_COMPLETED,
+    EVENT_SMART_INGEST_FAILED,
+    create_usage_log,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +49,22 @@ def run_smart_ingest_job(
     chunk_overlap: int,
     batch_size: int,
 ) -> None:
+    admin_user_id: str | None = None
+    admin_email: str | None = None
+    ip_address: str | None = "unknown"
+    theme_name: str | None = None
+    extracted_text = None
+    saved_chunks = None
+    indexed_document = None
+    uploaded_file_deleted = False
+
     try:
+        processing_job = get_processing_job(job_id)
+        job_payload = processing_job.get("payload") or {}
+        admin_user_id = job_payload.get("admin_user_id")
+        admin_email = job_payload.get("admin_email")
+        ip_address = job_payload.get("ip_address") or "unknown"
+
         update_processing_job(
             job_id,
             {
@@ -151,6 +172,8 @@ def run_smart_ingest_job(
         if theme is None:
             raise ValueError("Tema informado não encontrado.")
 
+        theme_name = theme["name"]
+
         document_payload = {
             "original_filename": saved_file["original_filename"],
             "stored_filename": saved_file["stored_filename"],
@@ -203,6 +226,38 @@ def run_smart_ingest_job(
             },
         )
 
+        try:
+            create_usage_log(
+                event_type=EVENT_SMART_INGEST_COMPLETED,
+                ip_address=ip_address,
+                user_id=admin_user_id,
+                document_id=registered_document["document_id"],
+                metadata={
+                    "document_id": registered_document["document_id"],
+                    "job_id": job_id,
+                    "original_filename": saved_file["original_filename"],
+                    "theme_id": theme_id,
+                    "theme_name": theme_name,
+                    "admin_email": admin_email,
+                    "total_pages": extracted_text["total_pages"],
+                    "total_chars": extracted_text["total_chars"],
+                    "total_chunks": saved_chunks["total_chunks"],
+                    "total_enriched_chunks": indexed_document.get(
+                        "total_enriched_chunks"
+                    ),
+                    "total_embeddings": indexed_document.get("total_embeddings"),
+                    "total_skipped_chunks": indexed_document.get(
+                        "total_skipped_chunks"
+                    ),
+                    "uploaded_file_deleted": uploaded_file_deleted,
+                },
+            )
+        except Exception:
+            logger.exception(
+                "Falha ao registrar usage_log de smart ingest completed %s",
+                job_id,
+            )
+
     except Exception as error:
         logger.exception("Erro ao executar smart ingest job %s", job_id)
 
@@ -214,3 +269,23 @@ def run_smart_ingest_job(
                 "error": str(error),
             },
         )
+
+        try:
+            create_usage_log(
+                event_type=EVENT_SMART_INGEST_FAILED,
+                ip_address=ip_address,
+                user_id=admin_user_id,
+                metadata={
+                    "job_id": job_id,
+                    "original_filename": saved_file.get("original_filename"),
+                    "theme_id": theme_id,
+                    "theme_name": theme_name,
+                    "admin_email": admin_email,
+                    "error": str(error),
+                },
+            )
+        except Exception:
+            logger.exception(
+                "Falha ao registrar usage_log de smart ingest failed %s",
+                job_id,
+            )

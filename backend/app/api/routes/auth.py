@@ -1,6 +1,7 @@
+import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from app.api.admin_auth import require_admin_user
@@ -8,8 +9,14 @@ from app.config import get_settings
 from app.services.auth_service import (
     authenticate_user,
     create_access_token,
-    create_admin_user,
 )
+from app.services.usage_log_service import (
+    EVENT_ADMIN_LOGIN,
+    EVENT_ADMIN_LOGOUT,
+    create_usage_log,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -20,12 +27,6 @@ router = APIRouter(
 class LoginRequest(BaseModel):
     email: str
     password: str
-
-
-class SeedAdminRequest(BaseModel):
-    email: str
-    password: str
-    name: str | None = None
 
 
 class AuthResponse(BaseModel):
@@ -44,7 +45,7 @@ def set_admin_auth_cookie(response: Response, access_token: str) -> None:
     settings = get_settings()
 
     response.set_cookie(
-        key=settings.jwt_cookie_name,
+        key=settings.admin_cookie_name,
         value=access_token,
         httponly=True,
         secure=settings.cookie_secure,
@@ -59,7 +60,7 @@ def clear_admin_auth_cookie(response: Response) -> None:
     settings = get_settings()
 
     response.delete_cookie(
-        key=settings.jwt_cookie_name,
+        key=settings.admin_cookie_name,
         httponly=True,
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
@@ -69,7 +70,7 @@ def clear_admin_auth_cookie(response: Response) -> None:
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(payload: LoginRequest, response: Response):
+def login(payload: LoginRequest, request: Request, response: Response):
     user = authenticate_user(
         email=payload.email,
         password=payload.password,
@@ -84,6 +85,19 @@ def login(payload: LoginRequest, response: Response):
     access_token = create_access_token({"sub": user["id"]})
     set_admin_auth_cookie(response, access_token)
 
+    try:
+        create_usage_log(
+            event_type=EVENT_ADMIN_LOGIN,
+            ip_address=request.client.host if request.client else None,
+            user_id=user["id"],
+            metadata={
+                "email": user["email"],
+                "role": user["role"],
+            },
+        )
+    except Exception:
+        logger.exception("Falha ao registrar usage_log de admin login")
+
     return {
         "user": remove_password_hash(user),
     }
@@ -97,30 +111,23 @@ def get_current_admin_user(
 
 
 @router.post("/logout")
-def logout(response: Response):
+def logout(
+    request: Request,
+    response: Response,
+    user: dict = Depends(require_admin_user),
+):
+    try:
+        create_usage_log(
+            event_type=EVENT_ADMIN_LOGOUT,
+            ip_address=request.client.host if request.client else None,
+            user_id=user["id"],
+            metadata={
+                "email": user["email"],
+                "role": user["role"],
+            },
+        )
+    except Exception:
+        logger.exception("Falha ao registrar usage_log de admin logout")
+
     clear_admin_auth_cookie(response)
     return {"message": "Sessao encerrada com sucesso."}
-
-
-# Endpoint temporario para ambiente local/demo.
-@router.post("/admin/seed")
-def seed_admin_user(payload: SeedAdminRequest):
-    settings = get_settings()
-
-    if settings.app_env.lower() == "production":
-        raise HTTPException(
-            status_code=403,
-            detail="Endpoint indisponivel em producao.",
-        )
-
-    try:
-        return create_admin_user(
-            email=payload.email,
-            password=payload.password,
-            name=payload.name,
-        )
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        ) from error

@@ -9,8 +9,11 @@ from app.database.database import SessionLocal
 PROJECT_SMARTDOCS = "smartdocs"
 EVENT_CHAT_QUESTION = "chat_question"
 EVENT_RATE_LIMIT_BLOCKED = "rate_limit_blocked"
+EVENT_ADMIN_LOGIN = "admin_login"
+EVENT_ADMIN_LOGOUT = "admin_logout"
 EVENT_SMART_INGEST_STARTED = "smart_ingest_started"
 EVENT_SMART_INGEST_COMPLETED = "smart_ingest_completed"
+EVENT_SMART_INGEST_FAILED = "smart_ingest_failed"
 EVENT_DOCUMENT_DELETED = "document_deleted"
 
 

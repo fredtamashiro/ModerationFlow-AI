@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
 from app.api.admin_auth import require_admin_user
 from app.services.document_registry_service import (
@@ -13,6 +13,11 @@ from app.services.document_service import save_uploaded_file
 from app.services.processing_job_service import create_processing_job
 from app.services.queue_service import enqueue_smart_ingest_job
 from app.services.theme_service import find_theme_by_id
+from app.services.usage_log_service import (
+    EVENT_DOCUMENT_DELETED,
+    EVENT_SMART_INGEST_STARTED,
+    create_usage_log,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +56,9 @@ def list_documents():
 
 @router.delete("/{document_id}")
 def delete_document(
+    request: Request,
     document_id: str,
-    _admin_user: dict = Depends(require_admin_user),
+    admin_user: dict = Depends(require_admin_user),
 ):
     try:
         document = find_registered_document_by_id(document_id)
@@ -75,6 +81,21 @@ def delete_document(
                     }
                 )
 
+        try:
+            create_usage_log(
+                event_type=EVENT_DOCUMENT_DELETED,
+                ip_address=request.client.host if request.client else None,
+                user_id=admin_user["id"],
+                document_id=document_id,
+                metadata={
+                    "document_id": document_id,
+                    "original_filename": removed_document.get("original_filename"),
+                    "deleted_files": deleted_files,
+                },
+            )
+        except Exception:
+            logger.exception("Falha ao registrar usage_log de document deleted")
+
         return {
             "message": "Documento apagado com sucesso.",
             "document_id": document_id,
@@ -94,12 +115,13 @@ def delete_document(
 
 @router.post("/smart-ingest/start")
 def start_smart_ingest(
+    request: Request,
     file: UploadFile = File(...),
     theme_id: str = Form("generic_pdf"),
     chunk_size: int = Form(1000),
     chunk_overlap: int = Form(200),
     batch_size: int = Form(10),
-    _admin_user: dict = Depends(require_admin_user),
+    admin_user: dict = Depends(require_admin_user),
 ):
     try:
         theme = find_theme_by_id(theme_id)
@@ -108,6 +130,7 @@ def start_smart_ingest(
             raise ValueError("Tema informado não encontrado.")
 
         saved_file = save_uploaded_file(file)
+        ip_address = request.client.host if request.client else "unknown"
 
         job = create_processing_job(
             job_type="smart_ingest",
@@ -120,6 +143,9 @@ def start_smart_ingest(
                 "chunk_size": chunk_size,
                 "chunk_overlap": chunk_overlap,
                 "batch_size": batch_size,
+                "admin_user_id": admin_user["id"],
+                "admin_email": admin_user["email"],
+                "ip_address": ip_address,
             },
         )
 
@@ -131,6 +157,27 @@ def start_smart_ingest(
             chunk_overlap=chunk_overlap,
             batch_size=batch_size,
         )
+
+        try:
+            create_usage_log(
+                event_type=EVENT_SMART_INGEST_STARTED,
+                ip_address=ip_address,
+                user_id=admin_user["id"],
+                metadata={
+                    "job_id": job["job_id"],
+                    "queue_job_id": queue_job.id,
+                    "original_filename": saved_file["original_filename"],
+                    "stored_filename": saved_file["stored_filename"],
+                    "theme_id": theme["theme_id"],
+                    "theme_name": theme["name"],
+                    "chunk_size": chunk_size,
+                    "chunk_overlap": chunk_overlap,
+                    "batch_size": batch_size,
+                    "admin_email": admin_user["email"],
+                },
+            )
+        except Exception:
+            logger.exception("Falha ao registrar usage_log de smart ingest started")
 
         return {
             "message": "Processamento inteligente iniciado.",

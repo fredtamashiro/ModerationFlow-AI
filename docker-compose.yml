@@ -23,10 +23,12 @@ services:
     build:
       context: ./backend
     container_name: auto-manual-ai-backend
+    command: sh scripts/start_api.sh
     ports:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
+      - ./backend/scripts:/app/scripts
       - ./backend/alembic.ini:/app/alembic.ini
       - ./backend/migrations:/app/migrations
     env_file:
@@ -43,9 +45,10 @@ services:
     build:
       context: ./backend
     container_name: auto-manual-ai-worker
-    command: rq worker smart_ingest --url redis://redis:6379/0
+    command: sh scripts/start_worker.sh
     volumes:
       - ./backend/app:/app/app
+      - ./backend/scripts:/app/scripts
       - ./backend/alembic.ini:/app/alembic.ini
       - ./backend/migrations:/app/migrations
     env_file:

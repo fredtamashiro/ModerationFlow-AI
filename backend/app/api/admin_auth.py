@@ -18,7 +18,7 @@ def require_admin_user(
     if credentials and credentials.credentials:
         token = credentials.credentials
     else:
-        token = request.cookies.get(settings.jwt_cookie_name)
+        token = request.cookies.get(settings.admin_cookie_name)
 
     if not token:
         raise HTTPException(

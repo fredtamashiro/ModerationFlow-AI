@@ -1,49 +1,41 @@
-import os
+import sys
+from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.config import get_settings
 from app.services.auth_service import create_admin_user, get_user_by_email
 
 
-def get_required_env(name: str) -> str:
-    value = os.getenv(name, "").strip()
+def seed_admin() -> None:
+    settings = get_settings()
+    email = settings.admin_seed_email.strip()
+    password = settings.admin_seed_password.strip()
+    name = settings.admin_seed_name.strip() or None
 
-    if not value:
-        raise ValueError(f"Variavel de ambiente obrigatoria ausente: {name}")
-
-    return value
-
-
-def seed_admin() -> dict:
-    email = get_required_env("ADMIN_EMAIL")
-    password = get_required_env("ADMIN_PASSWORD")
-    name = os.getenv("ADMIN_NAME", "").strip() or None
+    if not email or not password:
+        print(
+            "Skipping admin seed: ADMIN_SEED_EMAIL or "
+            "ADMIN_SEED_PASSWORD not configured."
+        )
+        return
 
     existing_user = get_user_by_email(email)
 
     if existing_user:
-        return {
-            "created": False,
-            "user": {
-                "id": existing_user["id"],
-                "email": existing_user["email"],
-                "name": existing_user["name"],
-                "role": existing_user["role"],
-                "is_active": existing_user["is_active"],
-            },
-        }
+        print(f"Admin already exists: {existing_user['email']}")
+        return
 
     created_user = create_admin_user(
         email=email,
         password=password,
         name=name,
     )
-
-    return {
-        "created": True,
-        "user": created_user,
-    }
+    print(f"Admin created successfully: {created_user['email']}")
 
 
 if __name__ == "__main__":
-    result = seed_admin()
-    action = "criado" if result["created"] else "ja existente"
-    print(f"Admin {action}: {result['user']['email']}")
+    seed_admin()

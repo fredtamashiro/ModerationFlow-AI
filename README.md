@@ -1,118 +1,128 @@
 # SmartDocs AI
 
-Plataforma inteligente para consulta de documentos PDF com IA generativa, RAG, embeddings, LangGraph, temas configuraveis e processamento assincrono.
+Plataforma inteligente para consulta de documentos PDF usando IA generativa, RAG, LangGraph, PostgreSQL + pgvector, Redis Queue e Next.js.
+
+## Objetivo do projeto
+
+O SmartDocs AI demonstra uma aplicação real de IA aplicada à ingestão, enriquecimento, indexação semântica e consulta de documentos PDF com respostas contextualizadas e rastreáveis por fontes.
+
+O projeto foi estruturado como uma base de produto real, com separação entre API, worker assíncrono, banco vetorial, autenticação administrativa, rate limit, auditoria operacional e fluxo de deploy reproduzível.
 
 ## Principais funcionalidades
 
-- Upload de PDFs
-- Smart Ingest assincrono
-- Extracao de texto
+- Upload de PDFs por admin
+- Smart Ingest assíncrono
+- Extração de texto
 - Chunking
-- Enriquecimento semantico de chunks com LLM
-- Geracao de `embedding_content`
-- Persistencia em PostgreSQL
-- Busca vetorial com pgvector
-- Consulta via chat com fontes
+- Enriquecimento semântico com LLM
+- Geração de embeddings
+- Armazenamento em PostgreSQL + pgvector
+- Consulta via chat
 - Multi-query retrieval
-- Relevance grading
-- Temas configuraveis
-- Resumo automatico do documento
+- Relevance grader
+- Respostas com fontes
+- Resumo automático do documento
 - Perguntas sugeridas
-- Rate limit com Redis para proteger o chat
-- Logs de uso para auditoria
-- Exclusao de documentos e dados relacionados
-- Frontend em Next.js
+- Temas configuráveis
+- Rate limit com Redis
+- Login admin via cookie HttpOnly
+- Worker RQ para processamento assíncrono
+- Usage logs / auditoria
 
-## Arquitetura em alto nivel
+## Arquitetura
 
-- Frontend Next.js
-- Backend FastAPI
-- PostgreSQL com pgvector
-- Redis para rate limit
-- OpenAI LLM/Embeddings
-- LangChain/LangGraph
-- Storage local para uploads de PDFs
+- Frontend: Next.js / React / TypeScript
+- Backend: FastAPI
+- Worker: RQ + Redis
+- Banco: PostgreSQL + pgvector
+- IA: OpenAI, LangChain, LangGraph
+- Redis: fila e rate limit
+
+Documentação visual:
+
+- [docs/architecture.md](C:/IA/auto-manual-ai/docs/architecture.md:1)
 
 ## Fluxo Smart Ingest
 
-```text
-Upload PDF
--> escolher tema
--> criar job
--> extrair texto
--> gerar chunks
--> persistir chunks no PostgreSQL
--> enriquecer chunks com IA
--> persistir enriched chunks no PostgreSQL
--> gerar embeddings
--> persistir embeddings no pgvector
--> gerar resumo automatico
--> registrar documento
--> liberar consulta no chat
-```
+- Upload PDF
+- cria `processing_job`
+- envia job para Redis Queue
+- worker extrai texto
+- gera chunks
+- enriquece chunks com IA
+- gera `embedding_content`
+- cria embeddings
+- grava no PostgreSQL/pgvector
+- gera resumo automático
+- registra documento
+- remove PDF temporário
+- libera consulta
 
-## Pipeline de pergunta
+## Fluxo de pergunta
 
-```text
-Pergunta do usuario
--> geracao de queries alternativas
--> embedding da pergunta
--> busca vetorial no PostgreSQL + pgvector
--> avaliacao de relevancia dos chunks
--> geracao de resposta com base no contexto
--> retorno com fontes, paginas e motivos de relevancia
-```
+- Pergunta do usuário
+- geração de queries alternativas
+- busca vetorial com pgvector
+- relevance grader
+- montagem de contexto
+- geração da resposta final
+- retorno com fontes, páginas e motivos de relevância
 
-## Tecnologias
+## Segurança e controle de uso
 
-- Python
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
-- pgvector
-- Redis
-- LangChain
-- LangGraph
-- OpenAI
-- Next.js
-- React
-- TypeScript
-- Docker
+- Upload e delete disponíveis apenas para admin
+- Login admin via cookie HttpOnly
+- `COOKIE_SECURE=true` em produção
+- Chat público com rate limit por IP e limite global diário
+- Usage logs em PostgreSQL
+- PDF removido após processamento
 
 ## Como rodar localmente
 
-1. Copie o arquivo `.env.example` para `.env`.
-2. Configure a variavel `OPENAI_API_KEY`.
-3. Suba os servicos:
+1. Configure os arquivos de ambiente com base em:
+   - [backend/.env.example](C:/IA/auto-manual-ai/backend/.env.example:1)
+   - [frontend/.env.example](C:/IA/auto-manual-ai/frontend/.env.example:1)
+
+2. Suba os serviços:
 
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
-4. Acesse o frontend:
+3. Execute o bootstrap do banco:
 
-```text
-http://localhost:2000
+```bash
+docker compose exec backend python app/database/bootstrap.py
 ```
 
-5. Acesse a documentacao do backend:
+4. Acesse:
 
-```text
-http://localhost:8000/docs
-```
+- Frontend: `http://localhost:2000`
+- API Docs: `http://localhost:8000/docs`
 
-## Exemplos de uso
+## Variáveis de ambiente
 
-- Consultar manual automotivo
-- Consultar documentacao tecnica
-- Consultar norma/regulamento
-- Consultar politica interna ou contrato
+Os exemplos de configuração estão em:
+
+- [backend/.env.example](C:/IA/auto-manual-ai/backend/.env.example:1)
+- [frontend/.env.example](C:/IA/auto-manual-ai/frontend/.env.example:1)
+
+## Deploy
+
+O guia inicial de deploy está em:
+
+- [docs/deploy-railway.md](C:/IA/auto-manual-ai/docs/deploy-railway.md:1)
 
 ## Roadmap
 
-- Melhorar UX final
-- Autenticacao
-- Painel admin para logs de uso
-- Avaliacao automatizada de respostas
-- Deploy
-- Experimento futuro com QA extrativo usando Hugging Face
+- Painel admin de métricas
+- Melhorias de UX
+- Exportação de respostas
+- Suporte a múltiplos projetos / demos
+- Storage externo opcional
+- Avaliação automatizada de respostas
+- Experimento futuro com QA extrativo Hugging Face
+
+## Status
+
+Projeto em fase MVP / demo pública.

@@ -128,7 +128,7 @@ THEMES = [
 ]
 
 
-def seed_themes() -> int:
+def seed_themes() -> None:
     query = text(
         """
         INSERT INTO smartdocs.themes (
@@ -182,9 +182,5 @@ def seed_themes() -> int:
 
         db.commit()
 
-    return len(THEMES)
-
-
 if __name__ == "__main__":
-    total = seed_themes()
-    print(f"Temas processados: {total}")
+    seed_themes()
