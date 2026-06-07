@@ -10,6 +10,9 @@
   --accent: #99ff33;
   --accent-secondary: #2f6f6d;
   --accent-foreground: #1a1a1a;
+  --danger: #d64545;
+  --danger-soft: #fdecec;
+  --danger-border: #f3b8b8;
   --border: #d9dde3;
 }
 

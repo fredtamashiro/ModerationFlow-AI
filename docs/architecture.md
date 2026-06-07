@@ -37,16 +37,21 @@ flowchart LR
 
 ## Componentes
 
-- Frontend Next.js: interface pública de consulta e interface administrativa para upload e acompanhamento de processamento.
+- Frontend Next.js: separa a experiência em landing page (`/`) e workspace de documentos (`/documentos`), concentrando consulta pública, perguntas com fontes e operações administrativas de upload e delete.
 - API FastAPI: autenticação administrativa, endpoints de documentos, status de jobs, chat público, health checks e auditoria.
 - Worker RQ: executa o Smart Ingest fora do processo HTTP, consumindo jobs da fila Redis.
 - Redis Queue: desacopla o upload do processamento assíncrono.
 - Redis Rate Limit: protege o chat público por IP e por limite global diário.
-- PostgreSQL + pgvector: armazena documentos, chunks, chunks enriquecidos, embeddings, jobs e usage logs.
+- PostgreSQL + pgvector: armazena documentos, chunks, chunks enriquecidos, embeddings, jobs, uploads temporários e usage logs.
 - OpenAI API: usada para enriquecimento semântico, embeddings, resumo e geração de respostas.
 - LangGraph: coordena o pipeline de pergunta, geração de queries alternativas, grading de relevância e resposta final.
 - Auth admin via cookie HttpOnly: isola operações de upload, delete e leitura de jobs.
 - Usage logs: trilha operacional para eventos de admin, ingestão, falhas e uso.
+
+### Estrutura do frontend
+
+- Home (`/`): apresenta o projeto, a arquitetura e o material de deploy para portfólio e avaliação técnica.
+- Workspace (`/documentos`): concentra a experiência de consulta real, com seletor de documento, resumo, tópicos principais, perguntas sugeridas, histórico local e respostas com fontes.
 
 ## Fluxo Smart Ingest
 
@@ -55,6 +60,7 @@ flowchart TD
     Admin[Admin autenticado]
     Front[Frontend]
     Api[API FastAPI]
+    Uploads[(smartdocs.uploaded_files)]
     Jobs[(smartdocs.processing_jobs)]
     Queue[Redis Queue]
     Worker[Worker RQ]
@@ -64,10 +70,12 @@ flowchart TD
 
     Admin --> Front
     Front --> Api
+    Api --> Uploads
     Api --> Jobs
     Api --> Queue
     Api --> Logs
     Queue --> Worker
+    Worker --> Uploads
     Worker --> Jobs
     Worker --> OpenAI
     Worker --> Pg
@@ -77,9 +85,12 @@ flowchart TD
 ### Etapas do Smart Ingest
 
 - upload do PDF pelo admin
+- API salva o PDF temporariamente em `smartdocs.uploaded_files`
 - criação do `processing_job`
 - enqueue do job no Redis
 - consumo pelo worker
+- worker recupera o arquivo pelo banco
+- worker processa o PDF
 - extração de texto
 - geração de chunks
 - enriquecimento semântico com IA
@@ -88,7 +99,7 @@ flowchart TD
 - persistência em PostgreSQL + pgvector
 - geração de resumo automático
 - registro final do documento
-- remoção do PDF temporário
+- worker remove o arquivo temporário após sucesso/falha
 
 ## Fluxo de pergunta / RAG
 

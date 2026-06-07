@@ -42,6 +42,11 @@ Documentação visual:
 
 - [docs/architecture.md](C:/IA/auto-manual-ai/docs/architecture.md:1)
 
+## Experiência web
+
+- `/`: landing page do projeto, com foco em apresentação, arquitetura e deploy
+- `/documentos`: workspace de consulta, com seleção de documento, resumo, tópicos, histórico local de perguntas, respostas com fontes e ações administrativas para upload e delete
+
 ## Documentação
 
 - [docs/architecture.md](C:/IA/auto-manual-ai/docs/architecture.md:1)
@@ -53,8 +58,11 @@ Documentação visual:
 ## Fluxo Smart Ingest
 
 - Upload PDF
+- API salva o PDF temporariamente em `smartdocs.uploaded_files`
 - cria `processing_job`
 - envia job para Redis Queue
+- worker recupera o arquivo pelo banco
+- worker processa o PDF
 - worker extrai texto
 - gera chunks
 - enriquece chunks com IA
@@ -63,7 +71,7 @@ Documentação visual:
 - grava no PostgreSQL/pgvector
 - gera resumo automático
 - registra documento
-- remove PDF temporário
+- worker remove o arquivo temporário após sucesso/falha
 - libera consulta
 
 ## Fluxo de pergunta
@@ -84,6 +92,7 @@ Documentação visual:
 - Chat público com rate limit por IP e limite global diário
 - Usage logs em PostgreSQL
 - PDF removido após processamento
+- O PDF original é armazenado apenas temporariamente para processamento e removido após o Smart Ingest
 
 ## Como rodar localmente
 
