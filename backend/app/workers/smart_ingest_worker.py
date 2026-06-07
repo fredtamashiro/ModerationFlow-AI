@@ -15,6 +15,11 @@ from app.services.processing_job_service import (
     update_processing_job,
 )
 from app.services.theme_service import find_theme_by_id
+from app.services.uploaded_file_service import (
+    delete_uploaded_file_from_db,
+    get_uploaded_file_from_db,
+    write_uploaded_file_to_temp,
+)
 from app.services.usage_log_service import (
     EVENT_SMART_INGEST_COMPLETED,
     EVENT_SMART_INGEST_FAILED,
@@ -53,6 +58,10 @@ def run_smart_ingest_job(
     admin_email: str | None = None
     ip_address: str | None = "unknown"
     theme_name: str | None = None
+    uploaded_file_id: str | None = saved_file.get("uploaded_file_id")
+    original_filename: str | None = saved_file.get("original_filename")
+    uploaded_file_storage = "postgres_temp"
+    temp_file_path: str | None = None
     extracted_text = None
     saved_chunks = None
     indexed_document = None
@@ -64,6 +73,23 @@ def run_smart_ingest_job(
         admin_user_id = job_payload.get("admin_user_id")
         admin_email = job_payload.get("admin_email")
         ip_address = job_payload.get("ip_address") or "unknown"
+        uploaded_file_id = job_payload.get("uploaded_file_id") or uploaded_file_id
+        original_filename = job_payload.get("original_filename") or original_filename
+
+        if not uploaded_file_id:
+            raise ValueError("uploaded_file_id nao informado no job.")
+
+        uploaded_file = get_uploaded_file_from_db(uploaded_file_id)
+
+        if uploaded_file is None:
+            raise ValueError("Arquivo de upload nao encontrado.")
+
+        temp_file_path = write_uploaded_file_to_temp(uploaded_file)
+        saved_file = {
+            **saved_file,
+            **uploaded_file,
+            "path": temp_file_path,
+        }
 
         update_processing_job(
             job_id,
@@ -177,7 +203,8 @@ def run_smart_ingest_job(
         document_payload = {
             "original_filename": saved_file["original_filename"],
             "stored_filename": saved_file["stored_filename"],
-            "file_path": saved_file["path"],
+            "file_path": saved_file.get("file_path"),
+            "storage_url": uploaded_file_storage,
             "document_id": indexed_document["document_id"],
             "collection_name": indexed_document["collection_name"],
             "enriched_collection_name": indexed_document["collection_name"],
@@ -200,7 +227,7 @@ def run_smart_ingest_job(
         }
 
         registered_document = register_document(document_payload)
-        uploaded_file_deleted = remove_file_if_exists(saved_file["path"])
+        uploaded_file_deleted = delete_uploaded_file_from_db(uploaded_file_id)
 
         update_processing_job(
             job_id,
@@ -222,6 +249,7 @@ def run_smart_ingest_job(
                     "total_skipped_chunks": indexed_document.get("total_skipped_chunks"),
                     "skipped_chunks": indexed_document.get("skipped_chunks", []),
                     "uploaded_file_deleted": uploaded_file_deleted,
+                    "uploaded_file_storage": uploaded_file_storage,
                 },
             },
         )
@@ -250,6 +278,7 @@ def run_smart_ingest_job(
                         "total_skipped_chunks"
                     ),
                     "uploaded_file_deleted": uploaded_file_deleted,
+                    "uploaded_file_storage": uploaded_file_storage,
                 },
             )
         except Exception:
@@ -270,6 +299,15 @@ def run_smart_ingest_job(
             },
         )
 
+        if uploaded_file_id:
+            try:
+                uploaded_file_deleted = delete_uploaded_file_from_db(uploaded_file_id)
+            except Exception:
+                logger.exception(
+                    "Falha ao remover uploaded_file temporario do job %s",
+                    job_id,
+                )
+
         try:
             create_usage_log(
                 event_type=EVENT_SMART_INGEST_FAILED,
@@ -277,11 +315,13 @@ def run_smart_ingest_job(
                 user_id=admin_user_id,
                 metadata={
                     "job_id": job_id,
-                    "original_filename": saved_file.get("original_filename"),
+                    "original_filename": original_filename,
                     "theme_id": theme_id,
                     "theme_name": theme_name,
                     "admin_email": admin_email,
                     "error": str(error),
+                    "uploaded_file_deleted": uploaded_file_deleted,
+                    "uploaded_file_storage": uploaded_file_storage,
                 },
             )
         except Exception:
@@ -289,3 +329,5 @@ def run_smart_ingest_job(
                 "Falha ao registrar usage_log de smart ingest failed %s",
                 job_id,
             )
+    finally:
+        remove_file_if_exists(temp_file_path)

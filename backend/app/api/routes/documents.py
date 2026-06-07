@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
@@ -9,10 +10,10 @@ from app.services.document_registry_service import (
     find_registered_document_by_id,
     list_registered_documents,
 )
-from app.services.document_service import save_uploaded_file
 from app.services.processing_job_service import create_processing_job
 from app.services.queue_service import enqueue_smart_ingest_job
 from app.services.theme_service import find_theme_by_id
+from app.services.uploaded_file_service import save_uploaded_file_to_db
 from app.services.usage_log_service import (
     EVENT_DOCUMENT_DELETED,
     EVENT_SMART_INGEST_STARTED,
@@ -129,15 +130,21 @@ def start_smart_ingest(
         if theme is None:
             raise ValueError("Tema informado não encontrado.")
 
-        saved_file = save_uploaded_file(file)
         ip_address = request.client.host if request.client else "unknown"
+        original_filename = file.filename or "documento.pdf"
+        file_extension = Path(original_filename).suffix.lower() or ".pdf"
+        stored_filename = f"{uuid4()}{file_extension}"
+        saved_file = save_uploaded_file_to_db(file, stored_filename)
 
         job = create_processing_job(
             job_type="smart_ingest",
             payload={
+                "uploaded_file_id": saved_file["uploaded_file_id"],
                 "original_filename": saved_file["original_filename"],
                 "stored_filename": saved_file["stored_filename"],
-                "file_path": saved_file["path"],
+                "content_type": saved_file["content_type"],
+                "file_size": saved_file["file_size"],
+                "file_path": saved_file["file_path"],
                 "theme_id": theme["theme_id"],
                 "theme_name": theme["name"],
                 "chunk_size": chunk_size,
@@ -166,8 +173,11 @@ def start_smart_ingest(
                 metadata={
                     "job_id": job["job_id"],
                     "queue_job_id": queue_job.id,
+                    "uploaded_file_id": saved_file["uploaded_file_id"],
                     "original_filename": saved_file["original_filename"],
                     "stored_filename": saved_file["stored_filename"],
+                    "content_type": saved_file["content_type"],
+                    "file_size": saved_file["file_size"],
                     "theme_id": theme["theme_id"],
                     "theme_name": theme["name"],
                     "chunk_size": chunk_size,
