@@ -1,48 +1,56 @@
-import { ShieldCheck } from "lucide-react";
+import { Brain, LockKeyhole, ShieldCheck } from "lucide-react";
 
-import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { AuthUser } from "@/services/api";
+import { Card } from "@/components/ui/card";
 
-type ArchitectureSummaryProps = {
-  adminUser: AuthUser | null;
-  isCheckingSession: boolean;
-};
+const items = [
+  {
+    title: "Projeto em produção",
+    description:
+      "Frontend, API, worker, PostgreSQL, Redis e domínio próprio.",
+    icon: ShieldCheck,
+    className: "bg-white p-6 md:col-span-2",
+  },
+  {
+    title: "IA aplicada",
+    description:
+      "RAG, embeddings, pgvector, LangGraph e respostas com fontes.",
+    icon: Brain,
+    className: "bg-white p-6",
+  },
+  {
+    title: "Operação segura",
+    description:
+      "Login admin, rate limit, usage logs e processamento assíncrono.",
+    icon: LockKeyhole,
+    className: "bg-white p-6",
+  },
+] as const;
 
-export function ArchitectureSummary({
-  adminUser,
-  isCheckingSession,
-}: ArchitectureSummaryProps) {
+export function ArchitectureSummary() {
   return (
-    <div className="grid gap-4">
-      <Card className="rounded-[20px] border-[#d9dde3] bg-white p-6">
-        <CardTitle className="flex items-center gap-2 text-[#1A1A1A]">
-          <ShieldCheck className="h-5 w-5 text-[#99FF33]" />
-          Operação administrativa
-        </CardTitle>
-        <CardDescription className="text-[#666666]">
-          Login via cookie HttpOnly, upload restrito e logs operacionais para
-          acompanhar ingestão, falhas e exclusões.
-        </CardDescription>
-      </Card>
+    <div className="grid gap-4 md:grid-cols-2">
+      {items.map((item) => {
+        const Icon = item.icon;
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="rounded-[20px] border-[#d9dde3] bg-[#F7F8FA] p-5">
-          <p className="text-sm font-medium text-[#666666]">Status admin</p>
-          <p className="mt-2 text-lg font-semibold text-[#1A1A1A]">
-            {isCheckingSession
-              ? "Verificando..."
-              : adminUser
-                ? "Autenticado"
-                : "Não autenticado"}
-          </p>
-        </Card>
-        <Card className="rounded-[20px] border-[#d9dde3] bg-[#F7F8FA] p-5">
-          <p className="text-sm font-medium text-[#666666]">Stack</p>
-          <p className="mt-2 text-lg font-semibold text-[#1A1A1A]">
-            FastAPI, RQ, Redis e pgvector
-          </p>
-        </Card>
-      </div>
+        return (
+          <Card
+            key={item.title}
+            className={`rounded-[20px] border-[var(--border)] ${item.className}`}
+          >
+            <div className="grid gap-4">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-[var(--accent)]">
+                <Icon className="h-10 w-10" />
+              </span>
+              <div>
+                <h2 className="heading-4 text-[var(--foreground)]">{item.title}</h2>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted-foreground)]">
+                  {item.description}
+                </p>
+              </div>
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 }

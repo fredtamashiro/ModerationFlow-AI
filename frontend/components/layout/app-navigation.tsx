@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export const appNavItems = [
   { label: "Início", href: "/" },
-  { label: "Documentos", href: "/documentos" },
+  { label: "Ver Demo", href: "/documentos" },
 ] as const;
 
 function isActiveItem(href: string, pathname: string): boolean {
@@ -29,8 +29,8 @@ export function AppNavigation() {
             className={cn(
               "text-sm font-semibold transition",
               isActive
-                ? "text-[#2F6F6D]"
-                : "text-[#1A1A1A] hover:text-[#2F6F6D]",
+                ? "text-[var(--accent-secondary)]"
+                : "text-[var(--foreground)] hover:text-[var(--accent-secondary)]",
             )}
             aria-current={isActive ? "page" : undefined}
           >

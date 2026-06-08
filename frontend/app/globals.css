@@ -8,12 +8,18 @@
   --surface-soft: #f7f8fa;
   --surface-alt: #f0f2f5;
   --accent: #99ff33;
+  --accent-hover: #8ce82f;
+  --accent-active: #7fd229;
+  --accent-soft: #efffdd;
+  --accent-border: #cfeea6;
   --accent-secondary: #2f6f6d;
   --accent-foreground: #1a1a1a;
   --danger: #d64545;
   --danger-soft: #fdecec;
   --danger-border: #f3b8b8;
+  --warning-foreground: #7a6240;
   --border: #d9dde3;
+  --overlay: rgb(26 26 26 / 45%);
 }
 
 @theme inline {

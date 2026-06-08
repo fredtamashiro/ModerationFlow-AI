@@ -43,7 +43,7 @@ export function AppHeader({
   }, [isMenuOpen]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 border-b border-[#d9dde3] bg-white">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center overflow-hidden">
@@ -56,7 +56,7 @@ export function AppHeader({
               unoptimized
             />
           </span>
-          <span className="text-2xl font-semibold tracking-tight text-[#1A1A1A]">
+          <span className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
             FredTamashiro
           </span>
         </Link>
@@ -96,7 +96,7 @@ export function AppHeader({
                     onLogout();
                   }}
                   disabled={isLoggingOut}
-                  className="mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#1A1A1A] transition hover:bg-[#F0F2F5] disabled:opacity-60"
+                  className="mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[var(--foreground)] transition hover:bg-[var(--surface-alt)] disabled:opacity-60"
                 >
                   <LogOut className="h-4 w-4" />
                   {isLoggingOut ? "Saindo..." : "Sair"}
@@ -109,7 +109,7 @@ export function AppHeader({
             type="button"
             onClick={onLoginClick}
             disabled={isCheckingSession}
-            className="h-12 rounded-md bg-[#99FF33] px-6 text-[#1A1A1A] hover:brightness-95"
+            className="h-12 rounded-md bg-[var(--accent)] px-6 text-[var(--accent-foreground)] hover:brightness-95"
           >
             {isCheckingSession ? "Verificando..." : "Login"}
           </Button>

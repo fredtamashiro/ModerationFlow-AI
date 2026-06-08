@@ -13,7 +13,7 @@ export function Progress({ className, value, ...props }: ProgressProps) {
       {...props}
     >
       <div
-        className="h-full rounded-full bg-[#99FF33] transition-all"
+        className="h-full rounded-full bg-[var(--accent)] transition-all"
         style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
       />
     </div>

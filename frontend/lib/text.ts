@@ -1,4 +1,4 @@
-const MOJIBAKE_PATTERN = /[ÃÂ�]/;
+const MOJIBAKE_PATTERN = /[\u00C3\u00C2\uFFFD]/;
 
 export function normalizeUtf8Text(value: string | null | undefined): string {
   if (!value) {

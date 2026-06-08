@@ -40,14 +40,7 @@ export default function DocumentosPage() {
         </section>
       </main>
 
-      <AppFooter
-        links={[
-          { label: "Home", href: "/" },
-          { label: "Documentos", href: "/documentos" },
-          { label: "Arquitetura", href: "/#arquitetura" },
-          { label: "Deploy", href: "/#deploy" },
-        ]}
-      />
+      <AppFooter />
     </>
   );
 }

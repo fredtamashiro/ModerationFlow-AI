@@ -42,14 +42,11 @@ export default function Home() {
         onLoggedIn={handleLoggedIn}
       />
 
-      <main className="min-h-screen bg-[#fafafa] pt-28 text-[#1A1A1A]">
-        <section id="home" className="scroll-mt-28 bg-[#fafafa] py-10">
+      <main className="min-h-screen bg-[var(--background)] pt-28 text-[var(--foreground)]">
+        <section id="home" className="scroll-mt-28 bg-[var(--background)] py-10">
           <PageContainer className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
             <HeroSection />
-            <ArchitectureSummary
-              adminUser={adminUser}
-              isCheckingSession={isCheckingSession}
-            />
+            <ArchitectureSummary />
           </PageContainer>
         </section>
 
@@ -73,15 +70,7 @@ export default function Home() {
         <DeploySection />
       </main>
 
-      <AppFooter
-        links={[
-          { label: "Início", href: "#home" },
-          { label: "Fluxo", href: "#fluxo" },
-          { label: "Arquitetura", href: "#arquitetura" },
-          { label: "Documentos", href: "/documentos" },
-          { label: "Deploy", href: "#deploy" },
-        ]}
-      />
+      <AppFooter />
     </>
   );
 }

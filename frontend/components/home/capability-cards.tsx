@@ -1,47 +1,66 @@
-import { Database, ShieldCheck, Workflow } from "lucide-react";
+import {
+  Brain,
+  Cloud,
+  Monitor,
+  Server,
+} from "lucide-react";
 
 import { PageContainer } from "@/components/layout/page-container";
-import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 const items = [
   {
-    title: "Smart Ingest",
+    title: "Engenharia de IA aplicada",
     description:
-      "Upload, fila Redis, worker separado, enriquecimento com IA e atualização de status por job.",
-    icon: Workflow,
+      "Uso de LLMs, embeddings, RAG, LangGraph e busca vetorial em um produto funcional.",
+    icon: Brain,
   },
   {
-    title: "Base consultável",
+    title: "Backend robusto",
     description:
-      "Chunks, embeddings e documentos registrados em PostgreSQL com busca vetorial via pgvector.",
-    icon: Database,
+      "FastAPI, PostgreSQL, Redis, worker assíncrono, migrations, bootstrap e logs.",
+    icon: Server,
   },
   {
-    title: "Controle operacional",
+    title: "Produto full stack",
     description:
-      "Rate limit no chat público, autenticação admin e usage logs para auditoria de eventos.",
-    icon: ShieldCheck,
+      "Interface moderna em Next.js, área pública, workspace de consulta e painel admin.",
+    icon: Monitor,
   },
-];
+  {
+    title: "Deploy real",
+    description:
+      "Aplicação publicada com serviços separados, banco vetorial e domínio próprio.",
+    icon: Cloud,
+  },
+] as const;
 
 export function CapabilityCards() {
   return (
-    <section id="fluxo" className="scroll-mt-28 bg-white py-10">
-      <PageContainer>
-        <div className="grid gap-4 md:grid-cols-3">
+    <section className="bg-white py-14">
+      <PageContainer className="grid gap-8">
+        <div className="text-center">
+          <h2 className="heading-2 text-[var(--foreground)]">
+            O que este projeto demonstra
+          </h2>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-4">
           {items.map((item) => {
             const Icon = item.icon;
 
             return (
               <Card
                 key={item.title}
-                className="rounded-[20px] border-[#d9dde3] bg-[#F7F8FA] p-6"
+                className="rounded-[20px] border-[var(--border)] bg-[var(--surface)] p-6"
               >
-                <CardTitle className="flex items-center gap-2">
-                  <Icon className="h-5 w-5 text-[#99FF33]" />
-                  {item.title}
-                </CardTitle>
-                <CardDescription>{item.description}</CardDescription>
+                <span className="inline-flex h-10 w-10 items-center justify-center text-[var(--accent)]">
+                  <Icon className="h-10 w-10" />
+                </span>
+                <h3 className="heading-4 mt-5 text-[var(--foreground)]">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[var(--muted-foreground)]">
+                  {item.description}
+                </p>
               </Card>
             );
           })}

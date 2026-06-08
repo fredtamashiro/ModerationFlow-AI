@@ -1,12 +1,24 @@
 "use client";
 
-import { Children, ReactNode, isValidElement, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Children,
+  cloneElement,
+  ReactElement,
+  ReactNode,
+  isValidElement,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 
 import { ChatHistoryEntry } from "@/lib/chat-history";
 import { normalizeUtf8Text } from "@/lib/text";
 import { ChatSource } from "@/services/api";
+
+type ElementWithChildren = ReactElement<{ children?: ReactNode }>;
 
 type AnswerPanelProps = {
   history: ChatHistoryEntry[];
@@ -44,7 +56,7 @@ function extractTextContent(children: ReactNode): string {
         return String(child);
       }
 
-      if (isValidElement(child)) {
+      if (isValidElement<{ children?: ReactNode }>(child)) {
         return extractTextContent(child.props.children);
       }
 
@@ -80,14 +92,11 @@ function stripLeadingText(children: ReactNode, prefix: string): ReactNode {
       return node.map(visit);
     }
 
-    if (isValidElement(node)) {
-      return {
-        ...node,
-        props: {
-          ...node.props,
-          children: visit(node.props.children),
-        },
-      };
+    if (isValidElement<{ children?: ReactNode }>(node)) {
+      const element = node as ElementWithChildren;
+      return cloneElement(element, {
+        children: visit(element.props.children),
+      });
     }
 
     return node;
@@ -184,6 +193,8 @@ type HistoryItemProps = {
 function HistoryItem({ entry, isExpanded, onToggle }: HistoryItemProps) {
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
   const itemRef = useRef<HTMLDivElement | null>(null);
+  const hasMountedRef = useRef(false);
+  const previousExpandedRef = useRef(isExpanded);
 
   const normalizedAnswer = useMemo(
     () => injectSourceLinks(normalizeUtf8Text(entry.answer)),
@@ -199,7 +210,16 @@ function HistoryItem({ entry, isExpanded, onToggle }: HistoryItemProps) {
   }, [entry.sources, selectedPage]);
 
   useEffect(() => {
-    if (!isExpanded) {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      previousExpandedRef.current = isExpanded;
+      return;
+    }
+
+    const wasExpanded = previousExpandedRef.current;
+    previousExpandedRef.current = isExpanded;
+
+    if (!isExpanded || wasExpanded) {
       return;
     }
 
@@ -266,6 +286,7 @@ function HistoryItem({ entry, isExpanded, onToggle }: HistoryItemProps) {
                   p: ({ children }) => {
                     const textContent = extractTextContent(children).trimStart();
                     const limitationPrefix = "Limitação:";
+                    const inferencePrefix = "Inferência:";
 
                     if (textContent.startsWith(limitationPrefix)) {
                       const contentWithoutPrefix = stripLeadingText(
@@ -275,13 +296,29 @@ function HistoryItem({ entry, isExpanded, onToggle }: HistoryItemProps) {
 
                       return (
                         <div className="mt-6 border-t border-dashed border-[#d9dde3] pt-4">
-                          <p className="mb-3 italic last:mb-0">
-                            <strong className="font-semibold text-[#1A1A1A]">
+                          <p className="mb-3 text-[var(--warning-foreground)] last:mb-0">
+                            <strong className="font-semibold text-[var(--warning-foreground)]">
                               Limitação:
                             </strong>{" "}
                             {contentWithoutPrefix}
                           </p>
                         </div>
+                      );
+                    }
+
+                    if (textContent.startsWith(inferencePrefix)) {
+                      const contentWithoutPrefix = stripLeadingText(
+                        children,
+                        inferencePrefix,
+                      );
+
+                      return (
+                        <p className="mb-3 italic last:mb-0">
+                          <strong className="font-semibold italic text-[#1A1A1A]">
+                            Inferência:
+                          </strong>{" "}
+                          {contentWithoutPrefix}
+                        </p>
                       );
                     }
 
