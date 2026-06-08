@@ -15,6 +15,22 @@ class Settings(BaseSettings):
     openai_chat_model: str = "gpt-5-mini"
     openai_chat_temperature: float = 1
     openai_embedding_model: str = "text-embedding-3-small"
+    chat_alternative_queries_limit: int = 3
+    enable_multi_query: bool = True
+    max_search_queries: int = 2
+    max_chunks_to_grade: int = 3
+    enable_batch_relevance_grader: bool = True
+    skip_grader_for_high_confidence_retrieval: bool = True
+    high_confidence_vector_distance_threshold: float = 0.25
+    min_high_confidence_chunks: int = 2
+    max_answer_context_chunks: int = 2
+    max_answer_context_chars_per_chunk: int = 900
+    question_guard_enabled: bool = True
+    question_guard_blocked_terms: str = ""
+    chat_answer_cache_enabled: bool = True
+    chat_answer_cache_semantic_enabled: bool = True
+    chat_answer_cache_similarity_threshold: float = 0.06
+    chat_answer_cache_ttl_days: int = 30
     
     max_relevance_score: float = 1.2
     max_display_source_score: float = 1.0

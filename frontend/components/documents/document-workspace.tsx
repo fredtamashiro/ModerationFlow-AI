@@ -2,16 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { AnswerPanel } from "@/components/documents/answer-panel";
+import { AnswerLoadingSteps } from "@/components/documents/answer-loading-steps";
 import { DocumentSelector } from "@/components/documents/document-selector";
 import { DocumentSummaryCard } from "@/components/documents/document-summary-card";
+import { EmptyDocumentsState } from "@/components/documents/empty-documents-state";
+import { ImportDocumentModal } from "@/components/documents/import-document-modal";
+import { LimitationsPanel } from "@/components/documents/limitations-panel";
 import { MainTopics } from "@/components/documents/main-topics";
 import { QuestionBox } from "@/components/documents/question-box";
-import { AnswerPanel } from "@/components/documents/answer-panel";
 import { SuggestedQuestions } from "@/components/documents/suggested-questions";
-import { LimitationsPanel } from "@/components/documents/limitations-panel";
 import { TechnicalMetadata } from "@/components/documents/technical-metadata";
-import { ImportDocumentModal } from "@/components/documents/import-document-modal";
-import { EmptyDocumentsState } from "@/components/documents/empty-documents-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/lib/chat-history";
 import { normalizeUtf8Text } from "@/lib/text";
 import {
+  ApiError,
   askQuestion,
   AuthUser,
   ChatResponse,
@@ -56,10 +58,12 @@ export function DocumentWorkspace({ adminUser }: DocumentWorkspaceProps) {
       null,
     [documents, selectedDocumentId],
   );
+
   const currentHistory = useMemo(
     () => (selectedDocumentId ? historyByDocument[selectedDocumentId] ?? [] : []),
     [historyByDocument, selectedDocumentId],
   );
+
   const effectiveExpandedHistoryItemId = useMemo(() => {
     if (expandedHistoryItemId === undefined) {
       return currentHistory[0]?.id ?? null;
@@ -100,7 +104,7 @@ export function DocumentWorkspace({ adminUser }: DocumentWorkspaceProps) {
 
         setSelectedDocumentId(nextSelectedDocument.document_id);
       } catch {
-        setDocumentsErrorMessage("Não foi possível carregar os documentos.");
+        setDocumentsErrorMessage("Nao foi possivel carregar os documentos.");
       } finally {
         setIsLoadingDocuments(false);
       }
@@ -166,11 +170,15 @@ export function DocumentWorkspace({ adminUser }: DocumentWorkspaceProps) {
         setExpandedHistoryItemId(nextEntry.id);
         setQuestion("");
       } catch (error) {
-        setAnswerErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Não foi possível obter uma resposta.",
-        );
+        if (error instanceof ApiError && error.status === 400) {
+          setAnswerErrorMessage(error.message);
+        } else {
+          setAnswerErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel obter uma resposta.",
+          );
+        }
       } finally {
         setIsAsking(false);
       }
@@ -195,7 +203,7 @@ export function DocumentWorkspace({ adminUser }: DocumentWorkspaceProps) {
       await deleteDocument(selectedDocument.document_id);
       await loadDocuments();
     } catch {
-      setDocumentsErrorMessage("Não foi possível apagar o documento.");
+      setDocumentsErrorMessage("Nao foi possivel apagar o documento.");
     }
   }
 
@@ -235,7 +243,7 @@ export function DocumentWorkspace({ adminUser }: DocumentWorkspaceProps) {
             <h1 className="heading-2 text-[#1A1A1A]">Workspace de documentos</h1>
             <p className="mt-2 text-sm leading-7 text-[#666666]">
               Selecione um documento processado, revise o resumo, explore os
-              tópicos principais e converse com a base vetorial em um fluxo mais
+              topicos principais e converse com a base vetorial em um fluxo mais
               direto para uso real.
             </p>
           </div>
@@ -262,6 +270,7 @@ export function DocumentWorkspace({ adminUser }: DocumentWorkspaceProps) {
               </CardContent>
             </Card>
           )}
+
           {selectedDocument && (
             <>
               <DocumentSummaryCard summary={selectedDocument.document_summary} />
@@ -282,9 +291,11 @@ export function DocumentWorkspace({ adminUser }: DocumentWorkspaceProps) {
                   onQuestionChange={setQuestion}
                   onSubmit={() => void submitQuestion(question)}
                 >
+                  {isAsking && <AnswerLoadingSteps isLoading={isAsking} />}
                   <AnswerPanel
                     history={currentHistory}
                     errorMessage={answerErrorMessage}
+                    isLoading={isAsking}
                     expandedItemId={effectiveExpandedHistoryItemId}
                     onToggleItem={(itemId) =>
                       setExpandedHistoryItemId((currentItemId) =>
@@ -306,9 +317,7 @@ export function DocumentWorkspace({ adminUser }: DocumentWorkspaceProps) {
                 <LimitationsPanel
                   limitations={selectedDocument.summary_limitations}
                 />
-                <TechnicalMetadata
-                  document={selectedDocument}
-                />
+                <TechnicalMetadata document={selectedDocument} />
               </aside>
             </div>
           </PageContainer>

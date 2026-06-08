@@ -15,6 +15,23 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
+type ApiErrorDetail = {
+  message?: string;
+  reason?: string;
+};
+
+export class ApiError extends Error {
+  status: number;
+  reason?: string;
+
+  constructor(message: string, status: number, reason?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.reason = reason;
+  }
+}
+
 function createApiUrl(path: string): string {
   return `${API_URL}${path}`;
 }
@@ -39,6 +56,29 @@ async function getErrorMessage(
   }
 
   return fallbackMessage;
+}
+
+async function getErrorDetail(response: Response): Promise<ApiErrorDetail | null> {
+  try {
+    const payload = await response.json();
+    const detail = payload?.detail;
+
+    if (typeof detail === "string") {
+      return { message: detail };
+    }
+
+    if (detail && typeof detail === "object") {
+      return {
+        message:
+          typeof detail.message === "string" ? detail.message : undefined,
+        reason: typeof detail.reason === "string" ? detail.reason : undefined,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 function getAdminRequestInit(init?: RequestInit): RequestInit {
@@ -220,8 +260,11 @@ export async function askQuestion(params: {
   });
 
   if (!response.ok) {
-    throw new Error(
-      await getErrorMessage(response, "Erro ao enviar pergunta."),
+    const detail = await getErrorDetail(response);
+    throw new ApiError(
+      detail?.message ?? "Erro ao enviar pergunta.",
+      response.status,
+      detail?.reason,
     );
   }
 

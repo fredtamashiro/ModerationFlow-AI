@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { LockKeyhole, LogIn, X } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, LogIn, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ export function AdminLogin({
 }: AdminLoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -52,6 +53,7 @@ export function AdminLogin({
       });
 
       setPassword("");
+      setIsPasswordVisible(false);
       setErrorMessage("");
       onOpenChange(false);
       onLoggedIn(result.user);
@@ -126,14 +128,33 @@ export function AdminLogin({
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Senha
               </label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Sua senha"
-                autoComplete="current-password"
-                disabled={isSubmitting}
-              />
+              <div className="relative">
+                <Input
+                  type={isPasswordVisible ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Sua senha"
+                  autoComplete="current-password"
+                  disabled={isSubmitting}
+                  className="pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordVisible((current) => !current)}
+                  disabled={isSubmitting}
+                  className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-slate-500 transition hover:text-[#1A1A1A] disabled:cursor-not-allowed disabled:opacity-60"
+                  aria-label={
+                    isPasswordVisible ? "Ocultar senha" : "Exibir senha"
+                  }
+                  aria-pressed={isPasswordVisible}
+                >
+                  {isPasswordVisible ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <Button

@@ -1,3 +1,5 @@
+from collections.abc import Callable
+from time import perf_counter
 from typing import Any
 
 from langchain_openai import OpenAIEmbeddings
@@ -15,15 +17,23 @@ def search_similar_chunks_pgvector(
     document_id: str,
     query: str,
     k: int = 4,
+    query_embedding: list[float] | None = None,
+    on_timing: Callable[[str, int], None] | None = None,
 ) -> list[dict[str, Any]]:
     settings = get_settings()
+    resolved_query_embedding = query_embedding
 
-    embeddings_model = OpenAIEmbeddings(
-        model=settings.openai_embedding_model,
-    )
+    if resolved_query_embedding is None:
+        embeddings_model = OpenAIEmbeddings(
+            model=settings.openai_embedding_model,
+        )
 
-    query_embedding = embeddings_model.embed_query(query)
-    query_embedding_value = _format_embedding_for_pgvector(query_embedding)
+        embedding_started_at = perf_counter()
+        resolved_query_embedding = embeddings_model.embed_query(query)
+        if on_timing is not None:
+            on_timing("embedding_ms", int((perf_counter() - embedding_started_at) * 1000))
+
+    query_embedding_value = _format_embedding_for_pgvector(resolved_query_embedding)
 
     sql = text(
         """
@@ -50,6 +60,7 @@ def search_similar_chunks_pgvector(
         """
     )
 
+    retrieval_started_at = perf_counter()
     with SessionLocal() as db:
         rows = db.execute(
             sql,
@@ -59,6 +70,8 @@ def search_similar_chunks_pgvector(
                 "k": k,
             },
         ).mappings().all()
+    if on_timing is not None:
+        on_timing("retrieval_ms", int((perf_counter() - retrieval_started_at) * 1000))
 
     results = []
 

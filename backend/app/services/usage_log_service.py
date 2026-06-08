@@ -8,6 +8,7 @@ from app.database.database import SessionLocal
 
 PROJECT_SMARTDOCS = "smartdocs"
 EVENT_CHAT_QUESTION = "chat_question"
+EVENT_CHAT_QUESTION_BLOCKED = "chat_question_blocked"
 EVENT_RATE_LIMIT_BLOCKED = "rate_limit_blocked"
 EVENT_ADMIN_LOGIN = "admin_login"
 EVENT_ADMIN_LOGOUT = "admin_logout"

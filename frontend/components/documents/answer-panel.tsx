@@ -23,6 +23,7 @@ type ElementWithChildren = ReactElement<{ children?: ReactNode }>;
 type AnswerPanelProps = {
   history: ChatHistoryEntry[];
   errorMessage: string;
+  isLoading?: boolean;
   expandedItemId: string | null;
   onToggleItem: (itemId: string) => void;
 };
@@ -386,6 +387,7 @@ function HistoryItem({ entry, isExpanded, onToggle }: HistoryItemProps) {
 export function AnswerPanel({
   history,
   errorMessage,
+  isLoading = false,
   expandedItemId,
   onToggleItem,
 }: AnswerPanelProps) {
@@ -399,7 +401,7 @@ export function AnswerPanel({
         </p>
       )}
 
-      {history.length === 0 && !errorMessage && (
+      {history.length === 0 && !errorMessage && !isLoading && (
         <p className="mt-4 text-sm leading-7 text-[#666666]">
           Faça uma pergunta para abrir o contexto do documento, inspecionar os
           trechos relevantes e entender como a resposta foi construída.
