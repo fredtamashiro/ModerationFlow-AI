@@ -15,7 +15,21 @@ MIGRATIONS_DIR = Path("app/database/migrations")
 
 
 def ensure_migrations_table(db) -> None:
-    db.execute(text("CREATE SCHEMA IF NOT EXISTS shared"))
+    schema_exists = db.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.schemata
+                WHERE schema_name = 'shared'
+            ) AS schema_exists
+            """
+        )
+    ).scalar()
+
+    if not schema_exists:
+        db.execute(text("CREATE SCHEMA shared"))
+
     db.execute(
         text(
             """

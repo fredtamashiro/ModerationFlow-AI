@@ -17,6 +17,21 @@ O sistema vai analisar comentarios de uma plataforma de cursos online, consultar
 - OpenAI
 - Docker
 
+## Ambiente local
+
+Copie os arquivos de ambiente:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+```
+
+Suba o ambiente local:
+
+```bash
+docker compose up --build
+```
+
 ## Referencia tecnica
 
 O direcionamento atual do projeto esta documentado em [docs/development-runbook.md](docs/development-runbook.md).

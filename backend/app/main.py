@@ -5,6 +5,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
 from app.api.routes.usage_logs import router as usage_logs_router
 from app.config import get_settings
+from app.moderation.router import router as moderation_router
 
 settings = get_settings()
 origins = [
@@ -50,3 +51,4 @@ def health_check():
 app.include_router(health_router)
 app.include_router(usage_logs_router)
 app.include_router(auth_router)
+app.include_router(moderation_router)

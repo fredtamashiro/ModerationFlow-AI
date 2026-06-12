@@ -4,20 +4,12 @@ services:
     container_name: moderation-flow-postgres
     environment:
       POSTGRES_DB: moderation_flow
-      POSTGRES_USER: moderation_flow
-      POSTGRES_PASSWORD: moderation_flow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - moderation_flow_postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    container_name: moderation-flow-redis
-    ports:
-      - "6380:6379"
-    volumes:
-      - moderation_flow_redis_data:/data
 
   backend:
     build:
@@ -31,22 +23,27 @@ services:
       - ./backend/scripts:/app/scripts
       - ./backend/alembic.ini:/app/alembic.ini
       - ./backend/migrations:/app/migrations
-    env_file:
-      - ./backend/.env
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://moderation_flow:moderation_flow@postgres:5432/moderation_flow
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/moderation_flow
+      - OPENAI_API_KEY=
+      - JWT_SECRET_KEY=change-me-local
+      - FRONTEND_ORIGINS=http://localhost:3000
+      - COOKIE_SECURE=false
+      - COOKIE_SAMESITE=lax
+      - COOKIE_DOMAIN=
+      - ADMIN_SEED_EMAIL=admin@example.com
+      - ADMIN_SEED_PASSWORD=admin123
+      - ADMIN_SEED_NAME=Local Admin
     depends_on:
       - postgres
-      - redis
 
   frontend:
     build:
       context: ./frontend
     container_name: moderation-flow-frontend
     ports:
-      - "2000:3000"
+      - "3000:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -61,4 +58,3 @@ services:
 
 volumes:
   moderation_flow_postgres_data:
-  moderation_flow_redis_data:

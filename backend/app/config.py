@@ -14,21 +14,18 @@ class Settings(BaseSettings):
     app_api_key: str | None = None
     openai_chat_model: str = "gpt-5-mini"
     openai_chat_temperature: float = 1
-    database_url: str = (
-        "postgresql://moderation_flow:moderation_flow@postgres:5432/moderation_flow"
-    )
-    redis_url: str = "redis://redis:6379/0"
-    jwt_secret_key: str = "change-this-secret-in-production"
+    database_url: str = "postgresql://postgres:postgres@postgres:5432/moderation_flow"
+    jwt_secret_key: str = "change-me-local"
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 720
     admin_cookie_name: str = "moderation_flow_admin_token"
-    frontend_origins: str = "http://localhost:2000"
+    frontend_origins: str = "http://localhost:3000"
     cookie_domain: str | None = None
     cookie_secure: bool = False
     cookie_samesite: str = "lax"
-    admin_seed_email: str = ""
-    admin_seed_password: str = ""
-    admin_seed_name: str = ""
+    admin_seed_email: str = "admin@example.com"
+    admin_seed_password: str = "admin123"
+    admin_seed_name: str = "Local Admin"
 
     @field_validator("cookie_domain", mode="before")
     @classmethod
