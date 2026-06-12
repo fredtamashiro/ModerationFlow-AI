@@ -49,7 +49,7 @@ export function AppHeader({
           <span className="flex h-11 w-11 items-center justify-center overflow-hidden">
             <Image
               src="/logo-header.png"
-              alt="FredTamashiro"
+              alt="ModerationFlow AI"
               width={44}
               height={44}
               className="h-full w-full object-contain"
@@ -57,7 +57,7 @@ export function AppHeader({
             />
           </span>
           <span className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-            FredTamashiro
+            ModerationFlow AI
           </span>
         </Link>
 

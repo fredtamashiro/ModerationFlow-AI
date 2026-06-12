@@ -8,7 +8,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.database.run_migrations import run_migrations
 from app.database.seeds.seed_admin import seed_admin
-from app.database.seeds.seed_themes import seed_themes
 
 
 def bootstrap_database() -> None:
@@ -16,9 +15,6 @@ def bootstrap_database() -> None:
 
     print("Running migrations...")
     run_migrations()
-
-    print("Seeding themes...")
-    seed_themes()
 
     print("Seeding admin...")
     seed_admin()

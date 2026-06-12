@@ -4,7 +4,13 @@ import { FormEvent, useEffect, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, LogIn, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AuthUser, loginAdmin } from "@/services/api";
 
@@ -91,7 +97,7 @@ export function AdminLogin({
                 Acesso administrativo
               </CardTitle>
               <CardDescription>
-                Entre para importar, apagar documentos e acompanhar o processamento.
+                Entre para acessar a area administrativa do ModerationFlow AI.
               </CardDescription>
             </div>
 
@@ -143,9 +149,7 @@ export function AdminLogin({
                   onClick={() => setIsPasswordVisible((current) => !current)}
                   disabled={isSubmitting}
                   className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-slate-500 transition hover:text-[#1A1A1A] disabled:cursor-not-allowed disabled:opacity-60"
-                  aria-label={
-                    isPasswordVisible ? "Ocultar senha" : "Exibir senha"
-                  }
+                  aria-label={isPasswordVisible ? "Ocultar senha" : "Exibir senha"}
                   aria-pressed={isPasswordVisible}
                 >
                   {isPasswordVisible ? (
@@ -167,9 +171,7 @@ export function AdminLogin({
             </Button>
           </form>
 
-          {errorMessage && (
-            <p className="mt-3 text-sm text-red-700">{errorMessage}</p>
-          )}
+          {errorMessage && <p className="mt-3 text-sm text-red-700">{errorMessage}</p>}
         </CardContent>
       </Card>
     </div>

@@ -28,7 +28,6 @@ export function useAdminSession() {
 
     async function loadCurrentAdmin() {
       try {
-        setIsCheckingSession(true);
         const user = await getCurrentAdmin();
 
         if (!isMounted) {
@@ -72,7 +71,7 @@ export function useAdminSession() {
       setAuthErrorMessage(
         error instanceof Error
           ? error.message
-          : "Não foi possível encerrar a sessão.",
+          : "Nao foi possivel encerrar a sessao.",
       );
     } finally {
       setIsLoggingOut(false);

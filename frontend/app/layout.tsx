@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SmartDocs IA",
-  description: "Assistente inteligente para consulta de documentos em PDF.",
+  title: "ModerationFlow AI",
+  description:
+    "Sistema de moderacao assistida por IA com LangGraph, Human-in-the-Loop e auditoria.",
   robots: {
     index: false,
     follow: false,
@@ -18,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

@@ -6,16 +6,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from app.database.database import SessionLocal
 
-PROJECT_SMARTDOCS = "smartdocs"
-EVENT_CHAT_QUESTION = "chat_question"
-EVENT_CHAT_QUESTION_BLOCKED = "chat_question_blocked"
-EVENT_RATE_LIMIT_BLOCKED = "rate_limit_blocked"
+PROJECT_MODERATION_FLOW = "moderation-flow-ai"
 EVENT_ADMIN_LOGIN = "admin_login"
 EVENT_ADMIN_LOGOUT = "admin_logout"
-EVENT_SMART_INGEST_STARTED = "smart_ingest_started"
-EVENT_SMART_INGEST_COMPLETED = "smart_ingest_completed"
-EVENT_SMART_INGEST_FAILED = "smart_ingest_failed"
-EVENT_DOCUMENT_DELETED = "document_deleted"
 
 
 def serialize_usage_log(row) -> dict[str, Any]:
@@ -42,7 +35,7 @@ def create_usage_log(
     user_id: str | None = None,
     document_id: str | None = None,
     metadata: dict[str, Any] | None = None,
-    project: str = PROJECT_SMARTDOCS,
+    project: str = PROJECT_MODERATION_FLOW,
 ) -> dict[str, Any]:
     query = text(
         """

@@ -1,28 +1,28 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: smartdocs-postgres
+    container_name: moderation-flow-postgres
     environment:
-      POSTGRES_DB: smartdocs
-      POSTGRES_USER: smartdocs
-      POSTGRES_PASSWORD: smartdocs
+      POSTGRES_DB: moderation_flow
+      POSTGRES_USER: moderation_flow
+      POSTGRES_PASSWORD: moderation_flow
     ports:
       - "5432:5432"
     volumes:
-      - smartdocs_postgres_data:/var/lib/postgresql/data
+      - moderation_flow_postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
-    container_name: smartdocs-redis
+    container_name: moderation-flow-redis
     ports:
       - "6380:6379"
     volumes:
-      - smartdocs_redis_data:/data
+      - moderation_flow_redis_data:/data
 
   backend:
     build:
       context: ./backend
-    container_name: auto-manual-ai-backend
+    container_name: moderation-flow-backend
     command: sh scripts/start_api.sh
     ports:
       - "8000:8000"
@@ -35,27 +35,7 @@ services:
       - ./backend/.env
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://smartdocs:smartdocs@postgres:5432/smartdocs
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - postgres
-      - redis
-
-  worker:
-    build:
-      context: ./backend
-    container_name: auto-manual-ai-worker
-    command: sh scripts/start_worker.sh
-    volumes:
-      - ./backend/app:/app/app
-      - ./backend/scripts:/app/scripts
-      - ./backend/alembic.ini:/app/alembic.ini
-      - ./backend/migrations:/app/migrations
-    env_file:
-      - ./backend/.env
-    environment:
-      - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://smartdocs:smartdocs@postgres:5432/smartdocs
+      - DATABASE_URL=postgresql://moderation_flow:moderation_flow@postgres:5432/moderation_flow
       - REDIS_URL=redis://redis:6379/0
     depends_on:
       - postgres
@@ -64,7 +44,7 @@ services:
   frontend:
     build:
       context: ./frontend
-    container_name: auto-manual-ai-frontend
+    container_name: moderation-flow-frontend
     ports:
       - "2000:3000"
     volumes:
@@ -80,5 +60,5 @@ services:
       - backend
 
 volumes:
-  smartdocs_postgres_data:
-  smartdocs_redis_data:
+  moderation_flow_postgres_data:
+  moderation_flow_redis_data:

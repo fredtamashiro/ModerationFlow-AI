@@ -20,20 +20,19 @@ export function AppFooter({ links = [] }: AppFooterProps) {
     <footer className="border-t border-[var(--border)] bg-[var(--surface)] py-10">
       <PageContainer className="grid gap-8 md:grid-cols-[1.2fr_0.8fr] md:items-end">
         <div>
-          <p className="heading-4 text-[var(--foreground)]">FredTamashiro</p>
+          <p className="heading-4 text-[var(--foreground)]">ModerationFlow AI</p>
           <p className="mt-3 max-w-xl text-sm leading-7 text-[var(--muted-foreground)]">
-            SmartDocs AI é uma demonstração técnica de ingestão inteligente,
-            busca semântica e consulta de documentos com IA aplicada a um fluxo
-            real de produto.
+            Aplicacao full stack de moderacao assistida por IA com LangGraph,
+            analise de comentarios, revisao humana e trilha de auditoria.
           </p>
           <p className="mt-4 text-xs text-[var(--muted-foreground)]">
-            © {currentYear} Fred Tamashiro. Projeto em evolução contínua.
+            © {currentYear} Fred Tamashiro. Projeto em desenvolvimento.
           </p>
         </div>
 
         <div className="grid gap-6 md:justify-items-end">
           {links.length > 0 && (
-            <nav aria-label="Links do rodapé" className="flex flex-wrap gap-4 text-sm">
+            <nav aria-label="Links do rodape" className="flex flex-wrap gap-4 text-sm">
               {links.map((link) => {
                 const isInternalRoute = link.href.startsWith("/");
 

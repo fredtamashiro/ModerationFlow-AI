@@ -6,11 +6,15 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export const appNavItems = [
-  { label: "Início", href: "/" },
-  { label: "Ver Demo", href: "/documentos" },
+  { label: "Inicio", href: "/" },
+  { label: "Runbook", href: "/#runbook" },
 ] as const;
 
 function isActiveItem(href: string, pathname: string): boolean {
+  if (href.startsWith("/#")) {
+    return pathname === "/";
+  }
+
   return pathname === href;
 }
 
