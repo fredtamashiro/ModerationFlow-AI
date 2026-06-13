@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 
 from app.moderation import repository
+from app.database.database import SessionLocal
 
 
 def _validate_limit(limit: int) -> None:
@@ -115,3 +116,60 @@ def list_steps_for_run(run_id: str) -> list[dict]:
 def list_decisions_for_comment(comment_id: str) -> list[dict]:
     get_comment(comment_id)
     return repository.list_decisions_by_comment_id(comment_id)
+
+
+def _validate_human_decision(decision: str) -> None:
+    if decision not in repository.ALLOWED_HUMAN_DECISIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Campo 'human_decision' invalido.",
+        )
+
+
+def _validate_human_risk_level(risk_level: str | None) -> None:
+    if risk_level and risk_level not in repository.ALLOWED_HUMAN_RISK_LEVELS:
+        raise HTTPException(
+            status_code=400,
+            detail="Campo 'human_risk_level' invalido.",
+        )
+
+
+def _get_comment_status_from_human_decision(human_decision: str) -> str:
+    decision_to_status = {
+        "approve": "approved",
+        "flag": "waiting_human_review",
+        "remove": "removed",
+        "request_edit": "edit_requested",
+    }
+    return decision_to_status[human_decision]
+
+
+def create_human_decision(comment_id: str, payload: dict) -> dict:
+    _validate_human_decision(payload["human_decision"])
+    _validate_human_risk_level(payload.get("human_risk_level"))
+
+    target_status = _get_comment_status_from_human_decision(payload["human_decision"])
+
+    with SessionLocal.begin() as db:
+        comment = repository.get_comment_by_id_for_update(db, comment_id)
+
+        if not comment:
+            raise HTTPException(status_code=404, detail="Comentario nao encontrado.")
+
+        created_decision = repository.create_human_decision(
+            db=db,
+            comment_id=comment_id,
+            payload=payload,
+        )
+        repository.update_comment_status(
+            db=db,
+            comment_id=comment_id,
+            status=target_status,
+        )
+        repository.create_feedback_example(
+            db=db,
+            comment_text=comment["content"],
+            payload=payload,
+        )
+
+    return created_decision

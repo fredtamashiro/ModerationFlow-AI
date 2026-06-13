@@ -1,6 +1,8 @@
+import json
 from collections.abc import Sequence
 
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app.database.database import SessionLocal
 
@@ -13,6 +15,20 @@ ALLOWED_COMMENT_STATUSES = {
     "removed",
     "edit_requested",
     "failed",
+}
+
+ALLOWED_HUMAN_DECISIONS = {
+    "approve",
+    "flag",
+    "remove",
+    "request_edit",
+}
+
+ALLOWED_HUMAN_RISK_LEVELS = {
+    "low",
+    "medium",
+    "high",
+    "unknown",
 }
 
 ALLOWED_GUIDELINE_SEVERITIES = {
@@ -316,6 +332,7 @@ def list_decisions_by_comment_id(comment_id: str) -> list[dict]:
                     moderator_note,
                     final_content,
                     was_ai_correct,
+                    metadata,
                     decided_at,
                     created_at
                 FROM moderation.moderation_decisions
@@ -327,3 +344,150 @@ def list_decisions_by_comment_id(comment_id: str) -> list[dict]:
         ).fetchall()
 
     return _serialize_rows(rows)
+
+
+def get_comment_by_id_for_update(db: Session, comment_id: str) -> dict | None:
+    row = db.execute(
+        text(
+            """
+            SELECT
+                id,
+                author_name,
+                course_name,
+                lesson_name,
+                content,
+                status,
+                metadata,
+                created_at,
+                updated_at
+            FROM moderation.comments
+            WHERE id = CAST(:comment_id AS UUID)
+            FOR UPDATE
+            """
+        ),
+        {"comment_id": comment_id},
+    ).fetchone()
+
+    return dict(row._mapping) if row else None
+
+
+def create_human_decision(db: Session, comment_id: str, payload: dict) -> dict:
+    row = db.execute(
+        text(
+            """
+            INSERT INTO moderation.moderation_decisions (
+                id,
+                comment_id,
+                run_id,
+                ai_recommendation,
+                human_decision,
+                human_category,
+                human_risk_level,
+                moderator_note,
+                final_content,
+                was_ai_correct,
+                metadata
+            )
+            VALUES (
+                gen_random_uuid(),
+                CAST(:comment_id AS UUID),
+                NULL,
+                NULL,
+                :human_decision,
+                :human_category,
+                :human_risk_level,
+                :moderator_note,
+                :final_content,
+                NULL,
+                CAST(:metadata AS JSONB)
+            )
+            RETURNING
+                id,
+                comment_id,
+                run_id,
+                ai_recommendation,
+                human_decision,
+                human_category,
+                human_risk_level,
+                moderator_note,
+                final_content,
+                was_ai_correct,
+                metadata,
+                decided_at,
+                created_at
+            """
+        ),
+        {
+            "comment_id": comment_id,
+            "human_decision": payload["human_decision"],
+            "human_category": payload.get("human_category"),
+            "human_risk_level": payload.get("human_risk_level"),
+            "moderator_note": payload.get("moderator_note"),
+            "final_content": payload.get("final_content"),
+            "metadata": json.dumps(payload.get("metadata", {})),
+        },
+    ).fetchone()
+
+    return dict(row._mapping)
+
+
+def update_comment_status(db: Session, comment_id: str, status: str) -> None:
+    db.execute(
+        text(
+            """
+            UPDATE moderation.comments
+            SET
+                status = :status,
+                updated_at = NOW()
+            WHERE id = CAST(:comment_id AS UUID)
+            """
+        ),
+        {
+            "comment_id": comment_id,
+            "status": status,
+        },
+    )
+
+
+def create_feedback_example(
+    db: Session,
+    comment_text: str,
+    payload: dict,
+) -> None:
+    db.execute(
+        text(
+            """
+            INSERT INTO moderation.feedback_examples (
+                id,
+                comment_text,
+                ai_decision,
+                human_decision,
+                ai_category,
+                human_category,
+                ai_confidence,
+                moderator_note,
+                was_ai_correct,
+                metadata
+            )
+            VALUES (
+                gen_random_uuid(),
+                :comment_text,
+                NULL,
+                :human_decision,
+                NULL,
+                :human_category,
+                NULL,
+                :moderator_note,
+                NULL,
+                CAST(:metadata AS JSONB)
+            )
+            """
+        ),
+        {
+            "comment_text": comment_text,
+            "human_decision": payload["human_decision"],
+            "human_category": payload.get("human_category"),
+            "moderator_note": payload.get("moderator_note"),
+            "metadata": json.dumps(payload.get("metadata", {})),
+        },
+    )

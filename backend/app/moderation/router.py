@@ -6,11 +6,13 @@ from app.moderation.schemas import (
     CommentListResponse,
     Guideline,
     GuidelineListResponse,
+    HumanDecisionCreate,
     ModerationDecision,
     ModerationRunSummary,
     ModerationStep,
 )
 from app.moderation.service import (
+    create_human_decision,
     get_comment,
     get_guideline,
     get_guideline_by_code,
@@ -74,3 +76,8 @@ def get_run_steps(run_id: str):
 @router.get("/comments/{comment_id}/decisions", response_model=list[ModerationDecision])
 def get_comment_decisions(comment_id: str):
     return list_decisions_for_comment(comment_id)
+
+
+@router.post("/comments/{comment_id}/decisions", response_model=ModerationDecision)
+def create_comment_decision(comment_id: str, payload: HumanDecisionCreate):
+    return create_human_decision(comment_id, payload.model_dump())

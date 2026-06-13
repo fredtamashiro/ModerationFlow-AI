@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Comment(BaseModel):
@@ -93,5 +93,15 @@ class ModerationDecision(BaseModel):
     moderator_note: str | None = None
     final_content: str | None = None
     was_ai_correct: bool | None = None
+    metadata: dict[str, Any]
     decided_at: datetime
     created_at: datetime
+
+
+class HumanDecisionCreate(BaseModel):
+    human_decision: str
+    human_category: str | None = None
+    human_risk_level: str | None = None
+    moderator_note: str | None = None
+    final_content: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
