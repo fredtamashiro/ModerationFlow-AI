@@ -84,6 +84,36 @@ moderation-flow-ai
 → implementa moderação com LangGraph
 ```
 
+---
+
+## 21. AvaliaÃ§Ã£o local do grafo
+
+Para executar a avaliaÃ§Ã£o baseline do motor de moderaÃ§Ã£o:
+
+```bash
+cd backend
+python scripts/evaluate_moderation.py
+```
+
+Dataset utilizado:
+
+```text
+backend/app/evaluation/datasets/moderation_eval.json
+```
+
+Com Docker:
+
+```bash
+docker compose exec backend python scripts/evaluate_moderation.py
+```
+
+ObservaÃ§Ãµes:
+
+- a avaliaÃ§Ã£o atual executa o grafo em memÃ³ria;
+- ela nÃ£o persiste `moderation_runs` nem `moderation_steps`;
+- ela consulta apenas as `guidelines` jÃ¡ existentes para montar o estado inicial;
+- o objetivo Ã© gerar um baseline heurÃ­stico para comparaÃ§Ãµes futuras.
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;
