@@ -280,5 +280,327 @@
     "expected_risk_level": "high",
     "expected_action": "remove",
     "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "eval-036",
+    "comment": "Nao gostei da didatica desse modulo.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-037",
+    "comment": "Achei o modulo confuso e cansativo.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-038",
+    "comment": "O professor fala rapido demais para quem esta comecando.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-039",
+    "comment": "Esperava mais exemplos praticos ao longo da aula.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-040",
+    "comment": "A organizacao do conteudo nao ajudou muito no aprendizado.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-041",
+    "comment": "A explicacao ate funciona, mas ficou confusa em varios pontos.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-042",
+    "comment": "Esse curso foi bem decepcionante.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-043",
+    "comment": "Achei muito fraco, sinceramente.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-044",
+    "comment": "Isso aqui parece mal planejado.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-045",
+    "comment": "A ideia e boa, mas a execucao ficou bem ruim.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-046",
+    "comment": "Nao foi horrivel, mas ficou longe do que eu esperava.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-047",
+    "comment": "Quem montou esse curso nao entende nada.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "eval-048",
+    "comment": "O tutor foi totalmente despreparado para explicar isso.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "eval-049",
+    "comment": "Esse professor e ridiculo.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "eval-050",
+    "comment": "A monitoria foi muito mal conduzida por gente despreparada.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "eval-051",
+    "comment": "O instrutor passa seguranca de quem nao domina o assunto.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "eval-052",
+    "comment": "Parabens, conseguiram deixar dificil algo que era simples.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-053",
+    "comment": "Nossa, que aula maravilhosa... so que nao.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-054",
+    "comment": "Se essa era a explicacao boa, imagina a ruim.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "eval-055",
+    "comment": "Genial... agora fiquei ainda mais confuso.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003", "R-006"]
+  },
+  {
+    "id": "eval-056",
+    "comment": "Que piada, vendem isso como aula avancada.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003", "R-006"]
+  },
+  {
+    "id": "eval-057",
+    "comment": "Nao consigo acessar a aula, alguem resolve isso?",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "eval-058",
+    "comment": "Ja tentei tres vezes e nada funciona.",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "eval-059",
+    "comment": "O certificado nao apareceu, podem verificar?",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "eval-060",
+    "comment": "Estou irritado porque o video trava toda hora, mas preciso de ajuda.",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "eval-061",
+    "comment": "Alguem da equipe consegue resolver meu acesso hoje?",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "eval-062",
+    "comment": "Tenho um material complementar, me chamem no privado.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "eval-063",
+    "comment": "Quem quiser o PDF completo, entra no meu grupo.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "eval-064",
+    "comment": "Fiz uma lista de exercicios, link no meu perfil.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "eval-065",
+    "comment": "Se quiserem meu resumo completo, passo no direct.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "eval-066",
+    "comment": "Tem gente tratando alunas como menos capazes aqui, isso e inaceitavel.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"]
+  },
+  {
+    "id": "eval-067",
+    "comment": "Esses comentarios reforcam preconceito contra religiao e precisam de moderacao.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"]
+  },
+  {
+    "id": "eval-068",
+    "comment": "Nao da para normalizar discriminacao por raca em uma comunidade tecnica.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"]
+  },
+  {
+    "id": "eval-069",
+    "comment": "Esse tipo de preconceito com deficiencia deveria ser removido imediatamente.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"]
+  },
+  {
+    "id": "eval-070",
+    "comment": "Tem como burlar a validacao e acessar o conteudo pago sem liberar minha conta?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "eval-071",
+    "comment": "Compartilhar a senha com o grupo ajuda a contornar esse bloqueio?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "eval-072",
+    "comment": "Alguem sabe um jeito ilegal de hack esse acesso?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "eval-073",
+    "comment": "Quero derrubar a conta de um colega, como faco isso?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "eval-074",
+    "comment": "nao gostei dessa aula",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Variacao informal e curta de critica legitima."
+  },
+  {
+    "id": "eval-075",
+    "comment": "professor explica mto rapido",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Critica legitima com abreviacao informal."
   }
 ]

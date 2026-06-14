@@ -43,3 +43,46 @@ Ajustes aplicados no baseline heuristico:
 ## Observacoes
 
 Este resultado ainda representa um baseline heuristico local, executado em memoria e validado sobre um dataset curado pequeno. As metricas mostram aderencia ao conjunto atual de exemplos, mas nao provam generalizacao para comentarios reais em producao. A arquitetura continua exigindo revisao humana obrigatoria e nao adiciona LLM, embeddings, `pgvector` ou persistencia de resultados de avaliacao nesta etapa.
+
+## Dataset hardening - Etapa 014
+
+### Objetivo
+
+Expandir o dataset para reduzir risco de overfitting e medir melhor a generalizacao do baseline heuristico atual.
+
+### Mudancas no dataset
+
+- dataset expandido de 35 para 75 exemplos;
+- inclusao de criticas legitimas menos literais;
+- inclusao de criticas agressivas, mas nao removiveis;
+- inclusao de ofensas indiretas;
+- inclusao de sarcasmo e ambiguidade com menor aderencia a keywords exatas;
+- inclusao de suporte com irritacao;
+- inclusao de spam menos obvio;
+- inclusao de discriminacao implicita;
+- inclusao de conteudo perigoso ou ilegal;
+- inclusao de erros de digitacao e linguagem informal.
+
+### Metricas apos expansao
+
+- total_examples: 75
+- successful_runs: 75
+- failed_runs: 0
+- accuracy_action: 65.33%
+- accuracy_risk_level: 65.33%
+- accuracy_category: 73.33%
+- policy_match_rate: 86.67%
+- average_latency_ms: 5ms
+
+### Observacoes
+
+As metricas cairam de forma relevante, o que confirma que o dataset anterior estava favoravel ao baseline. Os principais erros encontrados apos a expansao foram:
+
+- critica legitima fora das frases exatas do `intent_router` caindo em `fallback_human_review`;
+- comentarios ambiguos com tom negativo sendo tratados como `needs_human_review` em vez de `flag`;
+- ofensas indiretas sem palavras mais obvias nao sendo reconhecidas como `offensive_language`;
+- sarcasmo com elogio inicial sendo confundido com `positive_feedback`;
+- pedidos de suporte irritados sem markers claros de pergunta ou ajuda ficando como ambiguos;
+- alguns casos novos de spam menos obvio sem match suficiente para `R-001`.
+
+Esses resultados sao aceitaveis como diagnostico de generalizacao, mesmo ficando abaixo das metas desejaveis da etapa. O objetivo desta rodada foi endurecer a avaliacao, nao recalibrar heuristicas para recuperar 100%.
