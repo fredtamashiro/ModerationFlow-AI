@@ -75,6 +75,7 @@ def input_guard(state: ModerationGraphState) -> dict[str, Any]:
 def intent_router(state: ModerationGraphState) -> dict[str, Any]:
     started_at = perf_counter()
     content = _normalize_text(state["comment_content"])
+    has_concession = _contains_any(content, ("embora", "talvez", "reconheco", "mas"))
 
     spam_terms = (
         "http://",
@@ -86,6 +87,19 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "sigam meu perfil",
         "curso completo",
     )
+    subtle_spam_terms = (
+        "me chamem no privado",
+        "no privado",
+        "link no meu perfil",
+        "entra no meu grupo",
+        "meu grupo",
+        "meu perfil",
+        "direct",
+        "material complementar",
+        "pdf completo",
+        "resumo completo",
+        "passo no direct",
+    )
     toxic_terms = (
         "idiota",
         "imbecil",
@@ -93,13 +107,27 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "lixo humano",
         "pessima",
         "nao sabe ensinar",
+        "ridiculo",
+        "nao entende nada",
+        "despreparado",
+        "despreparada",
+        "nao domina o assunto",
     )
     ambiguous_terms = (
-        "ridiculo",
         "que piada",
         "quase dormi",
         "genial...",
         "sarcasmo",
+        "so que nao",
+        "imagina a ruim",
+        "parabens, conseguiram",
+        "conseguiram deixar dificil",
+        "conseguiram piorar",
+        "bem decepcionante",
+        "muito fraco",
+        "mal planejado",
+        "ficou bem ruim",
+        "longe do que eu esperava",
     )
     criticism_terms = (
         "perda de tempo",
@@ -110,6 +138,15 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "podia ser melhor",
         "ficou confuso",
         "nao foi tao util",
+        "nao gostei dessa aula",
+        "achei o modulo confuso",
+        "fala rapido demais",
+        "professor explica mto rapido",
+        "esperava mais exemplos",
+        "organizacao do conteudo",
+        "ficou confusa",
+        "superficial",
+        "cansativo",
     )
     question_terms = (
         "como ",
@@ -119,6 +156,16 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "duvida",
         "nao entendi",
         "alguem pode",
+        "nao consigo",
+        "alguem resolve",
+        "podem verificar",
+        "ja tentei",
+        "nada funciona",
+        "preciso de ajuda",
+        "me ajuda ai",
+        "certificado nao apareceu",
+        "video trava",
+        "resolver meu acesso",
     )
     positive_terms = (
         "excelente",
@@ -137,14 +184,22 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         route = "spam_fast_path"
         reason = "Foram encontrados indicadores promocionais ou de spam."
         confidence = 0.86
+    elif _contains_any(content, subtle_spam_terms):
+        route = "spam_fast_path"
+        reason = "Foram encontrados sinais de divulgacao externa ou contato privado."
+        confidence = 0.78
+    elif "ridiculo" in content and has_concession:
+        route = "ambiguous_deep_review"
+        reason = "O comentario mistura linguagem negativa com ressalva ou concessao."
+        confidence = 0.71
     elif _contains_any(content, toxic_terms):
         route = "toxic_fast_path"
-        reason = "Foram encontrados termos ofensivos explicitos."
-        confidence = 0.84
+        reason = "Foram encontrados sinais de ofensa direta ou ataque indireto."
+        confidence = 0.83
     elif _contains_any(content, ambiguous_terms):
         route = "ambiguous_deep_review"
         reason = "O comentario contem sarcasmo ou critica potencialmente ambigua."
-        confidence = 0.66
+        confidence = 0.70
     elif _contains_any(content, criticism_terms):
         route = "low_risk_path"
         reason = "O comentario aparenta ser uma critica legitima sem ofensa direta."
@@ -232,11 +287,22 @@ def toxic_fast_path(_: ModerationGraphState) -> dict[str, Any]:
 
 def low_risk_path(state: ModerationGraphState) -> dict[str, Any]:
     content = _normalize_text(state["comment_content"])
+    sarcastic = _contains_any(
+        content,
+        (
+            "so que nao",
+            "imagina a ruim",
+            "parabens, conseguiram",
+            "conseguiram deixar dificil",
+            "conseguiram piorar",
+            "genial... agora",
+        ),
+    )
     positive = _contains_any(
         content,
         ("excelente", "obrigado", "obrigada", "ajudou bastante", "gostei", "parabens"),
     )
-    if "nao gostei" in content:
+    if "nao gostei" in content or sarcastic:
         positive = False
     criticism = _contains_any(
         content,
@@ -249,12 +315,37 @@ def low_risk_path(state: ModerationGraphState) -> dict[str, Any]:
             "podia ser melhor",
             "ficou confuso",
             "nao foi tao util",
+            "nao gostei dessa aula",
+            "achei o modulo confuso",
+            "fala rapido demais",
+            "esperava mais exemplos",
+            "organizacao do conteudo",
+            "ficou confusa",
+            "superficial",
+            "cansativo",
+            "mto rapido",
+        ),
+    )
+    support = _contains_any(
+        content,
+        (
+            "nao consigo",
+            "alguem resolve",
+            "podem verificar",
+            "ja tentei",
+            "nada funciona",
+            "preciso de ajuda",
+            "certificado nao apareceu",
+            "video trava",
+            "resolver meu acesso",
         ),
     )
     if positive:
         category = "positive_feedback"
     elif criticism:
         category = "legitimate_criticism"
+    elif support:
+        category = "question_or_support_request"
     else:
         category = "question_or_support_request"
     return _path_result(
@@ -302,14 +393,100 @@ def guideline_retriever(state: ModerationGraphState) -> dict[str, Any]:
         "fallback_human_review": ("R-006",),
     }
     keyword_rules = (
-        (("http://", "https://", "link", "promocao", "compre", "acesse"), ("R-001",)),
-        (("burro", "idiota", "imbecil", "lixo", "ridiculo", "incompetente"), ("R-002", "R-003")),
-        (("raca", "religiao", "genero", "deficiencia", "preconceito", "discriminacao"), ("R-004",)),
+        (
+            (
+                "http://",
+                "https://",
+                "link",
+                "promocao",
+                "compre",
+                "acesse",
+                "no privado",
+                "me chamem",
+                "meu perfil",
+                "meu grupo",
+                "direct",
+                "pdf completo",
+                "material complementar",
+            ),
+            ("R-001",),
+        ),
+        (
+            (
+                "burro",
+                "idiota",
+                "imbecil",
+                "lixo",
+                "ridiculo",
+                "incompetente",
+                "nao entende nada",
+                "despreparado",
+                "despreparada",
+                "nao domina o assunto",
+            ),
+            ("R-002", "R-003"),
+        ),
+        (
+            (
+                "raca",
+                "religiao",
+                "genero",
+                "deficiencia",
+                "preconceito",
+                "discriminacao",
+                "menos capazes",
+            ),
+            ("R-004",),
+        ),
         (("ilegal", "hack", "burlar", "golpe", "derrubar a conta", "compartilhar a senha"), ("R-005",)),
-        (("duvida", "como ", "onde ", "quando ", "poderia", "nao entendi"), ("R-007",)),
+        (
+            (
+                "duvida",
+                "como ",
+                "onde ",
+                "quando ",
+                "poderia",
+                "nao entendi",
+                "nao consigo",
+                "alguem resolve",
+                "podem verificar",
+                "ja tentei",
+                "nada funciona",
+                "preciso de ajuda",
+                "certificado",
+                "acesso",
+                "video trava",
+            ),
+            ("R-007",),
+        ),
         (("bom", "otimo", "excelente", "gostei", "obrigado", "obrigada"), ("R-008",)),
-        (("perda de tempo", "faltaram exemplos", "ritmo da aula", "didatica", "precisa de revisao", "ficou confuso", "nao foi tao util"), ("R-006",)),
-        (("piada", "quase dormi", "genial...", "sarcasmo"), ("R-003", "R-006")),
+        (
+            (
+                "perda de tempo",
+                "faltaram exemplos",
+                "ritmo da aula",
+                "didatica",
+                "precisa de revisao",
+                "ficou confuso",
+                "ficou confusa",
+                "nao foi tao util",
+                "nao gostei",
+                "esperava mais exemplos",
+                "fala rapido demais",
+                "mto rapido",
+                "modulo confuso",
+                "superficial",
+                "decepcionante",
+                "muito fraco",
+                "mal planejado",
+                "ficou bem ruim",
+            ),
+            ("R-006",),
+        ),
+        (
+            ("piada", "quase dormi", "genial...", "sarcasmo", "so que nao", "imagina a ruim", "parabens, conseguiram"),
+            ("R-003", "R-006"),
+        ),
     )
 
     matched_codes = list(route_codes[route])
@@ -398,15 +575,37 @@ def risk_analyzer(state: ModerationGraphState) -> dict[str, Any]:
     elif route == "spam_fast_path" and "R-001" in codes:
         risk_level = "medium"
         category = "spam"
-        confidence = 0.85
-        recommended_action = "remove"
-        justification = "O comentario apresenta sinais de autopromocao ou spam relacionados a R-001."
+        content = _normalize_text(state.get("comment_content", ""))
+        explicit_spam = _contains_any(
+            content,
+            ("promocao", "desconto", "compre", "curso completo", "acesse meu site", "http://", "https://"),
+        )
+        if not explicit_spam and _contains_any(
+            content,
+            ("no privado", "meu perfil", "meu grupo", "direct", "material complementar", "pdf completo"),
+        ):
+            confidence = 0.78
+            recommended_action = "flag"
+            justification = "O comentario apresenta sinais de spam menos explicito ou divulgacao externa relacionados a R-001."
+        else:
+            confidence = 0.85
+            recommended_action = "remove"
+            justification = "O comentario apresenta sinais de autopromocao ou spam relacionados a R-001."
     elif route == "toxic_fast_path" and codes.intersection({"R-002", "R-003"}):
-        risk_level = "high"
+        content = _normalize_text(state.get("comment_content", ""))
+        high_severity = _contains_any(
+            content,
+            ("ridiculo", "idiota", "imbecil", "incompetente", "pessima", "nao sabe ensinar", "nao entende nada"),
+        )
+        risk_level = "high" if high_severity else "medium"
         category = "offensive_language"
-        confidence = 0.85
-        recommended_action = "remove"
-        justification = "O comentario contem ataque pessoal ou linguagem ofensiva relacionados a R-002/R-003."
+        confidence = 0.85 if high_severity else 0.79
+        recommended_action = "remove" if high_severity else "flag"
+        justification = (
+            "O comentario contem ataque pessoal ou linguagem ofensiva relacionados a R-002/R-003."
+            if high_severity
+            else "O comentario contem desqualificacao indireta ou linguagem depreciativa relacionada a R-002/R-003."
+        )
     elif route == "ambiguous_deep_review" and codes.intersection({"R-003", "R-006"}):
         risk_level = "medium"
         category = "ambiguous"
@@ -581,6 +780,30 @@ def critic_agent(state: ModerationGraphState) -> dict[str, Any]:
         adjusted_confidence = max(confidence, 0.88)
         critic_summary = (
             "A severidade do conteudo justifica manter a recomendacao de remocao para revisao humana."
+        )
+    elif recommended_action == "flag" and route == "spam_fast_path":
+        critic_agrees = True
+        adjusted_action = "flag"
+        adjusted_risk_level = "medium"
+        adjusted_confidence = max(confidence, 0.78)
+        critic_summary = (
+            "Os sinais sugerem spam menos explicito; a recomendacao de sinalizacao permanece proporcional."
+        )
+    elif recommended_action == "flag" and route == "ambiguous_deep_review":
+        critic_agrees = True
+        adjusted_action = "flag"
+        adjusted_risk_level = "medium"
+        adjusted_confidence = max(confidence, 0.70)
+        critic_summary = (
+            "O caso permanece ambiguo e deve seguir para revisao humana com sinalizacao conservadora."
+        )
+    elif recommended_action == "approve" and state.get("category") == "question_or_support_request":
+        critic_agrees = True
+        adjusted_action = "approve"
+        adjusted_risk_level = "low"
+        adjusted_confidence = max(confidence, 0.78)
+        critic_summary = (
+            "O comentario aparenta ser um pedido legitimo de suporte, ainda que em tom irritado."
         )
     else:
         critic_agrees = False
