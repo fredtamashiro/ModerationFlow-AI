@@ -41,10 +41,22 @@ export type ModerationRun = {
   category: string | null;
   confidence: number | null;
   recommended_action: string | null;
+  ai_justification: string | null;
   critic_applied: boolean;
   requires_human_review: boolean;
+  policy_references: PolicyReference[];
+  metadata: Record<string, JsonValue>;
+  error_message: string | null;
+  started_at: string;
+  finished_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type PolicyReference = {
+  code: string;
+  title: string;
+  severity: string;
 };
 
 export type ModerationStep = {
@@ -273,6 +285,18 @@ export async function createHumanDecision(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function analyzeModerationComment(
+  commentId: string,
+): Promise<ModerationRun> {
+  return authenticatedFetch(
+    `/admin/moderation/comments/${commentId}/analyze`,
+    "Erro ao executar a analise de moderacao.",
+    {
+      method: "POST",
     },
   );
 }

@@ -7,9 +7,11 @@ import { useParams } from "next/navigation";
 import { AdminPageShell } from "@/components/admin/admin-page-shell";
 import { HumanReviewForm } from "@/components/moderation/human-review-form";
 import { StatusBadge } from "@/components/moderation/status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, formatLabel, formatMetadata } from "@/lib/moderation";
 import {
+  analyzeModerationComment,
   getModerationComment,
   listCommentDecisions,
   listCommentRuns,
@@ -26,9 +28,11 @@ export default function CommentDetailPage() {
   const [comment, setComment] = useState<ModerationComment | null>(null);
   const [runs, setRuns] = useState<ModerationRun[]>([]);
   const [decisions, setDecisions] = useState<ModerationDecision[]>([]);
-  const [stepsByRunId, setStepsByRunId] = useState<Record<string, ModerationStep[]>>({});
+  const [latestRunSteps, setLatestRunSteps] = useState<ModerationStep[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [analysisErrorMessage, setAnalysisErrorMessage] = useState("");
 
   const loadData = useCallback(async () => {
     const [nextComment, nextRuns, nextDecisions] = await Promise.all([
@@ -37,20 +41,20 @@ export default function CommentDetailPage() {
       listCommentDecisions(commentId),
     ]);
 
-    const runSteps = await Promise.all(
-      nextRuns.map(async (run) => ({
-        runId: run.id,
-        steps: await listRunSteps(run.id),
-      })),
+    const sortedRuns = [...nextRuns].sort(
+      (left, right) =>
+        new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
     );
+    const nextLatestRun = sortedRuns[0] ?? null;
+    const nextSteps = nextLatestRun ? await listRunSteps(nextLatestRun.id) : [];
 
     setComment(nextComment);
-    setRuns(nextRuns);
+    setRuns(sortedRuns);
     setDecisions(nextDecisions);
-    setStepsByRunId(
-      Object.fromEntries(runSteps.map((entry) => [entry.runId, entry.steps])),
-    );
+    setLatestRunSteps(nextSteps);
   }, [commentId]);
+
+  const latestRun = runs[0] ?? null;
 
   useEffect(() => {
     if (!commentId) {
@@ -59,7 +63,7 @@ export default function CommentDetailPage() {
 
     let isMounted = true;
 
-    async function loadData() {
+    async function loadPageData() {
       try {
         setIsLoading(true);
         setErrorMessage("");
@@ -86,17 +90,39 @@ export default function CommentDetailPage() {
       }
     }
 
-    void loadData();
+    void loadPageData();
 
     return () => {
       isMounted = false;
     };
   }, [commentId, loadData]);
 
+  async function handleAnalyze() {
+    if (!commentId || isAnalyzing) {
+      return;
+    }
+
+    try {
+      setIsAnalyzing(true);
+      setAnalysisErrorMessage("");
+
+      await analyzeModerationComment(commentId);
+      await loadData();
+    } catch (error) {
+      setAnalysisErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel executar a analise de moderacao.",
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }
+
   return (
     <AdminPageShell
       title="Detalhe do comentario"
-      description="Revise o comentario e consulte execucoes e decisoes registradas."
+      description="Execute a analise do grafo, revise a recomendacao e registre a decisao humana."
     >
       <Link
         href="/admin/moderation"
@@ -156,84 +182,184 @@ export default function CommentDetailPage() {
                   {formatMetadata(comment.metadata)}
                 </pre>
               </div>
+
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+                <p className="text-sm leading-6 text-[var(--muted-foreground)]">
+                  A analise abaixo e uma recomendacao inicial do grafo. A decisao
+                  final deve ser registrada pelo moderador na secao de revisao
+                  humana.
+                </p>
+              </div>
+
+              {analysisErrorMessage ? (
+                <div className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]">
+                  {analysisErrorMessage}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={isAnalyzing}
+                >
+                  {isAnalyzing ? "Executando analise..." : "Executar analise"}
+                </Button>
+                <span className="text-sm text-[var(--muted-foreground)]">
+                  A chamada usa `POST /admin/moderation/comments/{commentId}/analyze`.
+                </span>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="border-[var(--border)] bg-[var(--surface)]">
             <CardHeader>
-              <CardTitle>Runs de moderacao</CardTitle>
+              <CardTitle>Ultimo run de moderacao</CardTitle>
               <CardDescription>
-                Nenhuma acao de IA e disparada nesta tela. Ela apenas exibe o que ja existe.
+                Resumo da analise mais recente produzida pelo grafo para este
+                comentario.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {runs.length === 0 ? (
+              {latestRun === null ? (
                 <p className="text-sm text-[var(--muted-foreground)]">
                   Nenhuma analise de IA executada ainda.
                 </p>
               ) : (
-                runs.map((run) => (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <StatusBadge status={latestRun.status} />
+                    <span className="text-sm text-[var(--muted-foreground)]">
+                      Run {latestRun.id}
+                    </span>
+                  </div>
+
+                  <dl className="mt-4 grid gap-3 md:grid-cols-3">
+                    <Fact label="Status" value={latestRun.status} />
+                    <Fact label="Rota" value={latestRun.route ?? "-"} />
+                    <Fact label="Risco" value={latestRun.risk_level ?? "-"} />
+                    <Fact label="Categoria" value={latestRun.category ?? "-"} />
+                    <Fact
+                      label="Confianca"
+                      value={
+                        latestRun.confidence === null
+                          ? "-"
+                          : latestRun.confidence.toFixed(2)
+                      }
+                    />
+                    <Fact
+                      label="Acao recomendada"
+                      value={latestRun.recommended_action ?? "-"}
+                    />
+                    <Fact
+                      label="Critic agent aplicado"
+                      value={latestRun.critic_applied ? "Sim" : "Nao"}
+                    />
+                    <Fact
+                      label="Revisao humana obrigatoria"
+                      value={latestRun.requires_human_review ? "Sim" : "Nao"}
+                    />
+                    <Fact
+                      label="Criado em"
+                      value={formatDateTime(latestRun.created_at)}
+                    />
+                    <Fact
+                      label="Atualizado em"
+                      value={formatDateTime(latestRun.updated_at)}
+                    />
+                  </dl>
+
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                      Justificativa da analise
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-7">
+                      {latestRun.ai_justification ?? "-"}
+                    </p>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                      Policy references
+                    </p>
+                    {latestRun.policy_references.length === 0 ? (
+                      <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                        Nenhuma diretriz relacionada encontrada.
+                      </p>
+                    ) : (
+                      <ul className="mt-3 space-y-2 text-sm">
+                        {latestRun.policy_references.map((reference) => (
+                          <li
+                            key={`${latestRun.id}-${reference.code}`}
+                            className="rounded-lg border border-[var(--border)] px-3 py-2"
+                          >
+                            <span className="font-medium">{reference.code}</span> -{" "}
+                            {reference.title} - {reference.severity}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                      Metadata do run
+                    </p>
+                    <pre className="mt-3 overflow-x-auto rounded-xl bg-[var(--surface)] p-4 text-xs leading-6 text-[var(--foreground)]">
+                      {formatMetadata(latestRun.metadata)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-[var(--border)] bg-[var(--surface)]">
+            <CardHeader>
+              <CardTitle>Steps do grafo</CardTitle>
+              <CardDescription>
+                Etapas registradas para o ultimo run de moderacao.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {latestRun === null ? (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Execute uma analise para visualizar os steps do grafo.
+                </p>
+              ) : latestRunSteps.length === 0 ? (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Nenhum step registrado para esta analise.
+                </p>
+              ) : (
+                latestRunSteps.map((step) => (
                   <div
-                    key={run.id}
+                    key={step.id}
                     className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4"
                   >
-                    <div className="flex flex-wrap items-center gap-3">
-                      <StatusBadge status={run.status} />
-                      <span className="text-sm text-[var(--muted-foreground)]">
-                        {formatDateTime(run.created_at)}
-                      </span>
-                    </div>
-
-                    <dl className="mt-4 grid gap-3 md:grid-cols-3">
-                      <Fact label="Route" value={run.route ? formatLabel(run.route) : "-"} />
+                    <dl className="grid gap-3 md:grid-cols-3">
+                      <Fact label="Node" value={step.node_name} />
+                      <Fact label="Status" value={step.status} />
                       <Fact
-                        label="Risco"
-                        value={run.risk_level ? formatLabel(run.risk_level) : "-"}
-                      />
-                      <Fact
-                        label="Acao sugerida"
+                        label="Duracao"
                         value={
-                          run.recommended_action
-                            ? formatLabel(run.recommended_action)
-                            : "-"
+                          step.duration_ms === null ? "-" : `${step.duration_ms} ms`
                         }
                       />
+                      <Fact
+                        label="Criado em"
+                        value={formatDateTime(step.created_at)}
+                      />
+                      <Fact label="Modelo" value={step.model ?? "-"} />
+                      <Fact label="Erro" value={step.error_message ?? "-"} />
                     </dl>
 
                     <div className="mt-4">
                       <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                        Steps
+                        Metadata
                       </p>
-                      {stepsByRunId[run.id]?.length ? (
-                        <div className="mt-3 overflow-x-auto">
-                          <table className="min-w-full divide-y divide-[var(--border)] text-sm">
-                            <thead>
-                              <tr className="text-left text-[var(--muted-foreground)]">
-                                <th className="px-3 py-2 font-medium">Node</th>
-                                <th className="px-3 py-2 font-medium">Status</th>
-                                <th className="px-3 py-2 font-medium">Duracao</th>
-                                <th className="px-3 py-2 font-medium">Modelo</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--border)]">
-                              {stepsByRunId[run.id].map((step) => (
-                                <tr key={step.id}>
-                                  <td className="px-3 py-3">{step.node_name}</td>
-                                  <td className="px-3 py-3">{formatLabel(step.status)}</td>
-                                  <td className="px-3 py-3">
-                                    {step.duration_ms ? `${step.duration_ms} ms` : "-"}
-                                  </td>
-                                  <td className="px-3 py-3">{step.model ?? "-"}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                          Nenhuma etapa registrada ainda.
-                        </p>
-                      )}
+                      <pre className="mt-3 overflow-x-auto rounded-xl bg-[var(--surface)] p-4 text-xs leading-6 text-[var(--foreground)]">
+                        {formatMetadata(step.metadata)}
+                      </pre>
                     </div>
                   </div>
                 ))
