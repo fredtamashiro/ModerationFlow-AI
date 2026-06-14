@@ -95,12 +95,21 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "nao sabe ensinar",
     )
     ambiguous_terms = (
-        "perda de tempo",
         "ridiculo",
         "que piada",
         "quase dormi",
         "genial...",
         "sarcasmo",
+    )
+    criticism_terms = (
+        "perda de tempo",
+        "faltaram exemplos",
+        "ritmo da aula",
+        "nao gostei da didatica",
+        "precisa de revisao",
+        "podia ser melhor",
+        "ficou confuso",
+        "nao foi tao util",
     )
     question_terms = (
         "como ",
@@ -136,6 +145,10 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         route = "ambiguous_deep_review"
         reason = "O comentario contem sarcasmo ou critica potencialmente ambigua."
         confidence = 0.66
+    elif _contains_any(content, criticism_terms):
+        route = "low_risk_path"
+        reason = "O comentario aparenta ser uma critica legitima sem ofensa direta."
+        confidence = 0.79
     elif "?" in content or _contains_any(content, question_terms):
         route = "low_risk_path"
         reason = "O comentario aparenta ser uma duvida ou pedido de suporte."
@@ -223,7 +236,27 @@ def low_risk_path(state: ModerationGraphState) -> dict[str, Any]:
         content,
         ("excelente", "obrigado", "obrigada", "ajudou bastante", "gostei", "parabens"),
     )
-    category = "positive_feedback" if positive else "question_or_support_request"
+    if "nao gostei" in content:
+        positive = False
+    criticism = _contains_any(
+        content,
+        (
+            "perda de tempo",
+            "faltaram exemplos",
+            "ritmo da aula",
+            "nao gostei da didatica",
+            "precisa de revisao",
+            "podia ser melhor",
+            "ficou confuso",
+            "nao foi tao util",
+        ),
+    )
+    if positive:
+        category = "positive_feedback"
+    elif criticism:
+        category = "legitimate_criticism"
+    else:
+        category = "question_or_support_request"
     return _path_result(
         "low_risk_path",
         risk_level="low",
@@ -275,7 +308,8 @@ def guideline_retriever(state: ModerationGraphState) -> dict[str, Any]:
         (("ilegal", "hack", "burlar", "golpe", "derrubar a conta", "compartilhar a senha"), ("R-005",)),
         (("duvida", "como ", "onde ", "quando ", "poderia", "nao entendi"), ("R-007",)),
         (("bom", "otimo", "excelente", "gostei", "obrigado", "obrigada"), ("R-008",)),
-        (("perda de tempo", "piada", "ruim", "pessima", "quase dormi"), ("R-003", "R-006")),
+        (("perda de tempo", "faltaram exemplos", "ritmo da aula", "didatica", "precisa de revisao", "ficou confuso", "nao foi tao util"), ("R-006",)),
+        (("piada", "quase dormi", "genial...", "sarcasmo"), ("R-003", "R-006")),
     )
 
     matched_codes = list(route_codes[route])
@@ -388,6 +422,12 @@ def risk_analyzer(state: ModerationGraphState) -> dict[str, Any]:
         confidence = 0.84
         recommended_action = "approve"
         justification = "O comentario aparenta ser feedback positivo permitido por R-008."
+    elif route == "low_risk_path" and state.get("category") == "legitimate_criticism" and "R-006" in codes:
+        risk_level = "low"
+        category = "legitimate_criticism"
+        confidence = 0.80
+        recommended_action = "approve"
+        justification = "O comentario aparenta ser critica legitima permitida por R-006."
     elif route == "low_risk_path" and "R-007" in codes:
         risk_level = "low"
         category = "question_or_support_request"
@@ -522,6 +562,25 @@ def critic_agent(state: ModerationGraphState) -> dict[str, Any]:
         adjusted_confidence = confidence
         critic_summary = (
             "A violacao parece clara e consistente com ataque pessoal ou linguagem ofensiva."
+        )
+    elif recommended_action == "remove" and route == "spam_fast_path" and confidence >= 0.80:
+        critic_agrees = True
+        adjusted_action = "remove"
+        adjusted_risk_level = "medium"
+        adjusted_confidence = confidence
+        critic_summary = (
+            "Os sinais de spam parecem claros e proporcionais para recomendacao de remocao."
+        )
+    elif recommended_action == "remove" and state.get("category") in {
+        "hate_or_discrimination",
+        "dangerous_or_illegal_content",
+    }:
+        critic_agrees = True
+        adjusted_action = "remove"
+        adjusted_risk_level = "high"
+        adjusted_confidence = max(confidence, 0.88)
+        critic_summary = (
+            "A severidade do conteudo justifica manter a recomendacao de remocao para revisao humana."
         )
     else:
         critic_agrees = False
