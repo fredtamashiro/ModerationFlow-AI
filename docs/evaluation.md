@@ -132,3 +132,47 @@ Esses resultados sao aceitaveis como diagnostico de generalizacao, mesmo ficando
 ### Observacoes
 
 O retuning recuperou completamente as metricas no dataset endurecido atual, o que mostra ganho real de cobertura em relacao aos erros da etapa 014. Ao mesmo tempo, esse resultado aumenta o risco de overfitting heuristico ao conjunto de 75 exemplos, porque a calibracao ainda depende de regras lexicais e padroes manuais. O baseline segue util como referencia local, mas ainda precisa ser testado com novos lotes de exemplos e futuras avaliacoes menos alinhadas ao conjunto atual.
+
+## Holdout evaluation - Etapa 016
+
+### Objetivo
+
+Validar generalizacao do baseline heuristico em um conjunto separado de exemplos, sem usar o holdout para tuning imediato.
+
+### Dataset
+
+- arquivo: `backend/app/evaluation/datasets/moderation_holdout_eval.json`
+- total_examples: 35
+- tipos de casos: critica legitima negativa, critica agressiva nao removivel, suporte irritado, spam indireto, convite para grupo externo, elogio com ressalva, sarcasmo, ambiguidade, ofensa indireta, ofensa direta, discriminacao implicita, conteudo perigoso ou ilegal e linguagem informal com typos.
+
+### Metricas no dataset principal
+
+- total_examples: 75
+- accuracy_action: 100.00%
+- accuracy_risk_level: 100.00%
+- accuracy_category: 100.00%
+- policy_match_rate: 100.00%
+
+### Metricas no holdout
+
+- total_examples: 35
+- successful_runs: 35
+- failed_runs: 0
+- accuracy_action: 48.57%
+- accuracy_risk_level: 48.57%
+- accuracy_category: 57.14%
+- policy_match_rate: 88.57%
+- average_latency_ms: 6ms
+
+### Observacoes
+
+O holdout confirma que o baseline atual esta fortemente aderente ao dataset principal e ainda generaliza mal para exemplos novos com variacao de linguagem. Os principais grupos de divergencia no holdout foram:
+
+- critica legitima leve fora das frases mais esperadas pelo `intent_router`, caindo em `needs_human_review`;
+- spam indireto e convite para contato externo sem match forte suficiente para `R-001`;
+- sarcasmo iniciado por elogio sendo confundido com `positive_feedback` ou rota segura;
+- elogio com ressalva e critica mista informal ficando ambiguos demais;
+- algumas frases curtas e informais com typos ainda sem cobertura adequada;
+- um falso positivo grave em `R-004`, indicando que o baseline ainda pode errar de forma severa fora do conjunto usado em tuning.
+
+Nesta etapa, nenhuma heuristica foi alterada. O objetivo foi medir generalizacao, nao recuperar metrica no holdout.

@@ -1,0 +1,287 @@
+[
+  {
+    "id": "holdout-001",
+    "comment": "Achei o conteudo raso, mas deu para acompanhar.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Critica negativa leve, sem ofensa."
+  },
+  {
+    "id": "holdout-002",
+    "comment": "O curso me pareceu superficial em alguns momentos.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-003",
+    "comment": "Faltou aprofundar melhor a parte pratica.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-004",
+    "comment": "A aula ficou meio corrida para quem esta comecando.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-005",
+    "comment": "Eu esperava uma organizacao mais clara dos topicos.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-006",
+    "comment": "Sinceramente, ficou abaixo do esperado.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-007",
+    "comment": "O material nao esta horrivel, mas tambem nao convence.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-008",
+    "comment": "Parece promissor, mas a execucao ficou bem fraca.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-009",
+    "comment": "Nao consigo entrar na plataforma, alguem verifica isso por favor?",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "holdout-010",
+    "comment": "Ja tentei de novo e o certificado ainda nao saiu.",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "holdout-011",
+    "comment": "Nada abre aqui no celular, podem checar meu acesso?",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "holdout-012",
+    "comment": "alguem me ajuda ai pq o video nao carrega",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"],
+    "notes": "Suporte informal com typo leve."
+  },
+  {
+    "id": "holdout-013",
+    "comment": "Quem quiser material extra, mando no inbox.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "holdout-014",
+    "comment": "Tenho uma comunidade com resumos, depois me chamem.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "holdout-015",
+    "comment": "Tem um guia melhor no meu canal, o link esta na bio.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "holdout-016",
+    "comment": "Entrem no meu grupo para receber os exercicios completos.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "holdout-017",
+    "comment": "Excelente explicacao, pena que a demonstracao final ficou curta.",
+    "expected_category": "positive_feedback",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-008"],
+    "notes": "Elogio com ressalva leve."
+  },
+  {
+    "id": "holdout-018",
+    "comment": "Gostei bastante da aula, so senti falta de mais exemplos.",
+    "expected_category": "positive_feedback",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-008"]
+  },
+  {
+    "id": "holdout-019",
+    "comment": "Maravilha... agora entendi menos do que antes.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003", "R-006"]
+  },
+  {
+    "id": "holdout-020",
+    "comment": "Parabens mesmo, conseguiram transformar algo basico em confusao.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-021",
+    "comment": "Que aula incrivel... so que ficou bem ruim de acompanhar.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003", "R-006"]
+  },
+  {
+    "id": "holdout-022",
+    "comment": "Quem preparou isso claramente nao domina o tema.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "holdout-023",
+    "comment": "A pessoa que deu suporte estava bem despreparada.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "holdout-024",
+    "comment": "Esse instrutor e um ridiculo.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "holdout-025",
+    "comment": "Voce e um idiota, nao devia estar ensinando ninguem.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "holdout-026",
+    "comment": "Esse espaco trata mulheres como menos capazes e isso e absurdo.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"]
+  },
+  {
+    "id": "holdout-027",
+    "comment": "Nao deveriamos aceitar preconceito contra pessoas com deficiencia aqui.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"]
+  },
+  {
+    "id": "holdout-028",
+    "comment": "Tem como burlar o acesso premium sem pagar?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "holdout-029",
+    "comment": "Alguem conhece um jeito de hack essa conta sem ser detectado?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "holdout-030",
+    "comment": "Compartilhar a senha com geral ajuda a furar essa restricao?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "holdout-031",
+    "comment": "curti a aula mas achei a ultima parte corrida",
+    "expected_category": "positive_feedback",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-008"],
+    "notes": "Linguagem informal."
+  },
+  {
+    "id": "holdout-032",
+    "comment": "nao curti mt a explicacao dessa parte",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Critica legitima informal com abreviacao."
+  },
+  {
+    "id": "holdout-033",
+    "comment": "top o conteudo, mas faltou mostrar um caso real",
+    "expected_category": "positive_feedback",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-008"]
+  },
+  {
+    "id": "holdout-034",
+    "comment": "A explicacao foi meio confusa, embora a ideia seja boa.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "holdout-035",
+    "comment": "Que piada, venderam isso como conteudo avancado.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003", "R-006"]
+  }
+]
