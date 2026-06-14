@@ -8,7 +8,11 @@ router = APIRouter(
 )
 
 
-@router.get("/database")
+@router.get(
+    "/database",
+    summary="Verificar conexao com o banco",
+    description="Executa uma consulta simples para validar a conexao ativa com o PostgreSQL.",
+)
 def database_healthcheck():
     try:
         return check_database_connection()

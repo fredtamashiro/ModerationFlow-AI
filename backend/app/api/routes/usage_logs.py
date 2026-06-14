@@ -9,7 +9,14 @@ router = APIRouter(
 )
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="Listar logs de uso",
+    description=(
+        "Retorna os eventos operacionais mais recentes. "
+        "Requer autenticacao de administrador."
+    ),
+)
 def get_usage_logs(
     limit: int = 50,
     _admin_user: dict = Depends(require_admin_user),

@@ -32,7 +32,11 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.get(
+    "/",
+    summary="Consultar identificacao da API",
+    description="Retorna o nome da aplicacao e confirma que a API esta disponivel.",
+)
 def root():
     return {
         "name": "ModerationFlow AI",
@@ -40,7 +44,11 @@ def root():
     }
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    summary="Verificar saude da API",
+    description="Health check basico que confirma que o processo FastAPI esta respondendo.",
+)
 def health_check():
     return {
         "status": "ok",

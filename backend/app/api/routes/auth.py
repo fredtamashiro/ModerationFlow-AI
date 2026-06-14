@@ -69,7 +69,15 @@ def clear_admin_auth_cookie(response: Response) -> None:
     )
 
 
-@router.post("/login", response_model=AuthResponse)
+@router.post(
+    "/login",
+    response_model=AuthResponse,
+    summary="Autenticar administrador",
+    description=(
+        "Valida email e senha, cria o token de acesso e configura o cookie "
+        "HttpOnly usado nas rotas administrativas."
+    ),
+)
 def login(payload: LoginRequest, request: Request, response: Response):
     user = authenticate_user(
         email=payload.email,
@@ -103,14 +111,24 @@ def login(payload: LoginRequest, request: Request, response: Response):
     }
 
 
-@router.get("/me")
+@router.get(
+    "/me",
+    summary="Consultar administrador autenticado",
+    description=(
+        "Retorna os dados publicos do administrador associado ao token ou cookie atual."
+    ),
+)
 def get_current_admin_user(
     user: dict = Depends(require_admin_user),
 ):
     return remove_password_hash(user)
 
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    summary="Encerrar sessao administrativa",
+    description="Remove o cookie de autenticacao e registra o evento de logout.",
+)
 def logout(
     request: Request,
     response: Response,
