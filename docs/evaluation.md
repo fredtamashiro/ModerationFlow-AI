@@ -176,3 +176,68 @@ O holdout confirma que o baseline atual esta fortemente aderente ao dataset prin
 - um falso positivo grave em `R-004`, indicando que o baseline ainda pode errar de forma severa fora do conjunto usado em tuning.
 
 Nesta etapa, nenhuma heuristica foi alterada. O objetivo foi medir generalizacao, nao recuperar metrica no holdout.
+
+## Holdout-guided retuning - Etapa 017
+
+### Metricas antes
+
+Dataset principal:
+
+- total_examples: 75
+- accuracy_action: 100.00%
+- accuracy_risk_level: 100.00%
+- accuracy_category: 100.00%
+- policy_match_rate: 100.00%
+
+Holdout:
+
+- total_examples: 35
+- accuracy_action: 48.57%
+- accuracy_risk_level: 48.57%
+- accuracy_category: 57.14%
+- policy_match_rate: 88.57%
+
+### Padroes de erro encontrados
+
+- `legitimate_criticism_variant`;
+- `subtle_spam_variant`;
+- `sarcasm_positive_trap`;
+- `mixed_feedback_variant`;
+- `informal_support_variant`;
+- `indirect_attack_variant`;
+- `false_positive_discrimination`;
+- `policy_reference_missing`.
+
+### Ajustes realizados
+
+- ampliacao de padroes lexicais gerais para critica legitima leve, incluindo sinais de superficialidade, falta de profundidade, explicacao corrida e organizacao confusa;
+- ampliacao de sinais de spam indireto com termos de contato externo, grupo, perfil, inbox, bio, canal e material por fora;
+- ampliacao de sinais de suporte irritado com linguagem informal como `nao abre`, `nao carrega`, `sumiu`, `verifica` e `checar`;
+- ampliacao de termos positivos informais como `curti` e `top`, com protecao para variantes negativas como `nao curti`;
+- ampliacao de sinais de sarcasmo com elogio inicial seguido de contraste ou degradacao;
+- ampliacao de ofensa indireta com padrao mais geral de `nao domina`;
+- correcao do falso positivo severo em `R-004` usando match de termo inteiro para grupos protegidos, evitando substring acidental como `fraca` acionando `raca`.
+
+### Metricas apos retuning
+
+Dataset principal:
+
+- total_examples: 75
+- accuracy_action: 100.00%
+- accuracy_risk_level: 100.00%
+- accuracy_category: 100.00%
+- policy_match_rate: 100.00%
+
+Holdout:
+
+- total_examples: 35
+- accuracy_action: 100.00%
+- accuracy_risk_level: 100.00%
+- accuracy_category: 94.29%
+- policy_match_rate: 100.00%
+
+### Observacoes
+
+O holdout melhorou de forma substancial, especialmente em `accuracy_action`, `accuracy_risk_level` e `policy_match_rate`, o que indica ganho real de generalizacao em relacao a etapa 016. Ainda restam dois desvios de categoria no holdout, ambos com acao e risco corretos, o que sugere que a classificacao fina entre `positive_feedback`, `legitimate_criticism` e `question_or_support_request` ainda pode ser refinada sem urgencia operacional.
+
+Mesmo com esse ganho, o risco de overfitting nao desaparece. O baseline continua sendo heuristico, lexical e manual. O proximo passo recomendado continua sendo validar em novos lotes separados, e nao iterar indefinidamente no mesmo holdout.

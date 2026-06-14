@@ -20,6 +20,13 @@ def _contains_any(content: str, terms: tuple[str, ...]) -> bool:
     return any(term in content for term in terms)
 
 
+def _contains_any_whole_term(content: str, terms: tuple[str, ...]) -> bool:
+    return any(
+        re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", content)
+        for term in terms
+    )
+
+
 def _step(node_name: str, started_at: float, metadata: dict[str, Any]) -> GraphStep:
     return {
         "node_name": node_name,
@@ -89,6 +96,7 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
     )
     subtle_spam_terms = (
         "me chamem no privado",
+        "me chamem",
         "no privado",
         "link no meu perfil",
         "entra no meu grupo",
@@ -99,6 +107,12 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "pdf completo",
         "resumo completo",
         "passo no direct",
+        "inbox",
+        "bio",
+        "me chama",
+        "mensagem",
+        "por fora",
+        "canal",
     )
     toxic_terms = (
         "idiota",
@@ -112,6 +126,7 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "despreparado",
         "despreparada",
         "nao domina o assunto",
+        "nao domina",
     )
     ambiguous_terms = (
         "que piada",
@@ -120,14 +135,21 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "sarcasmo",
         "so que nao",
         "imagina a ruim",
+        "parabens mesmo",
         "parabens, conseguiram",
         "conseguiram deixar dificil",
         "conseguiram piorar",
         "bem decepcionante",
         "muito fraco",
+        "bem fraco",
+        "bem fraca",
         "mal planejado",
         "ficou bem ruim",
         "longe do que eu esperava",
+        "abaixo do esperado",
+        "nao convence",
+        "maravilha... agora",
+        "mais confuso",
     )
     criticism_terms = (
         "perda de tempo",
@@ -145,8 +167,20 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "esperava mais exemplos",
         "organizacao do conteudo",
         "ficou confusa",
+        "confusa",
         "superficial",
         "cansativo",
+        "raso",
+        "rasa",
+        "faltou profundidade",
+        "parte pratica",
+        "meio corrida",
+        "corrida",
+        "corrido",
+        "mais clara",
+        "mais detalhe",
+        "curta",
+        "nao curti",
     )
     question_terms = (
         "como ",
@@ -166,6 +200,13 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "certificado nao apareceu",
         "video trava",
         "resolver meu acesso",
+        "nao carrega",
+        "nao abre",
+        "sumiu",
+        "checar",
+        "verifica",
+        "verificar",
+        "ainda nao saiu",
     )
     positive_terms = (
         "excelente",
@@ -174,6 +215,8 @@ def intent_router(state: ModerationGraphState) -> dict[str, Any]:
         "ajudou bastante",
         "gostei",
         "parabens",
+        "curti",
+        "top",
     )
 
     route: ModerationRoute
@@ -296,13 +339,25 @@ def low_risk_path(state: ModerationGraphState) -> dict[str, Any]:
             "conseguiram deixar dificil",
             "conseguiram piorar",
             "genial... agora",
+            "maravilha... agora",
+            "excelente... nao",
+            "otima explicacao, so que nao",
         ),
     )
     positive = _contains_any(
         content,
-        ("excelente", "obrigado", "obrigada", "ajudou bastante", "gostei", "parabens"),
+        (
+            "excelente",
+            "obrigado",
+            "obrigada",
+            "ajudou bastante",
+            "gostei",
+            "parabens",
+            "curti",
+            "top",
+        ),
     )
-    if "nao gostei" in content or sarcastic:
+    if "nao gostei" in content or "nao curti" in content or sarcastic:
         positive = False
     criticism = _contains_any(
         content,
@@ -324,6 +379,17 @@ def low_risk_path(state: ModerationGraphState) -> dict[str, Any]:
             "superficial",
             "cansativo",
             "mto rapido",
+            "raso",
+            "rasa",
+            "faltou profundidade",
+            "parte pratica",
+            "meio corrida",
+            "corrida",
+            "corrido",
+            "mais clara",
+            "mais detalhe",
+            "curta",
+            "nao curti",
         ),
     )
     support = _contains_any(
@@ -338,6 +404,13 @@ def low_risk_path(state: ModerationGraphState) -> dict[str, Any]:
             "certificado nao apareceu",
             "video trava",
             "resolver meu acesso",
+            "nao carrega",
+            "nao abre",
+            "sumiu",
+            "checar",
+            "verifica",
+            "verificar",
+            "ainda nao saiu",
         ),
     )
     if positive:
@@ -403,11 +476,17 @@ def guideline_retriever(state: ModerationGraphState) -> dict[str, Any]:
                 "acesse",
                 "no privado",
                 "me chamem",
+                "me chama",
                 "meu perfil",
                 "meu grupo",
                 "direct",
                 "pdf completo",
                 "material complementar",
+                "inbox",
+                "bio",
+                "mensagem",
+                "por fora",
+                "canal",
             ),
             ("R-001",),
         ),
@@ -423,21 +502,11 @@ def guideline_retriever(state: ModerationGraphState) -> dict[str, Any]:
                 "despreparado",
                 "despreparada",
                 "nao domina o assunto",
+                "nao domina",
             ),
             ("R-002", "R-003"),
         ),
-        (
-            (
-                "raca",
-                "religiao",
-                "genero",
-                "deficiencia",
-                "preconceito",
-                "discriminacao",
-                "menos capazes",
-            ),
-            ("R-004",),
-        ),
+        (("menos capazes",), ("R-004",)),
         (("ilegal", "hack", "burlar", "golpe", "derrubar a conta", "compartilhar a senha"), ("R-005",)),
         (
             (
@@ -456,10 +525,19 @@ def guideline_retriever(state: ModerationGraphState) -> dict[str, Any]:
                 "certificado",
                 "acesso",
                 "video trava",
+                "nao carrega",
+                "nao abre",
+                "sumiu",
+                "checar",
+                "verifica",
+                "ainda nao saiu",
             ),
             ("R-007",),
         ),
-        (("bom", "otimo", "excelente", "gostei", "obrigado", "obrigada"), ("R-008",)),
+        (
+            ("bom", "otimo", "excelente", "gostei", "obrigado", "obrigada", "curti", "top"),
+            ("R-008",),
+        ),
         (
             (
                 "perda de tempo",
@@ -469,6 +547,7 @@ def guideline_retriever(state: ModerationGraphState) -> dict[str, Any]:
                 "precisa de revisao",
                 "ficou confuso",
                 "ficou confusa",
+                "confusa",
                 "nao foi tao util",
                 "nao gostei",
                 "esperava mais exemplos",
@@ -478,18 +557,46 @@ def guideline_retriever(state: ModerationGraphState) -> dict[str, Any]:
                 "superficial",
                 "decepcionante",
                 "muito fraco",
+                "bem fraco",
+                "bem fraca",
                 "mal planejado",
                 "ficou bem ruim",
+                "raso",
+                "rasa",
+                "faltou profundidade",
+                "parte pratica",
+                "corrida",
+                "corrido",
+                "mais clara",
+                "mais detalhe",
+                "curta",
+                "nao curti",
             ),
             ("R-006",),
         ),
         (
-            ("piada", "quase dormi", "genial...", "sarcasmo", "so que nao", "imagina a ruim", "parabens, conseguiram"),
+            (
+                "piada",
+                "quase dormi",
+                "genial...",
+                "sarcasmo",
+                "so que nao",
+                "imagina a ruim",
+                "parabens, conseguiram",
+                "maravilha... agora",
+                "mais confuso",
+            ),
             ("R-003", "R-006"),
         ),
     )
 
     matched_codes = list(route_codes[route])
+    if _contains_any_whole_term(
+        content,
+        ("raca", "religiao", "genero", "deficiencia", "preconceito", "discriminacao"),
+    ):
+        if "R-004" not in matched_codes:
+            matched_codes.append("R-004")
     keyword_match = False
     for keywords, codes in keyword_rules:
         if _contains_any(content, keywords):
@@ -582,7 +689,21 @@ def risk_analyzer(state: ModerationGraphState) -> dict[str, Any]:
         )
         if not explicit_spam and _contains_any(
             content,
-            ("no privado", "meu perfil", "meu grupo", "direct", "material complementar", "pdf completo"),
+            (
+                "no privado",
+                "me chamem",
+                "me chama",
+                "meu perfil",
+                "meu grupo",
+                "direct",
+                "material complementar",
+                "pdf completo",
+                "inbox",
+                "bio",
+                "mensagem",
+                "por fora",
+                "canal",
+            ),
         ):
             confidence = 0.78
             recommended_action = "flag"
