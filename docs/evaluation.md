@@ -241,3 +241,56 @@ Holdout:
 O holdout melhorou de forma substancial, especialmente em `accuracy_action`, `accuracy_risk_level` e `policy_match_rate`, o que indica ganho real de generalizacao em relacao a etapa 016. Ainda restam dois desvios de categoria no holdout, ambos com acao e risco corretos, o que sugere que a classificacao fina entre `positive_feedback`, `legitimate_criticism` e `question_or_support_request` ainda pode ser refinada sem urgencia operacional.
 
 Mesmo com esse ganho, o risco de overfitting nao desaparece. O baseline continua sendo heuristico, lexical e manual. O proximo passo recomendado continua sendo validar em novos lotes separados, e nao iterar indefinidamente no mesmo holdout.
+
+## Blind validation - Etapa 018
+
+### Objetivo
+
+Medir generalizacao em um terceiro dataset separado, sem usar esse conjunto para retuning imediato.
+
+### Datasets
+
+- `main`: `backend/app/evaluation/datasets/moderation_eval.json`
+- `holdout`: `backend/app/evaluation/datasets/moderation_holdout_eval.json`
+- `blind`: `backend/app/evaluation/datasets/moderation_blind_eval.json`
+
+### Metricas no dataset principal
+
+- total_examples: 75
+- accuracy_action: 100.00%
+- accuracy_risk_level: 100.00%
+- accuracy_category: 100.00%
+- policy_match_rate: 100.00%
+
+### Metricas no holdout
+
+- total_examples: 35
+- accuracy_action: 100.00%
+- accuracy_risk_level: 100.00%
+- accuracy_category: 94.29%
+- policy_match_rate: 100.00%
+
+### Metricas no blind validation
+
+- total_examples: 32
+- successful_runs: 32
+- failed_runs: 0
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+- average_latency_ms: 5ms
+
+### Observacoes
+
+O blind validation mostra que o baseline ainda generaliza de forma apenas parcial fora dos conjuntos ja conhecidos. O desempenho ficou melhor que o holdout antes do retuning, mas bem abaixo de `main` e abaixo do holdout atual, o que indica que o sistema ainda esta sensivel a novas variacoes lexicais e combinacoes de tom.
+
+Principais divergencias no blind:
+
+- critica legitima leve com formulacoes novas ainda cai em `needs_human_review`;
+- elogio com ressalva ou critica mista continua escorregando para `positive_feedback` ou `ambiguous`;
+- sarcasmo com elogio inicial ainda passa por armadilhas semanticas;
+- algumas frases negativas moderadas acabam sem cobertura suficiente para sair de `fallback_human_review`;
+- `policy_match_rate` permaneceu alto, entao o problema principal esta mais em classificacao final e acao do que em recuperar regras.
+
+Nesta etapa, nenhuma heuristica foi alterada. O objetivo foi criar validacao cega e medir generalizacao, nao corrigir o baseline.

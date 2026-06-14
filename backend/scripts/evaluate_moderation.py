@@ -18,6 +18,9 @@ DEFAULT_DATASET = (
 HOLDOUT_DATASET = (
     BACKEND_ROOT / "app" / "evaluation" / "datasets" / "moderation_holdout_eval.json"
 )
+BLIND_DATASET = (
+    BACKEND_ROOT / "app" / "evaluation" / "datasets" / "moderation_blind_eval.json"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--dataset",
-        choices=("main", "holdout"),
+        choices=("main", "holdout", "blind"),
         default="main",
         help="Seleciona um dataset predefinido. Default: main.",
     )
@@ -48,6 +51,8 @@ def resolve_dataset_path(args: argparse.Namespace) -> Path:
 
     if args.dataset == "holdout":
         return HOLDOUT_DATASET
+    if args.dataset == "blind":
+        return BLIND_DATASET
     return DEFAULT_DATASET
 
 

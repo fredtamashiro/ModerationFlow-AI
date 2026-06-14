@@ -1,0 +1,262 @@
+[
+  {
+    "id": "blind-001",
+    "comment": "O conteudo ajudou, mas achei que faltou aprofundar alguns pontos.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Elogio com critica leve."
+  },
+  {
+    "id": "blind-002",
+    "comment": "A aula foi util, so senti falta de exemplos mais completos.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "blind-003",
+    "comment": "Nao ficou ruim, mas o modulo podia aprofundar mais.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "blind-004",
+    "comment": "Achei a explicacao apressada demais nessa parte.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "blind-005",
+    "comment": "Bom material, porem faltou mostrar um cenário mais real.",
+    "expected_category": "positive_feedback",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-008"]
+  },
+  {
+    "id": "blind-006",
+    "comment": "Gostei da base, mas ainda parece superficial.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "blind-007",
+    "comment": "Sendo honesto, ficou mais fraco do que eu imaginava.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "blind-008",
+    "comment": "A ideia era boa, mas o resultado final decepcionou.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "blind-009",
+    "comment": "Que conteudo incrivel... agora fiquei ainda mais perdido.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003", "R-006"]
+  },
+  {
+    "id": "blind-010",
+    "comment": "Parabens, ficou tao claro que eu entendi menos.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "blind-011",
+    "comment": "Excelente... so que nao explicou a parte importante.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003", "R-006"]
+  },
+  {
+    "id": "blind-012",
+    "comment": "Nao consigo abrir a ultima aula, podem conferir meu acesso?",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "blind-013",
+    "comment": "Ja tentei varias vezes e o certificado sumiu do nada.",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "blind-014",
+    "comment": "ngm resolve meu login, alguem pode verificar?",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"],
+    "notes": "Informalidade e abreviacao."
+  },
+  {
+    "id": "blind-015",
+    "comment": "Tenho um guia por fora, me manda mensagem se quiser.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "blind-016",
+    "comment": "Se quiserem os arquivos completos, chama no privado.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "blind-017",
+    "comment": "Entrem no meu grupo para baixar todo o material.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "blind-018",
+    "comment": "Acesse meu site agora para comprar o treinamento completo.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "blind-019",
+    "comment": "Link promocional no meu perfil com desconto especial.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-001"]
+  },
+  {
+    "id": "blind-020",
+    "comment": "ok",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "unknown",
+    "expected_action": "needs_human_review",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Comentario curto demais."
+  },
+  {
+    "id": "blind-021",
+    "comment": "curti a aula, mas achei a parte final meio corrida",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"]
+  },
+  {
+    "id": "blind-022",
+    "comment": "nao abriu aqui e ja tentei de td",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"]
+  },
+  {
+    "id": "blind-023",
+    "comment": "Quem estruturou isso claramente nao domina o assunto.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "blind-024",
+    "comment": "O suporte foi dado por gente despreparada.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "blind-025",
+    "comment": "Esse professor e um imbecil.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "blind-026",
+    "comment": "Voce e ridiculo e nao sabe ensinar.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"]
+  },
+  {
+    "id": "blind-027",
+    "comment": "Tratar alunas como menos capazes aqui e inaceitavel.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"]
+  },
+  {
+    "id": "blind-028",
+    "comment": "Nao pode haver preconceito contra religiao nessa comunidade.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"]
+  },
+  {
+    "id": "blind-029",
+    "comment": "A explicacao ficou fraca, mas nao foi preconceituosa.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Caso pensado para evitar falso positivo de discriminacao."
+  },
+  {
+    "id": "blind-030",
+    "comment": "Tem como burlar esse bloqueio para acessar sem permissao?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "blind-031",
+    "comment": "Compartilhar a senha com outras pessoas ajuda a contornar isso?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  },
+  {
+    "id": "blind-032",
+    "comment": "Alguem sabe um jeito ilegal de hack esse acesso?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"]
+  }
+]
