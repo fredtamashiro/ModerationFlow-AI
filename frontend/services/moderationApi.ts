@@ -72,8 +72,22 @@ export type ModerationDecision = {
   moderator_note: string | null;
   final_content: string | null;
   was_ai_correct: boolean | null;
+  metadata: Record<string, JsonValue>;
   decided_at: string;
   created_at: string;
+};
+
+export type HumanDecision = "approve" | "flag" | "remove" | "request_edit";
+
+export type HumanRiskLevel = "low" | "medium" | "high" | "unknown";
+
+export type HumanDecisionPayload = {
+  human_decision: HumanDecision;
+  human_category: string | null;
+  human_risk_level: HumanRiskLevel | null;
+  moderator_note: string | null;
+  final_content: string | null;
+  metadata: Record<string, JsonValue>;
 };
 
 export type PaginatedModerationComments = {
@@ -146,10 +160,15 @@ async function getErrorMessage(
 async function authenticatedFetch<T>(
   path: string,
   fallbackMessage: string,
+  init?: RequestInit,
 ): Promise<T> {
   const response = await fetch(createApiUrl(path), {
     cache: "no-store",
     credentials: "include",
+    ...init,
+    headers: {
+      ...init?.headers,
+    },
   });
 
   if (!response.ok) {
@@ -238,5 +257,22 @@ export async function listCommentDecisions(
   return authenticatedFetch(
     `/admin/moderation/comments/${commentId}/decisions`,
     "Erro ao buscar decisoes de moderacao.",
+  );
+}
+
+export async function createHumanDecision(
+  commentId: string,
+  payload: HumanDecisionPayload,
+): Promise<ModerationDecision> {
+  return authenticatedFetch(
+    `/admin/moderation/comments/${commentId}/decisions`,
+    "Erro ao registrar decisao humana.",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
   );
 }

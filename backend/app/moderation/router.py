@@ -8,10 +8,12 @@ from app.moderation.schemas import (
     GuidelineListResponse,
     HumanDecisionCreate,
     ModerationDecision,
+    ModerationRun,
     ModerationRunSummary,
     ModerationStep,
 )
 from app.moderation.service import (
+    analyze_comment,
     create_human_decision,
     get_comment,
     get_guideline,
@@ -81,3 +83,8 @@ def get_comment_decisions(comment_id: str):
 @router.post("/comments/{comment_id}/decisions", response_model=ModerationDecision)
 def create_comment_decision(comment_id: str, payload: HumanDecisionCreate):
     return create_human_decision(comment_id, payload.model_dump())
+
+
+@router.post("/comments/{comment_id}/analyze", response_model=ModerationRun)
+def analyze_moderation_comment(comment_id: str):
+    return analyze_comment(comment_id)

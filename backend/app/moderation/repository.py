@@ -491,3 +491,234 @@ def create_feedback_example(
             "metadata": json.dumps(payload.get("metadata", {})),
         },
     )
+
+
+def create_moderation_run(comment_id: str) -> dict:
+    with SessionLocal.begin() as db:
+        row = db.execute(
+            text(
+                """
+                INSERT INTO moderation.moderation_runs (
+                    id,
+                    comment_id,
+                    status,
+                    critic_applied,
+                    requires_human_review,
+                    policy_references,
+                    metadata,
+                    started_at
+                )
+                VALUES (
+                    gen_random_uuid(),
+                    CAST(:comment_id AS UUID),
+                    'started',
+                    FALSE,
+                    TRUE,
+                    '[]'::jsonb,
+                    CAST(:metadata AS JSONB),
+                    NOW()
+                )
+                RETURNING id, comment_id, status, started_at, created_at
+                """
+            ),
+            {
+                "comment_id": comment_id,
+                "metadata": json.dumps({"graph_version": "foundation_v1"}),
+            },
+        ).fetchone()
+
+        db.execute(
+            text(
+                """
+                UPDATE moderation.comments
+                SET status = 'analyzing', updated_at = NOW()
+                WHERE id = CAST(:comment_id AS UUID)
+                """
+            ),
+            {"comment_id": comment_id},
+        )
+
+    return dict(row._mapping)
+
+
+def _insert_moderation_step(db: Session, run_id: str, step: dict) -> None:
+    db.execute(
+        text(
+            """
+            INSERT INTO moderation.moderation_steps (
+                id,
+                run_id,
+                node_name,
+                status,
+                duration_ms,
+                model,
+                input_tokens,
+                output_tokens,
+                metadata,
+                error_message
+            )
+            VALUES (
+                gen_random_uuid(),
+                CAST(:run_id AS UUID),
+                :node_name,
+                :status,
+                :duration_ms,
+                NULL,
+                NULL,
+                NULL,
+                CAST(:metadata AS JSONB),
+                :error_message
+            )
+            """
+        ),
+        {
+            "run_id": run_id,
+            "node_name": step["node_name"],
+            "status": step["status"],
+            "duration_ms": step.get("duration_ms"),
+            "metadata": json.dumps(step.get("metadata", {})),
+            "error_message": step.get("error_message"),
+        },
+    )
+
+
+def complete_moderation_run(
+    run_id: str,
+    comment_id: str,
+    graph_state: dict,
+) -> None:
+    with SessionLocal.begin() as db:
+        for step in graph_state.get("steps", []):
+            _insert_moderation_step(db, run_id, step)
+
+        run_metadata = {
+            "graph_version": "foundation_v1",
+            "input_guard_reason": graph_state.get("input_guard_reason"),
+            "route_reason": graph_state.get("route_reason"),
+            "route_confidence": graph_state.get("route_confidence"),
+        }
+        db.execute(
+            text(
+                """
+                UPDATE moderation.moderation_runs
+                SET
+                    status = 'waiting_human_review',
+                    route = :route,
+                    risk_level = :risk_level,
+                    category = :category,
+                    confidence = :confidence,
+                    recommended_action = :recommended_action,
+                    ai_justification = :ai_justification,
+                    critic_applied = FALSE,
+                    requires_human_review = TRUE,
+                    policy_references = CAST(:policy_references AS JSONB),
+                    metadata = CAST(:metadata AS JSONB),
+                    error_message = NULL,
+                    finished_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = CAST(:run_id AS UUID)
+                """
+            ),
+            {
+                "run_id": run_id,
+                "route": graph_state["route"],
+                "risk_level": graph_state["risk_level"],
+                "category": graph_state["category"],
+                "confidence": graph_state["confidence"],
+                "recommended_action": graph_state["recommended_action"],
+                "ai_justification": graph_state["ai_justification"],
+                "policy_references": json.dumps(
+                    graph_state.get("policy_references", [])
+                ),
+                "metadata": json.dumps(run_metadata),
+            },
+        )
+
+        db.execute(
+            text(
+                """
+                UPDATE moderation.comments
+                SET status = 'waiting_human_review', updated_at = NOW()
+                WHERE id = CAST(:comment_id AS UUID)
+                """
+            ),
+            {"comment_id": comment_id},
+        )
+
+
+def fail_moderation_run(
+    run_id: str,
+    comment_id: str,
+    error_message: str,
+) -> None:
+    with SessionLocal.begin() as db:
+        _insert_moderation_step(
+            db,
+            run_id,
+            {
+                "node_name": "graph_execution",
+                "status": "failed",
+                "duration_ms": 0,
+                "metadata": {"fallback": "human_review"},
+                "error_message": error_message,
+            },
+        )
+        db.execute(
+            text(
+                """
+                UPDATE moderation.moderation_runs
+                SET
+                    status = 'failed',
+                    requires_human_review = TRUE,
+                    error_message = :error_message,
+                    finished_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = CAST(:run_id AS UUID)
+                """
+            ),
+            {"run_id": run_id, "error_message": error_message},
+        )
+        db.execute(
+            text(
+                """
+                UPDATE moderation.comments
+                SET status = 'waiting_human_review', updated_at = NOW()
+                WHERE id = CAST(:comment_id AS UUID)
+                """
+            ),
+            {"comment_id": comment_id},
+        )
+
+
+def get_moderation_run_by_id(run_id: str) -> dict | None:
+    with SessionLocal() as db:
+        row = db.execute(
+            text(
+                """
+                SELECT
+                    id,
+                    comment_id,
+                    status,
+                    route,
+                    risk_level,
+                    category,
+                    confidence,
+                    recommended_action,
+                    ai_justification,
+                    critic_applied,
+                    requires_human_review,
+                    policy_references,
+                    metadata,
+                    error_message,
+                    started_at,
+                    finished_at,
+                    created_at,
+                    updated_at
+                FROM moderation.moderation_runs
+                WHERE id = CAST(:run_id AS UUID)
+                """
+            ),
+            {"run_id": run_id},
+        ).fetchone()
+
+    return dict(row._mapping) if row else None

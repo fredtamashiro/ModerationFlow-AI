@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { AdminPageShell } from "@/components/admin/admin-page-shell";
+import { HumanReviewForm } from "@/components/moderation/human-review-form";
 import { StatusBadge } from "@/components/moderation/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, formatLabel, formatMetadata } from "@/lib/moderation";
@@ -29,6 +30,28 @@ export default function CommentDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const loadData = useCallback(async () => {
+    const [nextComment, nextRuns, nextDecisions] = await Promise.all([
+      getModerationComment(commentId),
+      listCommentRuns(commentId),
+      listCommentDecisions(commentId),
+    ]);
+
+    const runSteps = await Promise.all(
+      nextRuns.map(async (run) => ({
+        runId: run.id,
+        steps: await listRunSteps(run.id),
+      })),
+    );
+
+    setComment(nextComment);
+    setRuns(nextRuns);
+    setDecisions(nextDecisions);
+    setStepsByRunId(
+      Object.fromEntries(runSteps.map((entry) => [entry.runId, entry.steps])),
+    );
+  }, [commentId]);
+
   useEffect(() => {
     if (!commentId) {
       return;
@@ -41,29 +64,11 @@ export default function CommentDetailPage() {
         setIsLoading(true);
         setErrorMessage("");
 
-        const [nextComment, nextRuns, nextDecisions] = await Promise.all([
-          getModerationComment(commentId),
-          listCommentRuns(commentId),
-          listCommentDecisions(commentId),
-        ]);
-
-        const runSteps = await Promise.all(
-          nextRuns.map(async (run) => ({
-            runId: run.id,
-            steps: await listRunSteps(run.id),
-          })),
-        );
+        await loadData();
 
         if (!isMounted) {
           return;
         }
-
-        setComment(nextComment);
-        setRuns(nextRuns);
-        setDecisions(nextDecisions);
-        setStepsByRunId(
-          Object.fromEntries(runSteps.map((entry) => [entry.runId, entry.steps])),
-        );
       } catch (error) {
         if (!isMounted) {
           return;
@@ -86,12 +91,12 @@ export default function CommentDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [commentId]);
+  }, [commentId, loadData]);
 
   return (
     <AdminPageShell
       title="Detalhe do comentario"
-      description="Leitura administrativa do comentario, execucoes registradas e decisoes humanas."
+      description="Revise o comentario e consulte execucoes e decisoes registradas."
     >
       <Link
         href="/admin/moderation"
@@ -238,9 +243,21 @@ export default function CommentDetailPage() {
 
           <Card className="border-[var(--border)] bg-[var(--surface)]">
             <CardHeader>
+              <CardTitle>Revisao humana</CardTitle>
+              <CardDescription>
+                Registre a decisao final do moderador para este comentario.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <HumanReviewForm commentId={commentId} onSaved={loadData} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-[var(--border)] bg-[var(--surface)]">
+            <CardHeader>
               <CardTitle>Decisoes humanas</CardTitle>
               <CardDescription>
-                Esta etapa ainda nao cria acoes de aprovacao ou remocao.
+                Historico das decisoes registradas por moderadores.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -287,7 +304,7 @@ export default function CommentDetailPage() {
                         label="IA correta"
                         value={
                           decision.was_ai_correct === null
-                            ? "-"
+                            ? "Nao aplicavel"
                             : decision.was_ai_correct
                               ? "Sim"
                               : "Nao"

@@ -1,7 +1,13 @@
+import logging
+
 from fastapi import HTTPException
 
-from app.moderation import repository
 from app.database.database import SessionLocal
+from app.moderation import repository
+from app.moderation.graph import moderation_graph
+
+
+logger = logging.getLogger(__name__)
 
 
 def _validate_limit(limit: int) -> None:
@@ -173,3 +179,55 @@ def create_human_decision(comment_id: str, payload: dict) -> dict:
         )
 
     return created_decision
+
+
+def analyze_comment(comment_id: str) -> dict:
+    comment = get_comment(comment_id)
+    run_id: str | None = None
+    safe_error_message = "Falha inesperada durante a analise de moderacao."
+
+    try:
+        run = repository.create_moderation_run(comment_id)
+        run_id = str(run["id"])
+        initial_state = {
+            "comment_id": comment_id,
+            "comment_content": comment["content"],
+            "author_name": comment["author_name"],
+            "course_name": comment["course_name"],
+            "lesson_name": comment["lesson_name"],
+            "run_id": run_id,
+            "steps": [],
+            "errors": [],
+            "metadata": comment.get("metadata", {}),
+        }
+
+        final_state = moderation_graph.invoke(initial_state)
+        repository.complete_moderation_run(
+            run_id=run_id,
+            comment_id=comment_id,
+            graph_state=final_state,
+        )
+    except Exception as error:
+        logger.exception(
+            "Falha ao executar grafo de moderacao para comment_id=%s",
+            comment_id,
+        )
+        if run_id:
+            try:
+                repository.fail_moderation_run(
+                    run_id=run_id,
+                    comment_id=comment_id,
+                    error_message=safe_error_message,
+                )
+            except Exception:
+                logger.exception(
+                    "Falha ao persistir fallback do grafo para run_id=%s",
+                    run_id,
+                )
+        raise HTTPException(status_code=500, detail=safe_error_message) from error
+
+    completed_run = repository.get_moderation_run_by_id(run_id)
+    if not completed_run:
+        raise HTTPException(status_code=500, detail=safe_error_message)
+
+    return completed_run

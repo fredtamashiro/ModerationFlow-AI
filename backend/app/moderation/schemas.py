@@ -64,6 +64,29 @@ class ModerationRunSummary(BaseModel):
     updated_at: datetime
 
 
+class ModerationRun(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    comment_id: UUID
+    status: str
+    route: str | None = None
+    risk_level: str | None = None
+    category: str | None = None
+    confidence: float | None = None
+    recommended_action: str | None = None
+    ai_justification: str | None = None
+    critic_applied: bool
+    requires_human_review: bool
+    policy_references: list[str]
+    metadata: dict[str, Any]
+    error_message: str | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class ModerationStep(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
