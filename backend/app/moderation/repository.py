@@ -616,6 +616,9 @@ def complete_moderation_run(
             "input_guard_reason": graph_state.get("input_guard_reason"),
             "route_reason": graph_state.get("route_reason"),
             "route_confidence": graph_state.get("route_confidence"),
+            "confidence_gate_decision": graph_state.get("confidence_gate_decision"),
+            "critic_reason": graph_state.get("critic_reason"),
+            "critic_summary": graph_state.get("critic_summary"),
         }
         db.execute(
             text(
@@ -629,7 +632,7 @@ def complete_moderation_run(
                     confidence = :confidence,
                     recommended_action = :recommended_action,
                     ai_justification = :ai_justification,
-                    critic_applied = FALSE,
+                    critic_applied = :critic_applied,
                     requires_human_review = TRUE,
                     policy_references = CAST(:policy_references AS JSONB),
                     metadata = CAST(:metadata AS JSONB),
@@ -647,6 +650,7 @@ def complete_moderation_run(
                 "confidence": graph_state["confidence"],
                 "recommended_action": graph_state["recommended_action"],
                 "ai_justification": graph_state["ai_justification"],
+                "critic_applied": graph_state.get("critic_applied", False),
                 "policy_references": json.dumps(
                     graph_state.get("policy_references", [])
                 ),

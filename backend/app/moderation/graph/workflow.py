@@ -2,6 +2,8 @@ from langgraph.graph import END, START, StateGraph
 
 from app.moderation.graph.nodes import (
     ambiguous_deep_review,
+    confidence_gate,
+    critic_agent,
     decision_builder,
     fallback_human_review,
     guideline_retriever,
@@ -23,6 +25,10 @@ def _route_after_intent(state: ModerationGraphState) -> ModerationRoute:
     return state.get("route", "fallback_human_review")
 
 
+def _route_after_confidence_gate(state: ModerationGraphState) -> str:
+    return state.get("confidence_gate_decision", "high_confidence")
+
+
 def build_moderation_graph():
     workflow = StateGraph(ModerationGraphState)
 
@@ -35,6 +41,8 @@ def build_moderation_graph():
     workflow.add_node("fallback_human_review", fallback_human_review)
     workflow.add_node("guideline_retriever", guideline_retriever)
     workflow.add_node("risk_analyzer", risk_analyzer)
+    workflow.add_node("confidence_gate", confidence_gate)
+    workflow.add_node("critic_agent", critic_agent)
     workflow.add_node("decision_builder", decision_builder)
 
     workflow.add_edge(START, "input_guard")
@@ -68,7 +76,16 @@ def build_moderation_graph():
         workflow.add_edge(path_node, "guideline_retriever")
 
     workflow.add_edge("guideline_retriever", "risk_analyzer")
-    workflow.add_edge("risk_analyzer", "decision_builder")
+    workflow.add_edge("risk_analyzer", "confidence_gate")
+    workflow.add_conditional_edges(
+        "confidence_gate",
+        _route_after_confidence_gate,
+        {
+            "high_confidence": "decision_builder",
+            "needs_critic": "critic_agent",
+        },
+    )
+    workflow.add_edge("critic_agent", "decision_builder")
     workflow.add_edge("decision_builder", END)
     return workflow.compile()
 

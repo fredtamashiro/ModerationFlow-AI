@@ -427,20 +427,182 @@ def risk_analyzer(state: ModerationGraphState) -> dict[str, Any]:
     }
 
 
+def confidence_gate(state: ModerationGraphState) -> dict[str, Any]:
+    started_at = perf_counter()
+    confidence = state.get("confidence", 0.0)
+    recommended_action = state.get("recommended_action", "needs_human_review")
+    risk_level = state.get("risk_level", "unknown")
+    route = state.get("route", "fallback_human_review")
+    category = state.get("category", "ambiguous")
+    policy_codes = {reference["code"] for reference in state.get("policy_references", [])}
+
+    critic_required = False
+    reason = "confidence_above_threshold"
+
+    if confidence < 0.75:
+        critic_required = True
+        reason = "confidence_below_threshold"
+    elif recommended_action == "remove":
+        critic_required = True
+        reason = "remove_requires_review"
+    elif risk_level == "high":
+        critic_required = True
+        reason = "high_risk_level"
+    elif route == "ambiguous_deep_review":
+        critic_required = True
+        reason = "ambiguous_route"
+    elif category == "ambiguous":
+        critic_required = True
+        reason = "ambiguous_category"
+    elif {"R-003", "R-006"}.issubset(policy_codes):
+        critic_required = True
+        reason = "policy_conflict_r003_r006"
+
+    decision = "needs_critic" if critic_required else "high_confidence"
+    return {
+        "critic_required": critic_required,
+        "critic_reason": reason,
+        "confidence_gate_decision": decision,
+        "steps": [
+            _step(
+                "confidence_gate",
+                started_at,
+                {
+                    "decision": decision,
+                    "reason": reason,
+                    "confidence": confidence,
+                    "recommended_action": recommended_action,
+                    "risk_level": risk_level,
+                },
+            )
+        ],
+    }
+
+
+def critic_agent(state: ModerationGraphState) -> dict[str, Any]:
+    started_at = perf_counter()
+    confidence = state.get("confidence", 0.0)
+    recommended_action = state.get("recommended_action", "needs_human_review")
+    risk_level = state.get("risk_level", "unknown")
+    route = state.get("route", "fallback_human_review")
+    policy_codes = {reference["code"] for reference in state.get("policy_references", [])}
+
+    critic_summary = "O caso exige revisao humana adicional antes da consolidacao."
+    critic_agrees = True
+    adjusted_action = recommended_action
+    adjusted_risk_level = risk_level
+    adjusted_confidence = confidence
+
+    if recommended_action == "remove" and confidence < 0.75:
+        critic_agrees = False
+        adjusted_action = "flag"
+        adjusted_risk_level = "medium"
+        adjusted_confidence = min(confidence, 0.70)
+        critic_summary = (
+            "A remocao pode ser excessiva quando a confianca e baixa. "
+            "O caso deve ser revisto pelo moderador."
+        )
+    elif {"R-003", "R-006"}.issubset(policy_codes):
+        critic_agrees = False
+        adjusted_action = "flag"
+        adjusted_risk_level = "medium"
+        adjusted_confidence = min(confidence, 0.70)
+        critic_summary = (
+            "Ha conflito entre linguagem inadequada e critica legitima. "
+            "A decisao deve permanecer em revisao humana."
+        )
+    elif (
+        route == "toxic_fast_path"
+        and confidence >= 0.80
+        and recommended_action == "remove"
+    ):
+        critic_agrees = True
+        adjusted_action = "remove"
+        adjusted_risk_level = "high"
+        adjusted_confidence = confidence
+        critic_summary = (
+            "A violacao parece clara e consistente com ataque pessoal ou linguagem ofensiva."
+        )
+    else:
+        critic_agrees = False
+        adjusted_action = (
+            "flag" if recommended_action != "needs_human_review" else "needs_human_review"
+        )
+        adjusted_risk_level = (
+            "medium" if risk_level in {"high", "medium"} else risk_level
+        )
+        adjusted_confidence = min(confidence, 0.70)
+        critic_summary = (
+            "A recomendacao foi mantida em modo conservador para priorizar revisao humana."
+        )
+
+    return {
+        "critic_applied": True,
+        "critic_summary": critic_summary,
+        "critic_agrees": critic_agrees,
+        "critic_adjusted_action": adjusted_action,
+        "critic_adjusted_risk_level": adjusted_risk_level,
+        "critic_adjusted_confidence": adjusted_confidence,
+        "steps": [
+            _step(
+                "critic_agent",
+                started_at,
+                {
+                    "critic_agrees": critic_agrees,
+                    "adjusted_action": adjusted_action,
+                    "adjusted_risk_level": adjusted_risk_level,
+                    "adjusted_confidence": adjusted_confidence,
+                },
+            )
+        ],
+    }
+
+
 def decision_builder(state: ModerationGraphState) -> dict[str, Any]:
     started_at = perf_counter()
+    critic_applied = state.get("critic_applied", False)
     recommended_action = state.get("recommended_action", "needs_human_review")
+    final_action = (
+        state.get("critic_adjusted_action", recommended_action)
+        if critic_applied
+        else recommended_action
+    )
+    final_risk_level = (
+        state.get("critic_adjusted_risk_level", state.get("risk_level", "unknown"))
+        if critic_applied
+        else state.get("risk_level", "unknown")
+    )
+    final_confidence = (
+        state.get("critic_adjusted_confidence", state.get("confidence", 0.0))
+        if critic_applied
+        else state.get("confidence", 0.0)
+    )
+    final_justification = state.get("ai_justification", "")
+    if critic_applied and state.get("critic_summary"):
+        final_justification = (
+            f"{final_justification} Critic: {state['critic_summary']}"
+            if final_justification
+            else state["critic_summary"]
+        )
     return {
-        "critic_applied": False,
+        "recommended_action": final_action,
+        "risk_level": final_risk_level,
+        "confidence": final_confidence,
+        "ai_justification": final_justification,
+        "critic_applied": critic_applied,
         "requires_human_review": True,
         "steps": [
             _step(
                 "decision_builder",
                 started_at,
                 {
-                    "recommended_action": recommended_action,
+                    "recommended_action": final_action,
+                    "risk_level": final_risk_level,
+                    "confidence": final_confidence,
                     "requires_human_review": True,
-                    "critic_applied": False,
+                    "critic_applied": critic_applied,
+                    "confidence_gate_decision": state.get("confidence_gate_decision"),
+                    "critic_summary": state.get("critic_summary"),
                     "policy_codes": [
                         reference["code"]
                         for reference in state.get("policy_references", [])

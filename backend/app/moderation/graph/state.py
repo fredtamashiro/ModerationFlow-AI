@@ -54,6 +54,14 @@ class ModerationGraphState(TypedDict, total=False):
     recommended_action: str
     ai_justification: str
     critic_applied: bool
+    critic_required: bool
+    critic_reason: str
+    confidence_gate_decision: Literal["high_confidence", "needs_critic"]
+    critic_summary: str
+    critic_agrees: bool
+    critic_adjusted_action: str
+    critic_adjusted_risk_level: str
+    critic_adjusted_confidence: float
     requires_human_review: bool
     available_guidelines: list[GuidelineRecord]
     retrieved_guidelines: list[RetrievedGuideline]
