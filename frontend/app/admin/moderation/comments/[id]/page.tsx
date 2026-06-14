@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { AdminPageShell } from "@/components/admin/admin-page-shell";
 import { HumanReviewForm } from "@/components/moderation/human-review-form";
 import { StatusBadge } from "@/components/moderation/status-badge";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, formatLabel, formatMetadata } from "@/lib/moderation";
@@ -23,16 +24,29 @@ import {
 } from "@/services/moderationApi";
 
 export default function CommentDetailPage() {
+  return (
+    <AdminPageShell
+      title="Detalhe do comentario"
+      description="Execute a analise do grafo, revise a recomendacao e registre a decisao humana."
+    >
+      <CommentDetailContent />
+    </AdminPageShell>
+  );
+}
+
+function CommentDetailContent() {
   const params = useParams<{ id: string }>();
   const commentId = typeof params.id === "string" ? params.id : "";
   const [comment, setComment] = useState<ModerationComment | null>(null);
   const [runs, setRuns] = useState<ModerationRun[]>([]);
   const [decisions, setDecisions] = useState<ModerationDecision[]>([]);
   const [latestRunSteps, setLatestRunSteps] = useState<ModerationStep[]>([]);
+  const [latestDetailedRun, setLatestDetailedRun] = useState<ModerationRun | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [analysisErrorMessage, setAnalysisErrorMessage] = useState("");
+  const [analysisSuccessMessage, setAnalysisSuccessMessage] = useState("");
 
   const loadData = useCallback(async () => {
     const [nextComment, nextRuns, nextDecisions] = await Promise.all([
@@ -52,9 +66,34 @@ export default function CommentDetailPage() {
     setRuns(sortedRuns);
     setDecisions(nextDecisions);
     setLatestRunSteps(nextSteps);
+
+    if (!nextLatestRun) {
+      setLatestDetailedRun(null);
+      return;
+    }
+
+    setLatestDetailedRun((currentRun) =>
+      currentRun && currentRun.id === nextLatestRun.id ? currentRun : null,
+    );
   }, [commentId]);
 
-  const latestRun = runs[0] ?? null;
+  const latestRunSummary = runs[0] ?? null;
+  const latestRun =
+    latestDetailedRun && latestRunSummary && latestDetailedRun.id === latestRunSummary.id
+      ? { ...latestRunSummary, ...latestDetailedRun }
+      : latestRunSummary;
+  const latestPolicyReferences = latestRun?.policy_references ?? [];
+  const latestRunMetadata = latestRun?.metadata ?? {};
+  const sortedDecisions = [...decisions].sort(
+    (left, right) =>
+      new Date(right.decided_at).getTime() - new Date(left.decided_at).getTime(),
+  );
+  const latestDecision = sortedDecisions[0] ?? null;
+  const previousRuns = runs.slice(1);
+  const comparison = getRecommendationComparison(
+    latestRun?.recommended_action ?? null,
+    latestDecision?.human_decision ?? null,
+  );
 
   useEffect(() => {
     if (!commentId) {
@@ -105,9 +144,14 @@ export default function CommentDetailPage() {
     try {
       setIsAnalyzing(true);
       setAnalysisErrorMessage("");
+      setAnalysisSuccessMessage("");
 
-      await analyzeModerationComment(commentId);
+      const analyzedRun = await analyzeModerationComment(commentId);
+      setLatestDetailedRun(analyzedRun);
       await loadData();
+      setAnalysisSuccessMessage(
+        "Análise executada com sucesso. Revise a recomendação do grafo antes de registrar a decisão humana final.",
+      );
     } catch (error) {
       setAnalysisErrorMessage(
         error instanceof Error
@@ -120,10 +164,7 @@ export default function CommentDetailPage() {
   }
 
   return (
-    <AdminPageShell
-      title="Detalhe do comentario"
-      description="Execute a analise do grafo, revise a recomendacao e registre a decisao humana."
-    >
+    <>
       <Link
         href="/admin/moderation"
         className="text-sm font-medium text-[var(--accent-secondary)] transition hover:opacity-80"
@@ -185,8 +226,9 @@ export default function CommentDetailPage() {
 
               <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
                 <p className="text-sm leading-6 text-[var(--muted-foreground)]">
-                  A analise abaixo e uma recomendacao inicial do grafo. A decisao
-                  final deve ser registrada pelo moderador na secao de revisao
+                  A análise abaixo é apenas uma recomendação inicial do grafo.
+                  Ela não representa a decisão final da plataforma. A decisão
+                  final deve ser registrada por um moderador na seção de revisão
                   humana.
                 </p>
               </div>
@@ -197,13 +239,19 @@ export default function CommentDetailPage() {
                 </div>
               ) : null}
 
+              {analysisSuccessMessage ? (
+                <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800">
+                  {analysisSuccessMessage}
+                </Alert>
+              ) : null}
+
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   type="button"
                   onClick={handleAnalyze}
                   disabled={isAnalyzing}
                 >
-                  {isAnalyzing ? "Executando analise..." : "Executar analise"}
+                  {isAnalyzing ? "Executando análise..." : "Executar análise"}
                 </Button>
                 <span className="text-sm text-[var(--muted-foreground)]">
                   A chamada usa `POST /admin/moderation/comments/{commentId}/analyze`.
@@ -214,10 +262,94 @@ export default function CommentDetailPage() {
 
           <Card className="border-[var(--border)] bg-[var(--surface)]">
             <CardHeader>
+              <CardTitle>Auditoria da recomendacao</CardTitle>
+              <CardDescription>
+                Compare a recomendacao do grafo com a decisao final registrada pelo moderador.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {latestRun === null && latestDecision === null ? (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Nenhuma analise executada ainda e nenhuma decisao humana registrada ainda.
+                </p>
+              ) : null}
+
+              {latestRun === null && latestDecision !== null ? (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Nenhuma analise de IA executada ainda.
+                </p>
+              ) : null}
+
+              {latestRun !== null ? (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                    Recomendacao do grafo
+                  </p>
+                  <dl className="mt-3 grid gap-3 md:grid-cols-3">
+                    <Fact label="Status" value={latestRun.status} />
+                    <Fact label="Rota" value={latestRun.route ?? "-"} />
+                    <Fact label="Risco" value={latestRun.risk_level ?? "-"} />
+                    <Fact label="Categoria" value={latestRun.category ?? "-"} />
+                    <Fact
+                      label="Confianca"
+                      value={
+                        latestRun.confidence === null
+                          ? "-"
+                          : latestRun.confidence.toFixed(2)
+                      }
+                    />
+                    <Fact
+                      label="Acao recomendada"
+                      value={latestRun.recommended_action ?? "-"}
+                    />
+                    <Fact
+                      label="Critic agent aplicado"
+                      value={latestRun.critic_applied ? "Sim" : "Nao"}
+                    />
+                    <Fact
+                      label="Revisao humana obrigatoria"
+                      value={latestRun.requires_human_review ? "Sim" : "Nao"}
+                    />
+                    <Fact
+                      label="Criado em"
+                      value={formatDateTime(latestRun.created_at)}
+                    />
+                  </dl>
+                </div>
+              ) : null}
+
+              {latestDecision === null ? (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Nenhuma decisao humana registrada ainda.
+                </p>
+              ) : null}
+
+              {latestRun !== null && latestDecision !== null ? (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                    Comparacao entre recomendacao e decisao final
+                  </p>
+                  <dl className="mt-3 grid gap-3 md:grid-cols-3">
+                    <Fact
+                      label="Recomendacao do grafo"
+                      value={latestRun.recommended_action ?? "-"}
+                    />
+                    <Fact
+                      label="Decisao humana"
+                      value={latestDecision.human_decision}
+                    />
+                    <Fact label="Resultado" value={comparison.label} />
+                  </dl>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card className="border-[var(--border)] bg-[var(--surface)]">
+            <CardHeader>
               <CardTitle>Ultimo run de moderacao</CardTitle>
               <CardDescription>
-                Resumo da analise mais recente produzida pelo grafo para este
-                comentario.
+                Resumo detalhado da analise mais recente produzida pelo grafo para este comentario.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -282,13 +414,13 @@ export default function CommentDetailPage() {
                     <p className="text-sm font-medium text-[var(--muted-foreground)]">
                       Policy references
                     </p>
-                    {latestRun.policy_references.length === 0 ? (
+                    {latestPolicyReferences.length === 0 ? (
                       <p className="mt-2 text-sm text-[var(--muted-foreground)]">
                         Nenhuma diretriz relacionada encontrada.
                       </p>
                     ) : (
                       <ul className="mt-3 space-y-2 text-sm">
-                        {latestRun.policy_references.map((reference) => (
+                        {latestPolicyReferences.map((reference) => (
                           <li
                             key={`${latestRun.id}-${reference.code}`}
                             className="rounded-lg border border-[var(--border)] px-3 py-2"
@@ -302,14 +434,79 @@ export default function CommentDetailPage() {
                   </div>
 
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                      Metadata do run
-                    </p>
-                    <pre className="mt-3 overflow-x-auto rounded-xl bg-[var(--surface)] p-4 text-xs leading-6 text-[var(--foreground)]">
-                      {formatMetadata(latestRun.metadata)}
-                    </pre>
+                    <details className="rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+                      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium">
+                        Metadata do run
+                      </summary>
+                      <div className="border-t border-[var(--border)] p-4">
+                        <pre className="overflow-x-auto text-xs leading-6 text-[var(--foreground)]">
+                          {formatMetadata(latestRunMetadata)}
+                        </pre>
+                      </div>
+                    </details>
                   </div>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-[var(--border)] bg-[var(--surface)]">
+            <CardHeader>
+              <CardTitle>Historico de runs</CardTitle>
+              <CardDescription>
+                Execucoes anteriores do grafo para o mesmo comentario.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {previousRuns.length === 0 ? (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Nenhum run anterior registrado ainda.
+                </p>
+              ) : (
+                previousRuns.map((run) => (
+                  <details
+                    key={run.id}
+                    className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)]"
+                  >
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <StatusBadge status={run.status} />
+                        <span className="text-sm font-medium">
+                          {formatDateTime(run.created_at)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--muted-foreground)]">
+                        <span>route: {run.route ?? "-"}</span>
+                        <span>risk: {run.risk_level ?? "-"}</span>
+                        <span>action: {run.recommended_action ?? "-"}</span>
+                        <span>
+                          confidence:{" "}
+                          {run.confidence === null ? "-" : run.confidence.toFixed(2)}
+                        </span>
+                        <span>critic: {run.critic_applied ? "yes" : "no"}</span>
+                      </div>
+                    </summary>
+                    <div className="border-t border-[var(--border)] p-4">
+                      <dl className="grid gap-3 md:grid-cols-3">
+                        <Fact label="Status" value={run.status} />
+                        <Fact label="Rota" value={run.route ?? "-"} />
+                        <Fact label="Risco" value={run.risk_level ?? "-"} />
+                        <Fact
+                          label="Acao recomendada"
+                          value={run.recommended_action ?? "-"}
+                        />
+                        <Fact
+                          label="Confianca"
+                          value={run.confidence === null ? "-" : run.confidence.toFixed(2)}
+                        />
+                        <Fact
+                          label="Critic agent aplicado"
+                          value={run.critic_applied ? "Sim" : "Nao"}
+                        />
+                      </dl>
+                    </div>
+                  </details>
+                ))
               )}
             </CardContent>
           </Card>
@@ -331,37 +528,51 @@ export default function CommentDetailPage() {
                   Nenhum step registrado para esta analise.
                 </p>
               ) : (
-                latestRunSteps.map((step) => (
-                  <div
+                latestRunSteps.map((step, index) => (
+                  <details
                     key={step.id}
-                    className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4"
+                    className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)]"
+                    open={index === 0}
                   >
-                    <dl className="grid gap-3 md:grid-cols-3">
-                      <Fact label="Node" value={step.node_name} />
-                      <Fact label="Status" value={step.status} />
-                      <Fact
-                        label="Duracao"
-                        value={
-                          step.duration_ms === null ? "-" : `${step.duration_ms} ms`
-                        }
-                      />
-                      <Fact
-                        label="Criado em"
-                        value={formatDateTime(step.created_at)}
-                      />
-                      <Fact label="Modelo" value={step.model ?? "-"} />
-                      <Fact label="Erro" value={step.error_message ?? "-"} />
-                    </dl>
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="font-medium">{step.node_name}</span>
+                        <span className="text-sm text-[var(--muted-foreground)]">
+                          {formatLabel(step.status)}
+                        </span>
+                      </div>
+                      <div className="text-sm text-[var(--muted-foreground)]">
+                        {step.duration_ms === null ? "-" : `${step.duration_ms} ms`}
+                      </div>
+                    </summary>
+                    <div className="border-t border-[var(--border)] p-4">
+                      <dl className="grid gap-3 md:grid-cols-3">
+                        <Fact label="Node" value={step.node_name} />
+                        <Fact label="Status" value={step.status} />
+                        <Fact
+                          label="Criado em"
+                          value={formatDateTime(step.created_at)}
+                        />
+                        <Fact label="Modelo" value={step.model ?? "-"} />
+                        <Fact
+                          label="Duracao"
+                          value={
+                            step.duration_ms === null ? "-" : `${step.duration_ms} ms`
+                          }
+                        />
+                        <Fact label="Erro" value={step.error_message ?? "-"} />
+                      </dl>
 
-                    <div className="mt-4">
-                      <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                        Metadata
-                      </p>
-                      <pre className="mt-3 overflow-x-auto rounded-xl bg-[var(--surface)] p-4 text-xs leading-6 text-[var(--foreground)]">
-                        {formatMetadata(step.metadata)}
-                      </pre>
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                          Metadata
+                        </p>
+                        <pre className="mt-3 overflow-x-auto rounded-xl bg-[var(--surface)] p-4 text-xs leading-6 text-[var(--foreground)]">
+                          {formatMetadata(step.metadata)}
+                        </pre>
+                      </div>
                     </div>
-                  </div>
+                  </details>
                 ))
               )}
             </CardContent>
@@ -387,12 +598,12 @@ export default function CommentDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {decisions.length === 0 ? (
+              {sortedDecisions.length === 0 ? (
                 <p className="text-sm text-[var(--muted-foreground)]">
                   Nenhuma decisao humana registrada ainda.
                 </p>
               ) : (
-                decisions.map((decision) => (
+                sortedDecisions.map((decision) => (
                   <div
                     key={decision.id}
                     className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4"
@@ -454,7 +665,7 @@ export default function CommentDetailPage() {
           </Card>
         </div>
       ) : null}
-    </AdminPageShell>
+    </>
   );
 }
 
@@ -465,4 +676,23 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 text-sm">{value}</dd>
     </div>
   );
+}
+
+function getRecommendationComparison(
+  recommendedAction: string | null,
+  humanDecision: string | null,
+) {
+  if (!recommendedAction || !humanDecision) {
+    return { label: "Pendente" };
+  }
+
+  if (recommendedAction === "needs_human_review") {
+    return { label: "Nao aplicavel" };
+  }
+
+  if (recommendedAction === humanDecision) {
+    return { label: "Concordancia" };
+  }
+
+  return { label: "Divergencia" };
 }

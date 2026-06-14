@@ -14,6 +14,17 @@ import {
 } from "@/services/moderationApi";
 
 export default function GuidelineDetailPage() {
+  return (
+    <AdminPageShell
+      title="Detalhe da diretriz"
+      description="Consulta administrativa de uma politica de moderacao cadastrada."
+    >
+      <GuidelineDetailContent />
+    </AdminPageShell>
+  );
+}
+
+function GuidelineDetailContent() {
   const params = useParams<{ id: string }>();
   const guidelineId = typeof params.id === "string" ? params.id : "";
   const [guideline, setGuideline] = useState<ModerationGuideline | null>(null);
@@ -64,10 +75,7 @@ export default function GuidelineDetailPage() {
   }, [guidelineId]);
 
   return (
-    <AdminPageShell
-      title="Detalhe da diretriz"
-      description="Consulta administrativa de uma politica de moderacao cadastrada."
-    >
+    <>
       <Link
         href="/admin/moderation/guidelines"
         className="text-sm font-medium text-[var(--accent-secondary)] transition hover:opacity-80"
@@ -145,6 +153,6 @@ export default function GuidelineDetailPage() {
           </CardContent>
         </Card>
       ) : null}
-    </AdminPageShell>
+    </>
   );
 }

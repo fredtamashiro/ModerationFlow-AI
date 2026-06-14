@@ -25,7 +25,12 @@ const severityOptions = [
 export default function ModerationGuidelinesPage() {
   return (
     <Suspense fallback={<GuidelinesFallback />}>
-      <ModerationGuidelinesContent />
+      <AdminPageShell
+        title="Diretrizes de moderacao"
+        description="Catalogo administrativo das regras de comunidade usadas pela plataforma."
+      >
+        <ModerationGuidelinesContent />
+      </AdminPageShell>
     </Suspense>
   );
 }
@@ -104,10 +109,7 @@ function ModerationGuidelinesContent() {
   const hasNextPage = data ? offset + data.items.length < data.total : false;
 
   return (
-    <AdminPageShell
-      title="Diretrizes de moderacao"
-      description="Catalogo administrativo das regras de comunidade usadas pela plataforma."
-    >
+    <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/admin/moderation"
@@ -199,7 +201,7 @@ function ModerationGuidelinesContent() {
           ) : null}
         </CardContent>
       </Card>
-    </AdminPageShell>
+    </>
   );
 }
 

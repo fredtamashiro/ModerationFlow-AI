@@ -28,7 +28,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/moderation_flow
       - OPENAI_API_KEY=
       - JWT_SECRET_KEY=change-me-local
-      - FRONTEND_ORIGINS=http://localhost:3000
+      - FRONTEND_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
       - COOKIE_SECURE=false
       - COOKIE_SAMESITE=lax
       - COOKIE_DOMAIN=
@@ -47,10 +47,11 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: sh -c "npm install && npm run dev"
+    command: sh -c "npm install --include=dev && npm run dev"
     environment:
+      - NODE_ENV=development
       - INTERNAL_API_URL=http://backend:8000
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
       - WATCHPACK_POLLING=true
       - CHOKIDAR_USEPOLLING=true
     depends_on:

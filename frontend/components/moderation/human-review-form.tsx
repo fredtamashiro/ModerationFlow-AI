@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, type ReactNode, useState } from "react";
+import { CircleHelp, X } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isRiskHelpOpen, setIsRiskHelpOpen] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -141,7 +143,21 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
           </Select>
         </Field>
 
-        <Field label="Nivel de risco" htmlFor="human-risk-level">
+        <Field
+          label="Nivel de risco"
+          htmlFor="human-risk-level"
+          action={
+            <button
+              type="button"
+              onClick={() => setIsRiskHelpOpen(true)}
+              className="inline-flex cursor-pointer items-center justify-center rounded-full text-[var(--muted-foreground)] transition hover:text-[var(--accent-secondary)]"
+              aria-label="Entender como classificar o nivel de risco"
+              title="Entender como classificar o nivel de risco"
+            >
+              <CircleHelp className="h-4 w-4" />
+            </button>
+          }
+        >
           <Select
             id="human-risk-level"
             value={humanRiskLevel}
@@ -203,6 +219,80 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
           {isSaving ? "Salvando..." : "Registrar decisao"}
         </Button>
       </div>
+
+      {isRiskHelpOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setIsRiskHelpOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] p-5">
+              <div>
+                <h3 className="text-lg font-semibold">Como classificar o nível de risco</h3>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                  Use o risco para representar a gravidade prática do comentário no fluxo
+                  de moderação.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRiskHelpOpen(false)}
+                className="rounded-full p-1 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-soft)] hover:text-[var(--foreground)]"
+                aria-label="Fechar ajuda de nível de risco"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid gap-4 p-5 text-sm leading-7">
+              <div>
+                <p className="font-medium">`low`</p>
+                <p className="text-[var(--muted-foreground)]">
+                  Use quando o comentário é compreensível e não apresenta risco
+                  relevante. Exemplos: elogio, feedback positivo, dúvida educada,
+                  crítica legítima sem ofensa.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-medium">`medium`</p>
+                <p className="text-[var(--muted-foreground)]">
+                  Use quando existe um problema potencial, mas sem gravidade máxima.
+                  Exemplos: sarcasmo agressivo, ambiguidade, linguagem inadequada sem
+                  ataque direto, caso que pode exigir atenção.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-medium">`high`</p>
+                <p className="text-[var(--muted-foreground)]">
+                  Use quando há violação séria ou impacto claro. Exemplos: ataque
+                  pessoal, discriminação, conteúdo perigoso ou ilegal, spam evidente.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-medium">`unknown`</p>
+                <p className="text-[var(--muted-foreground)]">
+                  Use quando você não consegue classificar o risco com segurança ou
+                  quando o caso está ambíguo demais para uma conclusão firme.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+                <p className="font-medium">Regra prática</p>
+                <p className="mt-1 text-[var(--muted-foreground)]">
+                  Se o comentário for positivo, elogioso ou claramente seguro, o mais
+                  adequado costuma ser `low`, não `unknown`.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }
@@ -211,19 +301,24 @@ function Field({
   label,
   htmlFor,
   required = false,
+  action,
   children,
 }: {
   label: string;
   htmlFor: string;
   required?: boolean;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="grid gap-2">
-      <label htmlFor={htmlFor} className="text-sm font-medium">
-        {label}
-        {required ? " *" : ""}
-      </label>
+      <div className="flex items-center gap-2">
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+          {required ? " *" : ""}
+        </label>
+        {action}
+      </div>
       {children}
     </div>
   );

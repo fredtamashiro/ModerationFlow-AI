@@ -56,7 +56,12 @@ function MetricCard({
 export default function ModerationDashboardPage() {
   return (
     <Suspense fallback={<DashboardFallback />}>
-      <ModerationDashboardContent />
+      <AdminPageShell
+        title="Moderation Dashboard"
+        description="Visao inicial da fila de comentarios e do estado operacional da moderacao."
+      >
+        <ModerationDashboardContent />
+      </AdminPageShell>
     </Suspense>
   );
 }
@@ -154,10 +159,7 @@ function ModerationDashboardContent() {
   const hasNextPage = data ? offset + data.items.length < data.total : false;
 
   return (
-    <AdminPageShell
-      title="Moderation Dashboard"
-      description="Visao inicial da fila de comentarios e do estado operacional da moderacao."
-    >
+    <>
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard
           label="Comentarios"
@@ -287,7 +289,7 @@ function ModerationDashboardContent() {
           ) : null}
         </CardContent>
       </Card>
-    </AdminPageShell>
+    </>
   );
 }
 

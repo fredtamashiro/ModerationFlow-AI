@@ -60,6 +60,9 @@ backend/app/
 - Preserve the design system where possible.
 - Remove SmartDocs-specific text and flows.
 - Do not create UI for features that do not exist yet unless clearly marked as placeholder.
+- Modals and overlays should close when the user clicks outside the modal content, unless the spec explicitly requires a blocking modal.
+- Clickable buttons, icons, and custom interactive elements should provide clear pointer feedback with `cursor: pointer` when applicable.
+- Clickable icons should prefer hover feedback aligned with the project palette, with `hover:text-[var(--accent-secondary)]` as the default choice unless another state color is more appropriate.
 
 ## Database Standards
 
