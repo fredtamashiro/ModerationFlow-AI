@@ -189,6 +189,7 @@ def analyze_comment(comment_id: str) -> dict:
     try:
         run = repository.create_moderation_run(comment_id)
         run_id = str(run["id"])
+        available_guidelines = repository.list_guidelines_for_analysis()
         initial_state = {
             "comment_id": comment_id,
             "comment_content": comment["content"],
@@ -196,6 +197,13 @@ def analyze_comment(comment_id: str) -> dict:
             "course_name": comment["course_name"],
             "lesson_name": comment["lesson_name"],
             "run_id": run_id,
+            "available_guidelines": [
+                {
+                    **guideline,
+                    "id": str(guideline["id"]),
+                }
+                for guideline in available_guidelines
+            ],
             "steps": [],
             "errors": [],
             "metadata": comment.get("metadata", {}),

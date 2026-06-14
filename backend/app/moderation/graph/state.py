@@ -19,6 +19,24 @@ class GraphStep(TypedDict):
     error_message: str | None
 
 
+class GuidelineRecord(TypedDict):
+    id: str
+    code: str
+    title: str
+    description: str
+    severity: str
+
+
+class RetrievedGuideline(GuidelineRecord):
+    excerpt: str
+
+
+class PolicyReference(TypedDict):
+    code: str
+    title: str
+    severity: str
+
+
 class ModerationGraphState(TypedDict, total=False):
     comment_id: str
     comment_content: str
@@ -37,7 +55,9 @@ class ModerationGraphState(TypedDict, total=False):
     ai_justification: str
     critic_applied: bool
     requires_human_review: bool
-    policy_references: list[str]
+    available_guidelines: list[GuidelineRecord]
+    retrieved_guidelines: list[RetrievedGuideline]
+    policy_references: list[PolicyReference]
     run_id: str
     steps: Annotated[list[GraphStep], operator.add]
     errors: Annotated[list[str], operator.add]

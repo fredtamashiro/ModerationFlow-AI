@@ -212,6 +212,26 @@ def get_guideline_by_code(code: str) -> dict | None:
     return dict(row._mapping) if row else None
 
 
+def list_guidelines_for_analysis() -> list[dict]:
+    with SessionLocal() as db:
+        rows = db.execute(
+            text(
+                """
+                SELECT
+                    id,
+                    code,
+                    title,
+                    description,
+                    severity
+                FROM moderation.guidelines
+                ORDER BY code ASC
+                """
+            )
+        ).fetchall()
+
+    return _serialize_rows(rows)
+
+
 def list_runs_by_comment_id(comment_id: str) -> list[dict]:
     with SessionLocal() as db:
         rows = db.execute(
@@ -523,7 +543,7 @@ def create_moderation_run(comment_id: str) -> dict:
             ),
             {
                 "comment_id": comment_id,
-                "metadata": json.dumps({"graph_version": "foundation_v1"}),
+                "metadata": json.dumps({"graph_version": "guideline_risk_v1"}),
             },
         ).fetchone()
 
@@ -592,7 +612,7 @@ def complete_moderation_run(
             _insert_moderation_step(db, run_id, step)
 
         run_metadata = {
-            "graph_version": "foundation_v1",
+            "graph_version": "guideline_risk_v1",
             "input_guard_reason": graph_state.get("input_guard_reason"),
             "route_reason": graph_state.get("route_reason"),
             "route_confidence": graph_state.get("route_confidence"),

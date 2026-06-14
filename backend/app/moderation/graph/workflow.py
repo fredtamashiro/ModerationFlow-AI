@@ -4,11 +4,13 @@ from app.moderation.graph.nodes import (
     ambiguous_deep_review,
     decision_builder,
     fallback_human_review,
+    guideline_retriever,
     input_guard,
     intent_router,
     low_risk_path,
     spam_fast_path,
     toxic_fast_path,
+    risk_analyzer,
 )
 from app.moderation.graph.state import ModerationGraphState, ModerationRoute
 
@@ -31,6 +33,8 @@ def build_moderation_graph():
     workflow.add_node("low_risk_path", low_risk_path)
     workflow.add_node("ambiguous_deep_review", ambiguous_deep_review)
     workflow.add_node("fallback_human_review", fallback_human_review)
+    workflow.add_node("guideline_retriever", guideline_retriever)
+    workflow.add_node("risk_analyzer", risk_analyzer)
     workflow.add_node("decision_builder", decision_builder)
 
     workflow.add_edge(START, "input_guard")
@@ -61,8 +65,10 @@ def build_moderation_graph():
         "ambiguous_deep_review",
         "fallback_human_review",
     ):
-        workflow.add_edge(path_node, "decision_builder")
+        workflow.add_edge(path_node, "guideline_retriever")
 
+    workflow.add_edge("guideline_retriever", "risk_analyzer")
+    workflow.add_edge("risk_analyzer", "decision_builder")
     workflow.add_edge("decision_builder", END)
     return workflow.compile()
 

@@ -148,9 +148,10 @@ def create_comment_decision(comment_id: str, payload: HumanDecisionCreate):
     response_model=ModerationRun,
     summary="Executar analise inicial de moderacao",
     description=(
-        "Executa o grafo LangGraph heuristico, registra o run e seus steps e "
-        "encaminha o comentario para revisao humana obrigatoria. Nao cria uma "
-        "decisao final automaticamente."
+        "Executa o grafo LangGraph com roteamento heuristico e recuperacao "
+        "estruturada de diretrizes, registra o run e seus steps e encaminha "
+        "o comentario para revisao humana obrigatoria. Nao cria uma decisao "
+        "final automaticamente."
     ),
 )
 def analyze_moderation_comment(comment_id: str):

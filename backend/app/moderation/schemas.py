@@ -78,7 +78,7 @@ class ModerationRun(BaseModel):
     ai_justification: str | None = None
     critic_applied: bool
     requires_human_review: bool
-    policy_references: list[str]
+    policy_references: list[dict[str, Any]]
     metadata: dict[str, Any]
     error_message: str | None = None
     started_at: datetime | None = None
