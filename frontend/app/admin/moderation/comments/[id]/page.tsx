@@ -23,6 +23,21 @@ import {
   type ModerationStep,
 } from "@/services/moderationApi";
 
+const STEP_DESCRIPTIONS: Record<string, string> = {
+  input_guard: "Valida se o comentario tem conteudo minimo e pode seguir para analise.",
+  intent_router: "Define a rota inicial do grafo com base nos sinais detectados no comentario.",
+  spam_fast_path: "Aplica heuristicas rapidas para casos claros de spam ou autopromocao.",
+  toxic_fast_path: "Aplica heuristicas rapidas para casos claros de ofensa ou ataque pessoal.",
+  low_risk_path: "Classifica comentarios de baixo risco, como elogios, duvidas e critica legitima.",
+  ambiguous_deep_review: "Mantem casos ambiguos em uma trilha mais conservadora para revisao humana.",
+  fallback_human_review: "Encaminha para revisao humana quando as heuristicas nao encontram rota segura.",
+  guideline_retriever: "Relaciona o comentario com as diretrizes de moderacao mais relevantes.",
+  risk_analyzer: "Consolida categoria, risco e acao recomendada a partir da rota e das diretrizes.",
+  confidence_gate: "Decide se o caso precisa passar pelo critic agent antes da recomendacao final.",
+  critic_agent: "Revisa a recomendacao heuristica e reduz excesso de confianca quando necessario.",
+  decision_builder: "Monta o resultado final do run com justificativa, risco e acao recomendada.",
+};
+
 export default function CommentDetailPage() {
   return (
     <AdminPageShell
@@ -32,6 +47,10 @@ export default function CommentDetailPage() {
       <CommentDetailContent />
     </AdminPageShell>
   );
+}
+
+function getStepDescription(nodeName: string): string {
+  return STEP_DESCRIPTIONS[nodeName] ?? "Etapa interna do grafo registrada para auditoria da analise.";
 }
 
 function CommentDetailContent() {
@@ -533,13 +552,18 @@ function CommentDetailContent() {
                     key={step.id}
                     className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)]"
                     open={index === 0}
-                  >
-                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="font-medium">{step.node_name}</span>
-                        <span className="text-sm text-[var(--muted-foreground)]">
-                          {formatLabel(step.status)}
-                        </span>
+                    >
+                      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="font-medium">{step.node_name}</span>
+                          <span className="text-sm text-[var(--muted-foreground)]">
+                            {formatLabel(step.status)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[var(--muted-foreground)]">
+                          {getStepDescription(step.node_name)}
+                        </p>
                       </div>
                       <div className="text-sm text-[var(--muted-foreground)]">
                         {step.duration_ms === null ? "-" : `${step.duration_ms} ms`}
