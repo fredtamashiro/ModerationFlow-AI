@@ -9,7 +9,12 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.evaluation.runner import format_report, run_evaluation
+from app.evaluation.runner import (
+    format_compare_report,
+    format_report,
+    run_compare_evaluation,
+    run_evaluation,
+)
 
 
 DEFAULT_DATASET = (
@@ -37,6 +42,12 @@ def parse_args() -> argparse.Namespace:
         "--dataset-path",
         help="Caminho explicito para um arquivo JSON de dataset de avaliacao.",
     )
+    parser.add_argument(
+        "--mode",
+        choices=("heuristic", "llm", "compare"),
+        default="heuristic",
+        help="Seleciona o modo de avaliacao. Default: heuristic.",
+    )
     return parser.parse_args()
 
 
@@ -61,12 +72,17 @@ def main() -> int:
 
     try:
         dataset_path = resolve_dataset_path(args)
-        summary = run_evaluation(dataset_path)
+        if args.mode == "compare":
+            summary = run_compare_evaluation(dataset_path)
+            report = format_compare_report(summary)
+        else:
+            summary = run_evaluation(dataset_path, mode=args.mode)
+            report = format_report(summary)
     except Exception as error:
-        print(f"Falha ao executar avaliacao: {error}", file=sys.stderr)
+        print(str(error), file=sys.stderr)
         return 1
 
-    print(format_report(summary))
+    print(report)
     return 0
 
 

@@ -4,9 +4,11 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable
 
+from app.config import get_settings
 from app.moderation.graph import moderation_graph
+from app.moderation.llm import analyze_comment_with_llm
 from app.moderation import repository
 
 
@@ -64,6 +66,14 @@ class EvaluationResult:
     predicted_category: str | None
     predicted_policy_rules: list[str]
     error_message: str | None = None
+
+
+@dataclass
+class PredictionOutput:
+    predicted_action: str | None
+    predicted_risk_level: str | None
+    predicted_category: str | None
+    predicted_policy_rules: list[str]
 
 
 def load_dataset(dataset_path: Path) -> list[EvaluationExample]:
@@ -170,32 +180,120 @@ def build_initial_state(example: EvaluationExample, available_guidelines: list[d
     }
 
 
-def run_evaluation(dataset_path: Path) -> dict[str, Any]:
+def _predict_with_heuristic(
+    example: EvaluationExample,
+    available_guidelines: list[dict],
+) -> PredictionOutput:
+    final_state = moderation_graph.invoke(
+        build_initial_state(example, available_guidelines)
+    )
+    predicted_policy_rules = [
+        reference["code"]
+        for reference in final_state.get("policy_references", [])
+        if isinstance(reference, dict) and reference.get("code")
+    ]
+    return PredictionOutput(
+        predicted_action=final_state.get("recommended_action"),
+        predicted_risk_level=final_state.get("risk_level"),
+        predicted_category=final_state.get("category"),
+        predicted_policy_rules=predicted_policy_rules,
+    )
+
+
+def _predict_with_llm(
+    example: EvaluationExample,
+    available_guidelines: list[dict],
+) -> PredictionOutput:
+    response = analyze_comment_with_llm(example.comment, available_guidelines)
+    return PredictionOutput(
+        predicted_action=response.get("recommended_action"),
+        predicted_risk_level=response.get("risk_level"),
+        predicted_category=response.get("category"),
+        predicted_policy_rules=[
+            str(rule) for rule in response.get("policy_references", [])
+        ],
+    )
+
+
+def run_evaluation(
+    dataset_path: Path,
+    mode: str = "heuristic",
+) -> dict[str, Any]:
+    if mode == "llm":
+        _ensure_llm_evaluation_available()
     examples = load_dataset(dataset_path)
     available_guidelines = repository.list_guidelines_for_analysis()
+    predictor = _resolve_predictor(mode)
+    return _run_prediction_pass(examples, available_guidelines, predictor)
+
+
+def run_compare_evaluation(dataset_path: Path) -> dict[str, Any]:
+    _ensure_llm_evaluation_available()
+    heuristic_summary = run_evaluation(dataset_path, mode="heuristic")
+    llm_summary = run_evaluation(dataset_path, mode="llm")
+    return {
+        "heuristic": heuristic_summary,
+        "llm": llm_summary,
+        "comparison": {
+            "action_accuracy_delta": round(
+                llm_summary["accuracy_action"] - heuristic_summary["accuracy_action"],
+                2,
+            ),
+            "risk_level_accuracy_delta": round(
+                llm_summary["accuracy_risk_level"]
+                - heuristic_summary["accuracy_risk_level"],
+                2,
+            ),
+            "category_accuracy_delta": round(
+                llm_summary["accuracy_category"]
+                - heuristic_summary["accuracy_category"],
+                2,
+            ),
+            "policy_match_rate_delta": round(
+                llm_summary["policy_match_rate"]
+                - heuristic_summary["policy_match_rate"],
+                2,
+            ),
+        },
+    }
+
+
+def _resolve_predictor(
+    mode: str,
+) -> Callable[[EvaluationExample, list[dict]], PredictionOutput]:
+    if mode == "heuristic":
+        return _predict_with_heuristic
+    if mode == "llm":
+        return _predict_with_llm
+    raise ValueError(f"Unsupported evaluation mode: {mode}")
+
+
+def _ensure_llm_evaluation_available() -> None:
+    if not get_settings().openai_api_key:
+        raise RuntimeError("OPENAI_API_KEY is required for LLM evaluation mode.")
+
+
+def _run_prediction_pass(
+    examples: list[EvaluationExample],
+    available_guidelines: list[dict],
+    predictor: Callable[[EvaluationExample, list[dict]], PredictionOutput],
+) -> dict[str, Any]:
     results: list[EvaluationResult] = []
 
     for example in examples:
         started_at = perf_counter()
         try:
-            final_state = moderation_graph.invoke(
-                build_initial_state(example, available_guidelines)
-            )
+            prediction = predictor(example, available_guidelines)
             latency_ms = max(0, round((perf_counter() - started_at) * 1000))
-            predicted_policy_rules = [
-                reference["code"]
-                for reference in final_state.get("policy_references", [])
-                if isinstance(reference, dict) and reference.get("code")
-            ]
             results.append(
                 EvaluationResult(
                     example=example,
                     success=True,
                     latency_ms=latency_ms,
-                    predicted_action=final_state.get("recommended_action"),
-                    predicted_risk_level=final_state.get("risk_level"),
-                    predicted_category=final_state.get("category"),
-                    predicted_policy_rules=predicted_policy_rules,
+                    predicted_action=prediction.predicted_action,
+                    predicted_risk_level=prediction.predicted_risk_level,
+                    predicted_category=prediction.predicted_category,
+                    predicted_policy_rules=prediction.predicted_policy_rules,
                 )
             )
         except Exception as error:
@@ -329,4 +427,30 @@ def format_report(summary: dict[str, Any]) -> str:
             )
             lines.append(f"  comment: {result.example.comment}")
 
+    return "\n".join(lines)
+
+
+def format_compare_report(compare_summary: dict[str, Any]) -> str:
+    heuristic_report = format_report(compare_summary["heuristic"])
+    llm_report = format_report(compare_summary["llm"])
+    comparison = compare_summary["comparison"]
+    lines = [
+        "Heuristic results",
+        "-----------------",
+        *heuristic_report.splitlines()[2:],
+        "",
+        "LLM results",
+        "-----------",
+        *llm_report.splitlines()[2:],
+        "",
+        "Comparison",
+        "----------",
+        f"action_accuracy_delta: {comparison['action_accuracy_delta']:.2f}%",
+        (
+            "risk_level_accuracy_delta: "
+            f"{comparison['risk_level_accuracy_delta']:.2f}%"
+        ),
+        f"category_accuracy_delta: {comparison['category_accuracy_delta']:.2f}%",
+        f"policy_match_rate_delta: {comparison['policy_match_rate_delta']:.2f}%",
+    ]
     return "\n".join(lines)

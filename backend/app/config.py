@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     app_env: str = "local"
     app_name: str = "ModerationFlow AI"
-    openai_api_key: str
+    openai_api_key: str | None = None
     app_api_key: str | None = None
     openai_chat_model: str = "gpt-5-mini"
     openai_chat_temperature: float = 1

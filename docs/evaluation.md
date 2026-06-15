@@ -294,3 +294,51 @@ Principais divergencias no blind:
 - `policy_match_rate` permaneceu alto, entao o problema principal esta mais em classificacao final e acao do que em recuperar regras.
 
 Nesta etapa, nenhuma heuristica foi alterada. O objetivo foi criar validacao cega e medir generalizacao, nao corrigir o baseline.
+
+## LLM risk analyzer experiment - Etapa 019
+
+### Objetivo
+
+Adicionar um modo experimental com LLM para comparar o baseline heuristico atual em avaliacao offline, sem alterar o grafo principal nem o endpoint `POST /admin/moderation/comments/{comment_id}/analyze`.
+
+### Como executar
+
+```bash
+docker compose exec backend python scripts/evaluate_moderation.py --mode heuristic
+docker compose exec backend python scripts/evaluate_moderation.py --dataset blind --mode llm
+docker compose exec backend python scripts/evaluate_moderation.py --dataset blind --mode compare
+```
+
+### Metricas heuristicas
+
+As metricas heuristicas continuam sendo as registradas na etapa 018 para `blind validation`:
+
+- total_examples: 32
+- successful_runs: 32
+- failed_runs: 0
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+- average_latency_ms: 5ms
+
+### Metricas LLM
+
+Pendentes de execucao com `OPENAI_API_KEY` configurada no ambiente alvo.
+
+O runner agora contabiliza:
+
+- `successful_runs` para respostas validas do schema;
+- `failed_runs` para erro de chamada, timeout, JSON invalido ou falha de validacao.
+
+### Comparacao
+
+O modo `compare` imprime:
+
+- resultados do baseline heuristico;
+- resultados do `llm_risk_analyzer`;
+- deltas de `accuracy_action`, `accuracy_risk_level`, `accuracy_category` e `policy_match_rate`.
+
+### Observacoes
+
+O `llm_risk_analyzer` fica isolado em `backend/app/moderation/llm/` e usa guidelines como contexto textual, com saida JSON validada por Pydantic. Esse modo e apenas experimental e nao substitui a revisao humana nem o fluxo principal de producao.
