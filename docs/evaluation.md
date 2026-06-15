@@ -342,3 +342,66 @@ O modo `compare` imprime:
 ### Observacoes
 
 O `llm_risk_analyzer` fica isolado em `backend/app/moderation/llm/` e usa guidelines como contexto textual, com saida JSON validada por Pydantic. Esse modo e apenas experimental e nao substitui a revisao humana nem o fluxo principal de producao.
+
+## LLM prompt and schema tuning - Etapa 020
+
+### Metricas antes
+
+Heuristic blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+
+LLM blind:
+
+- accuracy_action: 59.38%
+- accuracy_risk_level: 65.62%
+- accuracy_category: 56.25%
+- policy_match_rate: 90.62%
+- average_latency_ms: 6651ms
+
+### Padroes de erro do LLM
+
+- suavizacao excessiva de casos ambiguos para `approve`;
+- perda de severidade esperada em casos ligados a `R-004` e `R-005`;
+- agressividade acima do esperado em alguns casos de `spam` e `personal_attack`;
+- variacao entre execucoes independentes, mesmo mantendo o mesmo dataset;
+- latencia muito superior ao baseline heuristico.
+
+### Ajustes realizados
+
+- reforco do `SYSTEM_PROMPT` com regras mais explicitas para ambiguidade, critica legitima, suporte irritado, discriminacao, conteudo perigoso e spam;
+- inclusao de `decision rules` mais diretas no prompt para priorizar `flag` quando nao houver certeza suficiente;
+- inclusao de exemplos curtos de referencia no prompt, sem hardcode do dataset;
+- revisao do schema Pydantic do `llm_risk_analyzer`;
+- deduplicacao de `policy_references`;
+- validacao explicita de `justification`;
+- pos-validacao leve no analisador para normalizar campos textuais, deduplicar policies e rejeitar respostas inconsistentes;
+- manutencao do comportamento de falha clara no runner quando a saida nao puder ser validada.
+
+### Metricas apos tuning
+
+LLM blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 78.12%
+- accuracy_category: 71.88%
+- policy_match_rate: 90.62%
+- average_latency_ms: 6025ms
+
+Compare blind:
+
+- action_accuracy_delta: 0.00%
+- risk_level_accuracy_delta: 9.37%
+- category_accuracy_delta: 0.00%
+- policy_match_rate_delta: -9.38%
+
+### Observacoes
+
+O tuning melhorou o modo LLM em `accuracy_action`, `accuracy_risk_level` e `accuracy_category`, atingindo as metas desejaveis de `accuracy_action >= 65%`, `accuracy_risk_level >= 65%`, `accuracy_category >= 65%` e `failed_runs = 0`. A meta desejavel de `policy_match_rate >= 90%` tambem foi atendida, embora ainda abaixo do baseline heuristico.
+
+O principal ganho ficou em classificacao de risco. O principal problema remanescente e a fundamentacao de policy em alguns casos ambiguos e em um caso relevante de `R-004`, alem da latencia ainda muito superior ao baseline heuristico.
+
+Durante a etapa foi testada uma tentativa de reduzir variancia com `temperature=0`, mas o modelo configurado nao aceita esse valor e retornou erro `400`, entao o ajuste foi revertido. O LLM continua experimental e nao substitui a decisao humana nem o fluxo principal de producao.

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 720
     admin_cookie_name: str = "moderation_flow_admin_token"
-    frontend_origins: str = "http://localhost:3000"
+    frontend_origins: str = "http://localhost:3003"
     cookie_domain: str | None = None
     cookie_secure: bool = False
     cookie_samesite: str = "lax"

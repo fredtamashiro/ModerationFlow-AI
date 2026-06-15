@@ -14,9 +14,16 @@ Rules:
 - Do not infer missing context.
 - Return only valid JSON matching the output schema.
 - Do not create new categories, risk levels, actions, or policy codes.
-- Prefer "flag" when the case is ambiguous.
-- Prefer "approve" for legitimate criticism without offense.
-- Prefer "remove" for clear spam, clear discrimination, dangerous content, or severe offense.
+- When there is not enough certainty for "approve" or "remove", use "flag".
+- Prefer "approve" for legitimate criticism without personal attack or abuse.
+- Prefer "approve" for support requests or frustrated help requests without direct offense.
+- Prefer "remove" for clear discrimination, dangerous or illegal content, severe offense, or explicit spam.
+- Differentiate explicit spam from subtle spam:
+  - explicit link, group, external contact, or promotional push can justify "remove";
+  - subtle external invitation or ambiguous promo should prefer "flag".
+- Cases involving protected groups, exclusion, humiliation, or depreciative generalization should map to R-004.
+- Cases involving fraud, bypassing the system, credential sharing, hacking, invasion, cheating, or illegal acts should map to R-005.
+- Avoid false positives for R-004 when the comment only mentions a protected-topic word without discriminatory content.
 """.strip()
 
 
@@ -45,6 +52,26 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
     sections = [
         f"comment:\n{comment.strip()}",
         f"guidelines:\n{build_guidelines_context(guidelines)}",
+        (
+            "decision rules:\n"
+            '- ambiguity, sarcasm, indirect attack, short low-context comment, or strong mixed-signal feedback -> prefer "flag"\n'
+            '- legitimate criticism without direct offense -> "approve" + category legitimate_criticism + R-006\n'
+            '- frustrated support/help request without direct offense -> "approve" + category question_or_support_request + R-007\n'
+            '- positive feedback -> "approve" + category positive_feedback + R-008\n'
+            '- clear discrimination or hateful exclusion -> "remove" + category hate_or_discrimination + R-004\n'
+            '- dangerous, illegal, fraud, bypass, hack, or credential-sharing content -> "remove" + category dangerous_or_illegal_content + R-005\n'
+            '- explicit spam with strong external promotion -> "remove" + category spam + R-001\n'
+            '- subtle spam or external invitation without full certainty -> "flag" + category spam + R-001'
+        ),
+        (
+            "reference examples:\n"
+            '- "nao gostei da aula, achei superficial" -> legitimate_criticism / low / approve / ["R-006"]\n'
+            '- "ninguem resolve meu certificado" -> question_or_support_request / low / approve / ["R-007"]\n'
+            '- "parabens, ficou tao claro que eu entendi menos" -> ambiguous / medium / flag / ["R-006"]\n'
+            '- "tratar alunas como menos capazes aqui e inaceitavel" -> hate_or_discrimination / high / remove / ["R-004"]\n'
+            '- "compartilhar a senha com outras pessoas ajuda a contornar isso?" -> dangerous_or_illegal_content / high / remove / ["R-005"]\n'
+            '- "entrem no meu grupo para baixar todo o material" -> spam / medium / remove or flag depending on explicitness, but never approve'
+        ),
         (
             "valid categories:\n"
             "spam, personal_attack, offensive_language, hate_or_discrimination, "
