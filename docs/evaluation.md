@@ -405,3 +405,76 @@ O tuning melhorou o modo LLM em `accuracy_action`, `accuracy_risk_level` e `accu
 O principal ganho ficou em classificacao de risco. O principal problema remanescente e a fundamentacao de policy em alguns casos ambiguos e em um caso relevante de `R-004`, alem da latencia ainda muito superior ao baseline heuristico.
 
 Durante a etapa foi testada uma tentativa de reduzir variancia com `temperature=0`, mas o modelo configurado nao aceita esse valor e retornou erro `400`, entao o ajuste foi revertido. O LLM continua experimental e nao substitui a decisao humana nem o fluxo principal de producao.
+
+## LLM policy reference calibration - Etapa 021
+
+### Metricas antes
+
+LLM blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 78.12%
+- accuracy_category: 71.88%
+- policy_match_rate: 90.62%
+- average_latency_ms: 6025ms
+
+### Problema observado
+
+Mesmo apos a etapa 020, o experimento LLM ainda perdia em `policy_match_rate` para o baseline heuristico. O problema principal era inconsistencia entre `category` e `policy_references`, especialmente quando o modelo:
+
+- classificava corretamente a categoria principal, mas devolvia a regra errada;
+- devolvia uma policy secundaria sem incluir a policy obrigatoria da categoria;
+- misturava `personal_attack` e `offensive_language` sem manter a policy minima esperada;
+- mantinha variancia entre execucoes independentes.
+
+### Ajustes realizados
+
+- reforco do prompt com regras explicitas de mapeamento `category -> policy`;
+- inclusao de instrucoes claras para `spam`, `personal_attack`, `offensive_language`, `hate_or_discrimination`, `dangerous_or_illegal_content`, `legitimate_criticism`, `question_or_support_request` e `positive_feedback`;
+- calibragem leve em `backend/app/moderation/llm/analyzer.py` para:
+  - remover duplicadas;
+  - preservar ordem;
+  - filtrar policies inconsistentes com a categoria quando o mapeamento for claro;
+  - inserir a policy primaria obrigatoria da categoria quando ela estiver ausente e o mapeamento for inequivoco;
+  - registrar essa calibragem na `justification` interna, sem alterar `recommended_action`, `risk_level` ou `category`.
+
+### Metricas apos calibragem
+
+LLM blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 78.12%
+- accuracy_category: 71.88%
+- policy_match_rate: 93.75%
+- average_latency_ms: 5758ms
+
+### Comparacao com heuristico
+
+Heuristic blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+
+LLM blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 78.12%
+- accuracy_category: 71.88%
+- policy_match_rate: 93.75%
+
+Delta LLM vs heuristic:
+
+- action_accuracy_delta: 0.00%
+- risk_level_accuracy_delta: 9.37%
+- category_accuracy_delta: 0.00%
+- policy_match_rate_delta: -6.25%
+
+### Observacoes
+
+A calibragem de policies melhorou o `policy_match_rate` de `90.62%` para `93.75%`, sem perda relevante nas outras metricas e mantendo `failed_runs = 0`. A meta desejavel de `policy_match_rate >= 95%` nao foi atingida nesta etapa.
+
+Os erros remanescentes de policy agora estao mais concentrados em casos em que a propria categoria escolhida pelo LLM ainda diverge do esperado, como `legitimate_criticism` versus `hate_or_discrimination` ou `offensive_language`. Isso indica que o proximo gargalo nao e apenas policy mapping, mas separacao semantica mais robusta entre categorias proximas.
+
+O LLM continua experimental, mais lento que o baseline heuristico e com alguma variancia entre execucoes independentes. Ele nao substitui a decisao humana nem o fluxo principal de producao.

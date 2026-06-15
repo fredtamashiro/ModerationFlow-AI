@@ -24,6 +24,7 @@ Rules:
 - Cases involving protected groups, exclusion, humiliation, or depreciative generalization should map to R-004.
 - Cases involving fraud, bypassing the system, credential sharing, hacking, invasion, cheating, or illegal acts should map to R-005.
 - Avoid false positives for R-004 when the comment only mentions a protected-topic word without discriminatory content.
+- Keep policy references consistent with the chosen category whenever the mapping is clear.
 """.strip()
 
 
@@ -62,6 +63,19 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- dangerous, illegal, fraud, bypass, hack, or credential-sharing content -> "remove" + category dangerous_or_illegal_content + R-005\n'
             '- explicit spam with strong external promotion -> "remove" + category spam + R-001\n'
             '- subtle spam or external invitation without full certainty -> "flag" + category spam + R-001'
+        ),
+        (
+            "policy mapping rules:\n"
+            '- spam -> must include R-001\n'
+            '- personal_attack -> must include R-002; R-003 may also appear when explicit offensive language is present\n'
+            '- offensive_language -> must include R-003; R-002 may also appear when there is a directed personal attack\n'
+            '- hate_or_discrimination -> must include R-004\n'
+            '- dangerous_or_illegal_content -> must include R-005\n'
+            '- legitimate_criticism -> must include R-006\n'
+            '- question_or_support_request -> must include R-007\n'
+            '- positive_feedback -> must include R-008; R-006 may also appear for praise with a real caveat\n'
+            '- ambiguous -> use the most relevant rule, often R-006, R-002, or R-003 depending on the case\n'
+            '- other -> policy_references may be empty'
         ),
         (
             "reference examples:\n"
