@@ -547,3 +547,93 @@ Delta LLM vs heuristic:
 Esta etapa melhorou `accuracy_action` do LLM sem perder `accuracy_risk_level` ou `policy_match_rate`, e manteve `failed_runs = 0` na execucao pareada de `compare`. A meta desejavel de `accuracy_category >= 75%` nao foi atingida; o resultado ficou em `71.88%`.
 
 O principal gargalo remanescente continua sendo a separacao fina entre `legitimate_criticism`, `ambiguous`, `personal_attack` e `offensive_language`, alem de um caso ainda mal resolvido de `hate_or_discrimination`. O LLM segue experimental, mais lento que o baseline heuristico e sujeito a alguma variancia entre execucoes independentes. Ele nao substitui a decisao humana nem o fluxo principal de producao.
+
+## LLM ambiguity and severity calibration - Etapa 024
+
+### Metricas antes
+
+LLM blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 78.12%
+- accuracy_category: 71.88%
+- policy_match_rate: 93.75%
+- average_latency_ms: ~6411ms
+
+### Problema observado
+
+Mesmo com LangSmith funcional e com a separacao de categorias melhor que nas etapas anteriores, o LLM ainda errava em tres grupos principais:
+
+- critica mais forte, decepcao ampla e sarcasmo ainda podiam cair em `approve` ou em categoria leve demais;
+- elogio com ressalva ainda oscilava entre `positive_feedback` e `legitimate_criticism`;
+- spam sutil com convite para contato externo ainda podia subir para `remove` de forma agressiva.
+
+### Ajustes realizados
+
+- reforco do `SYSTEM_PROMPT` para empurrar comentarios negativos nao triviais para `ambiguous / medium / flag`;
+- reforco explicito de que sarcasmo, ironia e elogio seguido de negacao nao devem virar `positive_feedback`;
+- nova secao de calibragem de ambiguidade e severidade no prompt, separando:
+  - critica legitima leve;
+  - critica mais forte ou frustrada;
+  - elogio com ressalva;
+  - spam sutil versus spam explicito;
+- inclusao de exemplos conceituais adicionais para:
+  - critica ambigua;
+  - sarcasmo;
+  - elogio com ressalva;
+  - spam sutil com convite para contato externo;
+- manutencao da pos-validacao existente sem alterar silenciosamente `category`, `risk_level` ou `recommended_action`.
+
+### Metricas apos calibragem
+
+LLM blind no `--mode compare`:
+
+- accuracy_action: 84.38%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 81.25%
+- policy_match_rate: 93.75%
+- average_latency_ms: 6269ms
+
+LLM blind em execucao separada de `--mode llm`:
+
+- accuracy_action: 84.38%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 78.12%
+- policy_match_rate: 93.75%
+- average_latency_ms: 7136ms
+
+### Comparacao com heuristico
+
+Heuristic blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+
+LLM blind no `compare`:
+
+- accuracy_action: 84.38%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 81.25%
+- policy_match_rate: 93.75%
+
+Delta LLM vs heuristic:
+
+- action_accuracy_delta: 15.63%
+- risk_level_accuracy_delta: 18.75%
+- category_accuracy_delta: 9.37%
+- policy_match_rate_delta: -6.25%
+
+### Observacoes
+
+Esta etapa superou com folga as metas desejaveis de `accuracy_action`, `accuracy_risk_level` e `accuracy_category`, manteve `policy_match_rate` em `93.75%` e eliminou falhas do runner LLM nas execucoes validadas.
+
+O principal problema remanescente ficou concentrado em:
+
+- uma fronteira ainda discutivel entre `positive_feedback` e `legitimate_criticism` em elogio com ressalva;
+- um caso de spam ainda mais agressivo que o esperado (`blind-017`);
+- fronteiras entre `personal_attack` e `offensive_language`;
+- um falso negativo relevante em `hate_or_discrimination` (`blind-028`).
+
+Tambem permaneceu alguma variancia entre execucoes independentes do LLM, especialmente em `accuracy_category` e latencia media. O experimento segue opcional, observavel com LangSmith, e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
