@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from time import perf_counter
 from typing import Any
 
 from langchain_openai import ChatOpenAI
@@ -7,6 +8,7 @@ from langchain_openai import ChatOpenAI
 from app.config import get_settings
 from app.moderation.llm.prompt import SYSTEM_PROMPT, build_llm_prompt
 from app.moderation.llm.schemas import LLMRiskAnalyzerResponse
+from app.observability import finalize_langsmith_run, start_langsmith_run
 
 PRIMARY_POLICY_BY_CATEGORY = {
     "spam": "R-001",
@@ -28,25 +30,91 @@ SECONDARY_ALLOWED_POLICIES_BY_CATEGORY = {
 }
 
 
-def analyze_comment_with_llm(comment: str, available_guidelines: list[dict]) -> dict:
+def analyze_comment_with_llm(
+    comment: str,
+    available_guidelines: list[dict],
+    trace_metadata: dict[str, Any] | None = None,
+) -> dict:
     settings = get_settings()
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY is required for LLM evaluation mode.")
+
+    prompt = build_llm_prompt(comment, available_guidelines)
+    started_at = perf_counter()
+    run_context = start_langsmith_run(
+        name="llm_risk_analyzer",
+        inputs={
+            "comment": comment,
+            "prompt": prompt,
+            "guidelines": available_guidelines,
+        },
+        metadata=trace_metadata or {},
+        tags=["moderation-flow-ai", "llm-experiment"],
+    )
 
     llm = ChatOpenAI(
         model=settings.openai_chat_model,
         temperature=settings.openai_chat_temperature,
         api_key=settings.openai_api_key,
-    ).with_structured_output(LLMRiskAnalyzerResponse)
+    ).with_structured_output(LLMRiskAnalyzerResponse, include_raw=True)
 
-    response = llm.invoke(
-        [
-            ("system", SYSTEM_PROMPT),
-            ("human", build_llm_prompt(comment, available_guidelines)),
-        ]
-    )
+    raw_response_payload: dict[str, Any] | None = None
+    try:
+        response = llm.invoke(
+            [
+                ("system", SYSTEM_PROMPT),
+                ("human", prompt),
+            ]
+        )
 
-    return _normalize_and_validate_response(response).model_dump()
+        raw_response = response.get("raw")
+        parsed_response = response.get("parsed")
+        parsing_error = response.get("parsing_error")
+        raw_response_payload = {
+            "content": getattr(raw_response, "content", None),
+            "additional_kwargs": getattr(raw_response, "additional_kwargs", {}),
+            "response_metadata": getattr(raw_response, "response_metadata", {}),
+        }
+
+        if parsing_error is not None:
+            raise parsing_error
+        if parsed_response is None:
+            raise ValueError("LLM response could not be parsed into the expected schema.")
+
+        normalized = _normalize_and_validate_response(parsed_response).model_dump()
+        latency_ms = max(0, round((perf_counter() - started_at) * 1000))
+        finalize_langsmith_run(
+            run_context,
+            outputs={
+                "raw_response": raw_response_payload,
+                "parsed_response": normalized,
+            },
+            metadata={
+                **(trace_metadata or {}),
+                "schema_valid": True,
+                "latency_ms": latency_ms,
+                "predicted_category": normalized.get("category"),
+                "predicted_risk_level": normalized.get("risk_level"),
+                "predicted_action": normalized.get("recommended_action"),
+                "predicted_policy_references": normalized.get("policy_references"),
+            },
+            tags=["success"],
+        )
+        return normalized
+    except Exception as error:
+        latency_ms = max(0, round((perf_counter() - started_at) * 1000))
+        finalize_langsmith_run(
+            run_context,
+            outputs={"raw_response": raw_response_payload} if raw_response_payload else None,
+            error=str(error),
+            metadata={
+                **(trace_metadata or {}),
+                "schema_valid": False,
+                "latency_ms": latency_ms,
+            },
+            tags=["error"],
+        )
+        raise
 
 
 def _normalize_and_validate_response(payload: LLMRiskAnalyzerResponse | dict[str, Any]) -> LLMRiskAnalyzerResponse:

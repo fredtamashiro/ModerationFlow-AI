@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     app_api_key: str | None = None
     openai_chat_model: str = "gpt-5-mini"
     openai_chat_temperature: float = 1
+    langsmith_tracing: bool = False
+    langsmith_api_key: str | None = None
+    langsmith_project: str = "moderation-flow-ai-dev"
+    langsmith_endpoint: str | None = None
     database_url: str = "postgresql://postgres:postgres@postgres:5432/moderation_flow"
     jwt_secret_key: str = "change-me-local"
     jwt_algorithm: str = "HS256"

@@ -183,6 +183,7 @@ def build_initial_state(example: EvaluationExample, available_guidelines: list[d
 def _predict_with_heuristic(
     example: EvaluationExample,
     available_guidelines: list[dict],
+    _: dict[str, Any],
 ) -> PredictionOutput:
     final_state = moderation_graph.invoke(
         build_initial_state(example, available_guidelines)
@@ -203,8 +204,20 @@ def _predict_with_heuristic(
 def _predict_with_llm(
     example: EvaluationExample,
     available_guidelines: list[dict],
+    evaluation_context: dict[str, Any],
 ) -> PredictionOutput:
-    response = analyze_comment_with_llm(example.comment, available_guidelines)
+    response = analyze_comment_with_llm(
+        example.comment,
+        available_guidelines,
+        trace_metadata={
+            **evaluation_context,
+            "comment": example.comment,
+            "expected_category": example.expected_category,
+            "expected_risk_level": example.expected_risk_level,
+            "expected_action": example.expected_action,
+            "expected_policy_rules": example.expected_policy_rules,
+        },
+    )
     return PredictionOutput(
         predicted_action=response.get("recommended_action"),
         predicted_risk_level=response.get("risk_level"),
@@ -224,7 +237,13 @@ def run_evaluation(
     examples = load_dataset(dataset_path)
     available_guidelines = repository.list_guidelines_for_analysis()
     predictor = _resolve_predictor(mode)
-    return _run_prediction_pass(examples, available_guidelines, predictor)
+    return _run_prediction_pass(
+        examples,
+        available_guidelines,
+        predictor,
+        mode=mode,
+        dataset_name=dataset_path.stem,
+    )
 
 
 def run_compare_evaluation(dataset_path: Path) -> dict[str, Any]:
@@ -260,7 +279,7 @@ def run_compare_evaluation(dataset_path: Path) -> dict[str, Any]:
 
 def _resolve_predictor(
     mode: str,
-) -> Callable[[EvaluationExample, list[dict]], PredictionOutput]:
+) -> Callable[[EvaluationExample, list[dict], dict[str, Any]], PredictionOutput]:
     if mode == "heuristic":
         return _predict_with_heuristic
     if mode == "llm":
@@ -276,14 +295,25 @@ def _ensure_llm_evaluation_available() -> None:
 def _run_prediction_pass(
     examples: list[EvaluationExample],
     available_guidelines: list[dict],
-    predictor: Callable[[EvaluationExample, list[dict]], PredictionOutput],
+    predictor: Callable[[EvaluationExample, list[dict], dict[str, Any]], PredictionOutput],
+    *,
+    mode: str,
+    dataset_name: str,
 ) -> dict[str, Any]:
     results: list[EvaluationResult] = []
 
     for example in examples:
         started_at = perf_counter()
         try:
-            prediction = predictor(example, available_guidelines)
+            prediction = predictor(
+                example,
+                available_guidelines,
+                {
+                    "dataset": dataset_name,
+                    "mode": mode,
+                    "example_id": example.id,
+                },
+            )
             latency_ms = max(0, round((perf_counter() - started_at) * 1000))
             results.append(
                 EvaluationResult(

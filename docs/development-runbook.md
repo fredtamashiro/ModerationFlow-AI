@@ -114,6 +114,8 @@ ObservaÃ§Ãµes:
 - ela consulta apenas as `guidelines` jÃ¡ existentes para montar o estado inicial;
 - o objetivo Ã© gerar um baseline heurÃ­stico para comparaÃ§Ãµes futuras.
 
+- a observabilidade opcional do experimento LLM com LangSmith estÃ¡ documentada em `docs/observability.md`.
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;
