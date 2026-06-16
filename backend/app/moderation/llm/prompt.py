@@ -78,13 +78,32 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- other -> policy_references may be empty'
         ),
         (
+            "category boundary rules:\n"
+            '- use legitimate_criticism when the comment criticizes the class, course, pacing, teaching style, depth, structure, or examples without directly insulting a person\n'
+            '- use offensive_language when there is abusive or insulting language even if the target is mainly the content or work quality\n'
+            '- use personal_attack when the criticism is directed at a person such as teacher, tutor, student, or staff member\n'
+            '- if both personal attack and offensive language are present, choose the dominant category based on whether the human target is central to the message\n'
+            '- use hate_or_discrimination only when a protected group, exclusion, humiliating generalization, or discriminatory treatment is clearly involved\n'
+            '- do not use hate_or_discrimination for ordinary criticism, generic offense, or ambiguous wording without a protected-group target\n'
+            '- use positive_feedback when the message is predominantly positive or neutral\n'
+            '- use legitimate_criticism instead of positive_feedback when praise includes a meaningful caveat and the caveat is the most useful part of the message\n'
+            '- use question_or_support_request when the comment clearly asks for help, access, correction, verification, certificate, login, or support\n'
+            '- if the comment mixes complaint and request for help, prioritize question_or_support_request\n'
+            '- choose the dominant category instead of averaging multiple weak signals'
+        ),
+        (
             "reference examples:\n"
             '- "nao gostei da aula, achei superficial" -> legitimate_criticism / low / approve / ["R-006"]\n'
             '- "ninguem resolve meu certificado" -> question_or_support_request / low / approve / ["R-007"]\n'
             '- "parabens, ficou tao claro que eu entendi menos" -> ambiguous / medium / flag / ["R-006"]\n'
             '- "tratar alunas como menos capazes aqui e inaceitavel" -> hate_or_discrimination / high / remove / ["R-004"]\n'
             '- "compartilhar a senha com outras pessoas ajuda a contornar isso?" -> dangerous_or_illegal_content / high / remove / ["R-005"]\n'
-            '- "entrem no meu grupo para baixar todo o material" -> spam / medium / remove or flag depending on explicitness, but never approve'
+            '- "entrem no meu grupo para baixar todo o material" -> spam / medium / remove or flag depending on explicitness, but never approve\n'
+            '- criticism about a class being shallow or confusing without attacking a person -> legitimate_criticism\n'
+            '- insult aimed at a teacher or staff member -> personal_attack\n'
+            '- offensive wording without a clear human target -> offensive_language\n'
+            '- praise with a meaningful complaint about missing depth or examples -> often legitimate_criticism\n'
+            '- complaint plus explicit help request about access or certificate -> question_or_support_request'
         ),
         (
             "valid categories:\n"
@@ -98,6 +117,7 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             "approve, flag, remove, request_edit, needs_human_review"
         ),
         "valid policy rules:\nR-001, R-002, R-003, R-004, R-005, R-006, R-007, R-008",
+        'policy_references must never be empty unless category is exactly "other".',
         f"output schema:\n{json.dumps(output_schema, ensure_ascii=True, indent=2)}",
         "Return only the JSON object.",
     ]

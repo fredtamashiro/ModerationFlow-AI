@@ -478,3 +478,72 @@ A calibragem de policies melhorou o `policy_match_rate` de `90.62%` para `93.75%
 Os erros remanescentes de policy agora estao mais concentrados em casos em que a propria categoria escolhida pelo LLM ainda diverge do esperado, como `legitimate_criticism` versus `hate_or_discrimination` ou `offensive_language`. Isso indica que o proximo gargalo nao e apenas policy mapping, mas separacao semantica mais robusta entre categorias proximas.
 
 O LLM continua experimental, mais lento que o baseline heuristico e com alguma variancia entre execucoes independentes. Ele nao substitui a decisao humana nem o fluxo principal de producao.
+
+## LLM category boundary tuning - Etapa 022
+
+### Metricas antes
+
+LLM blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 78.12%
+- accuracy_category: 71.88%
+- policy_match_rate: 93.75%
+- average_latency_ms: 5758ms
+
+### Problema observado
+
+Mesmo apos a etapa 021, o principal gargalo do experimento LLM continuava sendo a separacao entre categorias proximas. Os erros mais recorrentes estavam em fronteiras como:
+
+- `legitimate_criticism` versus `positive_feedback` em elogio com ressalva;
+- `legitimate_criticism` versus `ambiguous` em comentarios negativos moderados;
+- `offensive_language` versus `personal_attack` quando havia alvo humano claro;
+- `hate_or_discrimination` sendo subdetectado em caso semantico mais sutil.
+
+### Ajustes realizados
+
+- reforco do prompt com uma secao explicita de `category boundary rules`;
+- instrucoes claras para escolher a categoria dominante;
+- reforco para usar `question_or_support_request` quando houver pedido claro de ajuda;
+- reforco para usar `personal_attack` quando o alvo humano for central;
+- reforco para nao usar `hate_or_discrimination` sem grupo protegido claro;
+- reforco para tratar elogio com ressalva relevante como `legitimate_criticism`, e nao `positive_feedback`.
+
+### Metricas apos tuning
+
+LLM blind:
+
+- accuracy_action: 71.88%
+- accuracy_risk_level: 78.12%
+- accuracy_category: 71.88%
+- policy_match_rate: 93.75%
+- average_latency_ms: 5463ms
+
+### Comparacao com heuristico
+
+Heuristic blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+
+LLM blind:
+
+- accuracy_action: 71.88%
+- accuracy_risk_level: 78.12%
+- accuracy_category: 71.88%
+- policy_match_rate: 93.75%
+
+Delta LLM vs heuristic:
+
+- action_accuracy_delta: 3.13%
+- risk_level_accuracy_delta: 9.37%
+- category_accuracy_delta: 0.00%
+- policy_match_rate_delta: -6.25%
+
+### Observacoes
+
+Esta etapa melhorou `accuracy_action` do LLM sem perder `accuracy_risk_level` ou `policy_match_rate`, e manteve `failed_runs = 0` na execucao pareada de `compare`. A meta desejavel de `accuracy_category >= 75%` nao foi atingida; o resultado ficou em `71.88%`.
+
+O principal gargalo remanescente continua sendo a separacao fina entre `legitimate_criticism`, `ambiguous`, `personal_attack` e `offensive_language`, alem de um caso ainda mal resolvido de `hate_or_discrimination`. O LLM segue experimental, mais lento que o baseline heuristico e sujeito a alguma variancia entre execucoes independentes. Ele nao substitui a decisao humana nem o fluxo principal de producao.
