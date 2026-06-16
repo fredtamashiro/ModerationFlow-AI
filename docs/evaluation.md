@@ -637,3 +637,100 @@ O principal problema remanescente ficou concentrado em:
 - um falso negativo relevante em `hate_or_discrimination` (`blind-028`).
 
 Tambem permaneceu alguma variancia entre execucoes independentes do LLM, especialmente em `accuracy_category` e latencia media. O experimento segue opcional, observavel com LangSmith, e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
+
+## LLM harmful content and attack boundary calibration - Etapa 025
+
+### Metricas antes
+
+LLM blind da etapa 024 no `--mode compare`:
+
+- accuracy_action: 84.38%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 81.25%
+- policy_match_rate: 93.75%
+- average_latency_ms: 6269ms
+
+### Problema observado
+
+Mesmo apos a calibragem de ambiguidade da etapa 024, ainda restavam gargalos em tres fronteiras:
+
+- `personal_attack` vs `offensive_language`, principalmente quando havia alvo humano claro e linguagem ofensiva severa;
+- falso negativo relevante em `hate_or_discrimination` / `R-004`;
+- spam sutil ainda agressivo demais em um caso de convite externo, com `remove` quando o esperado era `flag`.
+
+### Ajustes realizados
+
+- reforco do `SYSTEM_PROMPT` para priorizar `hate_or_discrimination` quando houver preconceito, exclusao, inferiorizacao ou hostilidade ligada a grupo protegido;
+- nova secao de `harmful content and attack boundary rules` no prompt;
+- reforco para usar `personal_attack` quando o alvo principal for pessoa ou equipe;
+- reforco para usar `offensive_language` quando o abuso for principalmente contra conteudo, aula, modulo ou produto;
+- reforco para permitir `offensive_language` dominante em insulto humano severo com `R-003` e `R-002` quando fizer sentido;
+- reforco para nao suavizar conteudo ligado a preconceito para `legitimate_criticism`, `ambiguous` ou `positive_feedback`;
+- ajustes conceituais e exemplos curtos para:
+  - `R-004` envolvendo religiao;
+  - ataques a professor/equipe;
+  - abuso severo com insulto direto;
+  - spam sutil vs spam explicito.
+
+Nenhuma mudanca foi feita no grafo heuristico, endpoint `/analyze`, frontend, banco, migrations ou datasets.
+
+### Metricas apos calibragem
+
+LLM blind em execucao separada de `--mode llm`:
+
+- accuracy_action: 90.62%
+- accuracy_risk_level: 93.75%
+- accuracy_category: 84.38%
+- policy_match_rate: 96.88%
+- average_latency_ms: 6652ms
+
+LLM blind no `--mode compare`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 81.25%
+- policy_match_rate: 90.62%
+- average_latency_ms: 6775ms
+
+### Comparacao com heuristico
+
+Heuristic blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+
+LLM blind no `compare`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 81.25%
+- policy_match_rate: 90.62%
+
+Delta LLM vs heuristic:
+
+- action_accuracy_delta: 18.75%
+- risk_level_accuracy_delta: 18.75%
+- category_accuracy_delta: 9.37%
+- policy_match_rate_delta: -9.38%
+
+### Observacoes
+
+Esta etapa melhorou substancialmente a execucao isolada do LLM em `action`, `risk`, `category` e `policy_match_rate`, mantendo `failed_runs = 0`. O melhor resultado observado nesta rodada foi:
+
+- accuracy_action: 90.62%
+- accuracy_risk_level: 93.75%
+- accuracy_category: 84.38%
+- policy_match_rate: 96.88%
+
+Ao mesmo tempo, a execucao pareada de `compare` mostrou variancia e um trade-off relevante em `policy_match_rate`, que caiu para `90.62%`. Isso indica que a calibragem ainda nao estabilizou completamente entre execucoes independentes.
+
+Os erros remanescentes ficaram concentrados em:
+
+- `blind-017`, ainda agressivo demais em spam com convite externo;
+- `blind-023` e `blind-024`, ainda saindo como `personal_attack` em vez de `offensive_language`;
+- `blind-026`, ainda subestimando severidade de insulto direto;
+- `blind-028`, ainda instavel em `R-004` entre execucoes diferentes.
+
+O experimento continua opcional, observavel com LangSmith e sujeito a variancia. Ele nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
