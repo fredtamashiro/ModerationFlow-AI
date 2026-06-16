@@ -20,7 +20,7 @@ LANGSMITH_ENDPOINT=
 1. Defina `LANGSMITH_TRACING=true`.
 2. Preencha `LANGSMITH_API_KEY`.
 3. Opcionalmente ajuste `LANGSMITH_PROJECT`.
-4. Opcionalmente ajuste `LANGSMITH_ENDPOINT` se estiver usando um endpoint especifico.
+4. Ajuste `LANGSMITH_ENDPOINT` apenas se estiver usando um endpoint especifico. Se o valor estiver vazio, o backend usa o endpoint padrao do LangSmith.
 
 Se `LANGSMITH_TRACING=false` ou `LANGSMITH_API_KEY` estiver vazio, nenhum trace e enviado e o runner continua funcionando normalmente.
 

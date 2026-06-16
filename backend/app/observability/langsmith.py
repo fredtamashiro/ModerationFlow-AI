@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
+import os
 from typing import Any
 from uuid import uuid4
 
@@ -29,9 +30,11 @@ def _get_langsmith_client() -> Client | None:
         return None
 
     settings = get_settings()
+    _sync_langsmith_endpoint_env(settings.langsmith_endpoint)
     client_kwargs: dict[str, Any] = {"api_key": settings.langsmith_api_key}
-    if settings.langsmith_endpoint:
-        client_kwargs["api_url"] = settings.langsmith_endpoint
+    endpoint = settings.langsmith_endpoint
+    if endpoint is not None:
+        client_kwargs["api_url"] = endpoint
     return Client(**client_kwargs)
 
 
@@ -84,3 +87,11 @@ def finalize_langsmith_run(
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _sync_langsmith_endpoint_env(endpoint: str | None) -> None:
+    if endpoint is None:
+        os.environ.pop("LANGSMITH_ENDPOINT", None)
+        return
+
+    os.environ["LANGSMITH_ENDPOINT"] = endpoint

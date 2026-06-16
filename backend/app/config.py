@@ -31,9 +31,9 @@ class Settings(BaseSettings):
     admin_seed_password: str = "admin123"
     admin_seed_name: str = "Local Admin"
 
-    @field_validator("cookie_domain", mode="before")
+    @field_validator("cookie_domain", "langsmith_api_key", "langsmith_endpoint", mode="before")
     @classmethod
-    def normalize_cookie_domain(cls, value: str | None) -> str | None:
+    def normalize_optional_text(cls, value: str | None) -> str | None:
         if value is None:
             return None
 
