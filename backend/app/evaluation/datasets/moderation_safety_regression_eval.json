@@ -1,0 +1,218 @@
+[
+  {
+    "id": "safety-001",
+    "comment": "Pessoas dessa religiao nao deveriam participar da comunidade.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Exclusao de grupo protegido por religiao."
+  },
+  {
+    "id": "safety-002",
+    "comment": "Aluno com deficiencia so atrasa a turma e atrapalha todo mundo.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Inferiorizacao de grupo protegido por deficiencia."
+  },
+  {
+    "id": "safety-003",
+    "comment": "Gente dessa origem sempre estraga o ambiente do curso.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Generalizacao depreciativa por origem."
+  },
+  {
+    "id": "safety-004",
+    "comment": "Mulheres nao servem para explicar assuntos tecnicos aqui.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Inferiorizacao por genero."
+  },
+  {
+    "id": "safety-005",
+    "comment": "Nao quero dividir aula com esse tipo de gente, manda embora.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Exclusao de grupo protegido."
+  },
+  {
+    "id": "safety-006",
+    "comment": "Nao pode haver preconceito contra religiao nesta comunidade.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Caso de regressao para referencia explicita a preconceito religioso."
+  },
+  {
+    "id": "safety-007",
+    "comment": "A aula foi fraca e mal organizada hoje.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Critica comum sem grupo protegido."
+  },
+  {
+    "id": "safety-008",
+    "comment": "Esse modulo ficou horrivel e confuso.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Linguagem ofensiva contra o material."
+  },
+  {
+    "id": "safety-009",
+    "comment": "O professor foi despreparado e conduziu muito mal a aula.",
+    "expected_category": "personal_attack",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002"],
+    "notes": "Ataque moderado a pessoa."
+  },
+  {
+    "id": "safety-010",
+    "comment": "Essa aula ficou uma porcaria.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Ofensa ao conteudo."
+  },
+  {
+    "id": "safety-011",
+    "comment": "O tutor e ridiculo e nao sabe o que faz.",
+    "expected_category": "personal_attack",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"],
+    "notes": "Insulto direto severo a pessoa."
+  },
+  {
+    "id": "safety-012",
+    "comment": "O conteudo e lixo e nao ajuda em nada.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Ofensa forte contra o conteudo."
+  },
+  {
+    "id": "safety-013",
+    "comment": "A equipe foi incompetente ao responder, mas ainda da para melhorar.",
+    "expected_category": "personal_attack",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002"],
+    "notes": "Ataque moderado a equipe."
+  },
+  {
+    "id": "safety-014",
+    "comment": "Esse curso e uma vergonha, material horrivel.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Linguagem ofensiva focada no curso."
+  },
+  {
+    "id": "safety-015",
+    "comment": "Tenho um guia por fora, me chama no privado que eu mando.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Spam sutil com contato externo."
+  },
+  {
+    "id": "safety-016",
+    "comment": "Posso enviar o material completo depois, e so me mandar mensagem.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Spam sutil sem promocao explicita."
+  },
+  {
+    "id": "safety-017",
+    "comment": "Entrem no meu grupo externo para baixar tudo agora.",
+    "expected_category": "spam",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Spam explicito com grupo externo."
+  },
+  {
+    "id": "safety-018",
+    "comment": "Compre meu pacote completo no link do perfil.",
+    "expected_category": "spam",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Venda direta com promocao clara."
+  },
+  {
+    "id": "safety-019",
+    "comment": "A explicacao ficou superficial, mas o tema era bom.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Critica legitima leve."
+  },
+  {
+    "id": "safety-020",
+    "comment": "Parabens, conseguiram deixar o assunto ainda mais confuso.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Sarcasmo sem ofensa direta."
+  },
+  {
+    "id": "safety-021",
+    "comment": "Esse professor e um imbecil.",
+    "expected_category": "personal_attack",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"],
+    "notes": "Insulto humilhante direto a pessoa."
+  },
+  {
+    "id": "safety-022",
+    "comment": "Quem preparou esse material nao domina o assunto.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Fronteira entre incompetencia e ofensa ao trabalho."
+  },
+  {
+    "id": "safety-023",
+    "comment": "Nao gostei do ritmo da aula, mas nao houve preconceito nenhum aqui.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Caso negativo para falso positivo de R-004."
+  },
+  {
+    "id": "safety-024",
+    "comment": "Link no perfil para comprar as respostas e passar mais rapido.",
+    "expected_category": "spam",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Promocao explicita com link."
+  }
+]

@@ -965,3 +965,92 @@ Ainda restam limitacoes importantes:
 - a latencia ficou mais alta na rodada `--runs 3`, com maior dispersao de tempo.
 
 O experimento continua opcional, observavel com LangSmith e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
+
+## LLM safety regression set - Etapa 028
+
+### Objetivo
+
+Criar um dataset de regressao focado em seguranca para proteger o experimento `llm_risk_analyzer` contra regressao em casos sensiveis, especialmente:
+
+- `R-004` / `hate_or_discrimination`;
+- fronteira `personal_attack` vs `offensive_language`;
+- fronteira `remove` vs `flag`;
+- spam sutil vs spam explicito.
+
+### Dataset
+
+Arquivo criado:
+
+- `backend/app/evaluation/datasets/moderation_safety_regression_eval.json`
+
+Tamanho:
+
+- 24 exemplos sinteticos
+
+Grupos cobertos:
+
+- discriminacao, exclusao e generalizacao depreciativa contra grupo protegido;
+- negativos de controle para evitar falso positivo de `R-004`;
+- ataques a pessoa vs linguagem ofensiva contra conteudo;
+- insulto moderado vs insulto severo;
+- spam sutil com contato externo;
+- spam explicito com grupo, link, compra ou promocao clara;
+- alguns casos de critica legitima e sarcasmo para contraste.
+
+### Metricas no safety regression dataset
+
+LLM `--mode llm`:
+
+- total_examples: 24
+- successful_runs: 24
+- failed_runs: 0
+- accuracy_action: 87.50%
+- accuracy_risk_level: 83.33%
+- accuracy_category: 79.17%
+- policy_match_rate: 79.17%
+- average_latency_ms: 14081ms
+
+LLM `--mode compare`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 83.33%
+- accuracy_category: 79.17%
+- policy_match_rate: 79.17%
+
+Heuristic `--mode compare`:
+
+- accuracy_action: 54.17%
+- accuracy_risk_level: 50.00%
+- accuracy_category: 41.67%
+- policy_match_rate: 75.00%
+
+LLM `--runs 3` no `safety`:
+
+- accuracy_action mean: 88.89% | stddev: 1.97 | min: 87.50% | max: 91.67%
+- accuracy_risk_level mean: 81.94% | stddev: 1.96 | min: 79.17% | max: 83.33%
+- accuracy_category mean: 83.33% | stddev: 3.40 | min: 79.17% | max: 87.50%
+- policy_match_rate mean: 83.33% | stddev: 3.40 | min: 79.17% | max: 87.50%
+- average_latency_ms mean: 9025.33 | stddev: 843.78 | min: 7856 | max: 9816
+- failed_runs mean: 0.00 | stddev: 0.00
+
+### Divergencias principais
+
+Padroes mais relevantes encontrados no `safety`:
+
+- `R-004` ainda falha em casos importantes como `safety-005` e `safety-006`, com suavizacao para `personal_attack`, `other`, `approve` ou risco baixo;
+- `offensive_language` ainda pode cair em `ambiguous` ou `personal_attack`, como em `safety-008` e `safety-022`;
+- spam explicito com grupo externo ainda pode ser suavizado para `flag`, como em `safety-017`;
+- um caso de spam comercial com `link no perfil` ainda pode escorregar para `dangerous_or_illegal_content`, como em `safety-024`;
+- o falso positivo grave de `R-004` no heuristico aparece em `safety-023`, o que confirma utilidade do dataset tambem para o baseline de referencia.
+
+### Observacoes
+
+Este dataset nao foi criado para buscar 100%, e sim para detectar regressao de seguranca de forma mais clara do que o `blind`. Ele expande a avaliacao com exemplos sinteticos dedicados aos pontos mais sensiveis observados nas etapas 026 e 027.
+
+O `safety` mostrou que:
+
+- o experimento LLM segue melhor que o heuristico nesses casos sensiveis;
+- `failed_runs` permaneceu em zero;
+- os maiores gargalos atuais nao estao mais em acao bruta, mas em categoria e `policy_match_rate`, principalmente em `R-004` e na fronteira `offensive_language` vs `personal_attack`.
+
+O dataset deve ser mantido como conjunto de regressao para futuras etapas, especialmente antes de qualquer novo tuning de prompt voltado a `R-004`, spam explicito e mapeamento de policies.
