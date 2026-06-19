@@ -1269,3 +1269,146 @@ Este relatorio existe para orientar calibracao por padrao, nao por frase exata. 
 - policy secundaria aparecendo no lugar da policy principal.
 
 So depois dessa leitura agrupada faz sentido decidir se a proxima etapa deve mexer em prompt, normalizacao, schema ou ate no proprio dataset. Isso reduz o risco de overfitting local e melhora a defensabilidade tecnica das calibracoes futuras.
+
+## LLM spam severity and target boundary calibration - Etapa 031
+
+### Padroes identificados pela taxonomia
+
+A etapa 030 mostrou dois grupos de erro mais consistentes no experimento LLM:
+
+- `medium -> high` em spam explicito no dataset `blind`, especialmente quando havia direcionamento comercial ou promocional para fora da plataforma;
+- `offensive_language -> personal_attack` em comentarios que citavam quem montou ou preparou o material, mas cujo alvo semantico principal ainda era a baixa qualidade do curso, conteudo, servico ou explicacao.
+
+Esses padroes motivaram a calibragem desta etapa. O objetivo nao foi perseguir um exemplo isolado, e sim reforcar as regras gerais de severidade de spam e alvo predominante da ofensa.
+
+### Ajustes realizados
+
+- reforco do `SYSTEM_PROMPT` para separar melhor `spam` sutil de `spam` explicito:
+  - `medium / flag` para convite discreto, material por fora e contato externo sem redirecionamento claro;
+  - `high / remove` para link, grupo externo, redirecionamento explicito, recrutamento claro ou empurrao promocional forte;
+- reforco para nao usar `high / remove` apenas porque o texto tem tom comercial;
+- reforco adicional da fronteira entre `personal_attack` e `offensive_language` quando o comentario menciona criadores ou preparadores apenas como forma de criticar a qualidade do material, servico, curso ou explicacao;
+- novos exemplos conceituais no prompt para `servico horrivel`, `quem preparou esse material nao domina o assunto` e spam com redirecionamento externo.
+
+Nenhuma mudanca foi feita no baseline heuristico, LangGraph principal, endpoint `/analyze`, frontend, banco, migrations, datasets ou runner.
+
+### Metricas antes
+
+Referencia da etapa 029/030:
+
+LLM `--dataset safety --mode llm`:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 91.67%
+- policy_match_rate: 91.67%
+- failed_runs: 0
+
+LLM `--dataset safety --mode llm --runs 3`:
+
+- accuracy_action mean: 95.83%
+- accuracy_risk_level mean: 95.83%
+- accuracy_category mean: 91.67%
+- policy_match_rate mean: 91.67%
+
+LLM `--dataset blind --mode llm --runs 3`:
+
+- accuracy_action mean: 93.75%
+- accuracy_risk_level mean: 87.50%
+- accuracy_category mean: 88.54%
+- policy_match_rate mean: 96.88%
+
+LLM `--dataset blind --mode compare`:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 84.38%
+- policy_match_rate: 96.88%
+
+### Metricas depois
+
+As validacoes LLM desta etapa precisaram ser executadas com `LANGSMITH_TRACING=false` no `docker compose exec`, porque o ambiente estava com limite mensal de traces excedido no LangSmith e isso derrubava as execucoes antes da inferencia.
+
+LLM `--dataset safety --mode llm`:
+
+- total_examples: 24
+- successful_runs: 24
+- failed_runs: 0
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 95.83%
+- policy_match_rate: 95.83%
+- average_latency_ms: 6847ms
+
+LLM `--dataset safety --mode compare`:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 91.67%
+- policy_match_rate: 91.67%
+- failed_runs: 0
+
+LLM `--dataset safety --mode llm --runs 3`:
+
+- accuracy_action mean: 95.83% | stddev: 0.00 | min: 95.83% | max: 95.83%
+- accuracy_risk_level mean: 95.83% | stddev: 0.00 | min: 95.83% | max: 95.83%
+- accuracy_category mean: 91.67% | stddev: 0.00 | min: 91.67% | max: 91.67%
+- policy_match_rate mean: 91.67% | stddev: 0.00 | min: 91.67% | max: 91.67%
+- failed_runs mean: 0.00 | stddev: 0.00
+
+LLM `--dataset blind --mode llm --runs 3`:
+
+- accuracy_action mean: 93.75% | stddev: 0.00 | min: 93.75% | max: 93.75%
+- accuracy_risk_level mean: 87.50% | stddev: 0.00 | min: 87.50% | max: 87.50%
+- accuracy_category mean: 86.46% | stddev: 1.47 | min: 84.38% | max: 87.50%
+- policy_match_rate mean: 95.84% | stddev: 1.48 | min: 93.75% | max: 96.88%
+- failed_runs mean: 0.00 | stddev: 0.00
+
+LLM `--dataset blind --mode compare`:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 87.50%
+- policy_match_rate: 96.88%
+- failed_runs: 0
+
+### Efeito no safety dataset
+
+O `safety` melhorou no modo `llm` simples:
+
+- `accuracy_category` subiu de `91.67%` para `95.83%`;
+- `policy_match_rate` subiu de `91.67%` para `95.83%`;
+- o caso equivalente ao padrao `offensive_language -> personal_attack` deixou de aparecer na rodada simples.
+
+Na taxonomia do `safety`, sobrou apenas:
+
+- `hate_or_discrimination -> personal_attack`;
+- `remove -> flag`;
+- `high -> medium`;
+- `['R-004'] -> ['R-002']`.
+
+Isso mostra que a principal fronteira residual no `safety` voltou a se concentrar em `R-004`, e nao mais em `offensive_language` vs `personal_attack`.
+
+### Efeito no blind dataset
+
+O efeito no `blind` foi misto:
+
+- `accuracy_action` e `accuracy_risk_level` permaneceram iguais;
+- `accuracy_category` do `compare` melhorou de `84.38%` para `87.50%`;
+- a media de `accuracy_category` em `--runs 3` caiu de `88.54%` para `86.46%`;
+- a media de `policy_match_rate` em `--runs 3` caiu de `96.88%` para `95.84%`;
+- o padrao `medium -> high` em spam explicito continuou dominante;
+- `offensive_language -> personal_attack` permaneceu em dois casos relevantes no `blind`.
+
+Ou seja, a calibragem ajudou no `safety`, mas nao resolveu o trade-off do `blind` e ainda trouxe leve perda de estabilidade agregada em `category` e `policy_match_rate`.
+
+### Limitações conhecidas
+
+Depois da etapa 031, ainda permanecem:
+
+- `safety-005` saindo como `personal_attack / medium / flag` em vez de `hate_or_discrimination / high / remove`;
+- no `blind`, o bloco de spam explicito ainda aparece como `medium -> high` na taxonomia;
+- `blind-025` e `blind-026` continuam em `offensive_language -> personal_attack`;
+- a calibragem de alvo principal melhorou o `safety`, mas nao generalizou o suficiente para eliminar a mesma fronteira no `blind`.
+
+O experimento continua opcional, observavel com LangSmith quando houver cota disponivel, e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
