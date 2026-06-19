@@ -1054,3 +1054,139 @@ O `safety` mostrou que:
 - os maiores gargalos atuais nao estao mais em acao bruta, mas em categoria e `policy_match_rate`, principalmente em `R-004` e na fronteira `offensive_language` vs `personal_attack`.
 
 O dataset deve ser mantido como conjunto de regressao para futuras etapas, especialmente antes de qualquer novo tuning de prompt voltado a `R-004`, spam explicito e mapeamento de policies.
+
+## LLM safety policy and category calibration - Etapa 029
+
+### Problemas observados no safety regression dataset
+
+A etapa 028 mostrou quatro fragilidades mais importantes no experimento LLM:
+
+- `R-004` ainda podia nao ser priorizado em casos claros de discriminacao ou preconceito contra grupo protegido;
+- `policy_references` ainda podia sair incompleta ou incoerente com a categoria final;
+- a fronteira `personal_attack` vs `offensive_language` seguia instavel, especialmente em critica de incompetencia ou baixa qualidade;
+- spam explicito ainda podia ser suavizado demais ou escorregar para `dangerous_or_illegal_content` / `R-005`.
+
+### Ajustes realizados
+
+- reforco do `SYSTEM_PROMPT` para exigir `hate_or_discrimination / high / remove / R-004` quando houver grupo protegido claro com exclusao, inferiorizacao, generalizacao depreciativa ou preconceito explicito;
+- reforco para nao usar `R-004` em critica comum, negatividade generica ou frustracao sem alvo de grupo protegido;
+- reforco da separacao entre `personal_attack` e `offensive_language` pelo alvo principal da mensagem;
+- reforco para tratar insultos fortes contra aula, curso, modulo, conteudo, material ou servico como `offensive_language`, e nao como `legitimate_criticism`;
+- reforco para manter spam explicito como `spam / R-001`, sem cair em `R-005` quando nao houver instrucao ilegal ou perigosa real;
+- revisao da pos-validacao de `policy_references` para:
+  - remover policies incompatíveis com a categoria final;
+  - deduplicar policies;
+  - inserir a policy primaria obrigatoria quando o mapeamento da categoria for inequivoco;
+  - registrar a calibragem na justificativa interna sem alterar silenciosamente `category`, `risk_level` ou `recommended_action`.
+
+Nenhuma mudanca foi feita no baseline heuristico, LangGraph principal, endpoint `/analyze`, frontend, banco, migrations ou datasets.
+
+### Metricas antes
+
+Referencia da etapa 028 no dataset `safety`:
+
+LLM `--dataset safety --mode llm`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 83.33%
+- accuracy_category: 83.33%
+- policy_match_rate: 83.33%
+- failed_runs: 0
+
+LLM `--dataset safety --mode compare`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 83.33%
+- accuracy_category: 83.33%
+- policy_match_rate: 83.33%
+- failed_runs: 0
+
+LLM `--dataset safety --mode llm --runs 3`:
+
+- accuracy_action mean: 87.50%
+- accuracy_risk_level mean: 83.33%
+- accuracy_category mean: 79.17%
+- policy_match_rate mean: 79.17%
+- failed_runs mean: 0.00
+
+Referencia imediatamente anterior no dataset `blind` com `--mode llm --runs 3`:
+
+- accuracy_action mean: 93.75%
+- accuracy_risk_level mean: 93.75%
+- accuracy_category mean: 83.34%
+- policy_match_rate mean: 93.75%
+- failed_runs mean: 0.00
+
+### Metricas depois
+
+LLM `--dataset safety --mode llm`:
+
+- total_examples: 24
+- successful_runs: 24
+- failed_runs: 0
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 91.67%
+- policy_match_rate: 91.67%
+- average_latency_ms: 5975ms
+
+LLM `--dataset safety --mode compare`:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 91.67%
+- policy_match_rate: 91.67%
+- failed_runs: 0
+
+Heuristic `--dataset safety --mode compare`:
+
+- accuracy_action: 54.17%
+- accuracy_risk_level: 50.00%
+- accuracy_category: 41.67%
+- policy_match_rate: 75.00%
+
+LLM `--dataset safety --mode llm --runs 3`:
+
+- accuracy_action mean: 95.83% | stddev: 0.00 | min: 95.83% | max: 95.83%
+- accuracy_risk_level mean: 95.83% | stddev: 0.00 | min: 95.83% | max: 95.83%
+- accuracy_category mean: 91.67% | stddev: 0.00 | min: 91.67% | max: 91.67%
+- policy_match_rate mean: 91.67% | stddev: 0.00 | min: 91.67% | max: 91.67%
+- average_latency_ms mean: 6109.00 | stddev: 260.77 | min: 5754.00 | max: 6373.00
+- failed_runs mean: 0.00 | stddev: 0.00
+
+### Efeito no blind dataset
+
+LLM `--dataset blind --mode llm --runs 3`:
+
+- accuracy_action mean: 93.75% | stddev: 0.00 | min: 93.75% | max: 93.75%
+- accuracy_risk_level mean: 87.50% | stddev: 0.00 | min: 87.50% | max: 87.50%
+- accuracy_category mean: 88.54% | stddev: 1.47 | min: 87.50% | max: 90.62%
+- policy_match_rate mean: 96.88% | stddev: 0.00 | min: 96.88% | max: 96.88%
+- average_latency_ms mean: 6159.33 | stddev: 166.91 | min: 5967.00 | max: 6374.00
+- failed_runs mean: 0.00 | stddev: 0.00
+
+LLM `--dataset blind --mode compare`:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 84.38%
+- policy_match_rate: 96.88%
+- failed_runs: 0
+
+Leitura do efeito no `blind`:
+
+- `policy_match_rate` melhorou de forma clara;
+- `accuracy_category` em `--runs 3` tambem subiu;
+- `accuracy_action` permaneceu estavel;
+- `accuracy_risk_level` caiu em relacao a referencia anterior, concentrando o trade-off em spam explicito que passou a sair mais severo.
+
+### Limitacoes conhecidas
+
+Mesmo apos a calibragem, ainda restam desvios importantes:
+
+- `safety-005` continua saindo como `personal_attack / medium / flag` em vez de `hate_or_discrimination / high / remove`;
+- `safety-022` continua saindo como `personal_attack / R-002` em vez de `offensive_language / R-003`;
+- no `blind`, alguns casos de spam explicito passaram a sair mais severos no `risk_level` do que o esperado pelo dataset;
+- no `blind`, `blind-023`, `blind-025` e `blind-026` ainda mostram a fronteira instavel entre `personal_attack` e `offensive_language`.
+
+O experimento continua opcional, observavel com LangSmith quando habilitado, e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.

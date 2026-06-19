@@ -174,18 +174,29 @@ def _calibrate_policy_references(
     allowed_policies.update(SECONDARY_ALLOWED_POLICIES_BY_CATEGORY.get(category, set()))
 
     normalized: list[str] = []
+    removed_policies: list[str] = []
     for policy in policy_references:
         if allowed_policies and policy not in allowed_policies:
+            if policy not in removed_policies:
+                removed_policies.append(policy)
             continue
         if policy not in normalized:
             normalized.append(policy)
 
-    calibration_note: str | None = None
+    notes: list[str] = []
     if primary_policy and primary_policy not in normalized:
         normalized.insert(0, primary_policy)
-        calibration_note = f"added {primary_policy} for category {category}"
+        notes.append(f"added {primary_policy} for category {category}")
 
     if not allowed_policies:
         normalized = policy_references
 
+    if removed_policies:
+        notes.append(
+            "removed incompatible policies "
+            + ", ".join(removed_policies)
+            + f" for category {category}"
+        )
+
+    calibration_note = "; ".join(notes) if notes else None
     return normalized, calibration_note
