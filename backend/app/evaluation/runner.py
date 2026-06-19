@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from statistics import pstdev
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
@@ -75,6 +76,93 @@ class PredictionOutput:
     predicted_risk_level: str | None
     predicted_category: str | None
     predicted_policy_rules: list[str]
+
+
+def _build_error_analysis(results: list[EvaluationResult]) -> dict[str, Any]:
+    successful_results = [result for result in results if result.success]
+
+    category_confusions = Counter(
+        (result.example.expected_category, result.predicted_category)
+        for result in successful_results
+        if result.predicted_category != result.example.expected_category
+    )
+    action_confusions = Counter(
+        (result.example.expected_action, result.predicted_action)
+        for result in successful_results
+        if result.predicted_action != result.example.expected_action
+    )
+    risk_confusions = Counter(
+        (result.example.expected_risk_level, result.predicted_risk_level)
+        for result in successful_results
+        if result.predicted_risk_level != result.example.expected_risk_level
+    )
+    policy_confusions = Counter(
+        (
+            tuple(result.example.expected_policy_rules),
+            tuple(result.predicted_policy_rules),
+        )
+        for result in successful_results
+        if result.example.expected_policy_rules != result.predicted_policy_rules
+    )
+
+    category_items = _counter_to_named_pairs(
+        category_confusions,
+        left_key="expected_category",
+        right_key="predicted_category",
+    )
+    action_items = _counter_to_named_pairs(
+        action_confusions,
+        left_key="expected_action",
+        right_key="predicted_action",
+    )
+    risk_items = _counter_to_named_pairs(
+        risk_confusions,
+        left_key="expected_risk",
+        right_key="predicted_risk",
+    )
+    policy_items = _counter_to_policy_pairs(policy_confusions)
+
+    return {
+        "category_confusions": category_items,
+        "action_confusions": action_items,
+        "risk_confusions": risk_items,
+        "policy_confusions": policy_items,
+        "top_summary": {
+            "top_category_mismatches": category_items[:3],
+            "top_action_mismatches": action_items[:3],
+            "top_risk_mismatches": risk_items[:3],
+            "top_policy_mismatches": policy_items[:3],
+        },
+    }
+
+
+def _counter_to_named_pairs(
+    counter: Counter[tuple[str, str | None]],
+    *,
+    left_key: str,
+    right_key: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            left_key: left,
+            right_key: right if right is not None else "None",
+            "count": count,
+        }
+        for (left, right), count in counter.most_common()
+    ]
+
+
+def _counter_to_policy_pairs(
+    counter: Counter[tuple[tuple[str, ...], tuple[str, ...]]],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "expected_policy_rules": list(expected),
+            "predicted_policy_rules": list(predicted),
+            "count": count,
+        }
+        for (expected, predicted), count in counter.most_common()
+    ]
 
 
 def load_dataset(dataset_path: Path) -> list[EvaluationExample]:
@@ -391,6 +479,8 @@ def summarize_multi_run_results(run_summaries: list[dict[str, Any]]) -> dict[str
     return {
         "runs": run_summaries,
         "aggregate": aggregate,
+        "error_analysis_last_run": run_summaries[-1].get("error_analysis", {}),
+        "error_analysis_last_run_index": len(run_summaries),
     }
 
 
@@ -453,6 +543,7 @@ def summarize_results(results: list[EvaluationResult]) -> dict[str, Any]:
         "average_latency_ms": average_latency_ms,
         "divergences": divergences[:20],
         "failures": failed_results[:20],
+        "error_analysis": _build_error_analysis(results),
     }
 
 
@@ -509,6 +600,10 @@ def format_report(summary: dict[str, Any]) -> str:
                 f"got {result.predicted_policy_rules}"
             )
             lines.append(f"  comment: {result.example.comment}")
+
+    error_analysis = summary.get("error_analysis")
+    if error_analysis:
+        lines.extend(_format_error_analysis(error_analysis))
 
     return "\n".join(lines)
 
@@ -579,6 +674,19 @@ def format_multi_run_report(summary: dict[str, Any]) -> str:
             ),
         ]
     )
+
+    error_analysis = summary.get("error_analysis_last_run")
+    if error_analysis:
+        lines.extend(
+            [
+                "",
+                (
+                    "Error analysis (last run only): "
+                    f"run {summary['error_analysis_last_run_index']}"
+                ),
+            ]
+        )
+        lines.extend(_format_error_analysis(error_analysis))
     return "\n".join(lines)
 
 
@@ -606,3 +714,137 @@ def format_compare_report(compare_summary: dict[str, Any]) -> str:
         f"policy_match_rate_delta: {comparison['policy_match_rate_delta']:.2f}%",
     ]
     return "\n".join(lines)
+
+
+def _format_error_analysis(error_analysis: dict[str, Any]) -> list[str]:
+    lines: list[str] = ["", "Error analysis:"]
+    lines.extend(
+        _format_named_confusions(
+            title="Category confusion",
+            items=error_analysis.get("category_confusions", []),
+            left_key="expected_category",
+            right_key="predicted_category",
+        )
+    )
+    lines.extend(
+        _format_named_confusions(
+            title="Action confusion",
+            items=error_analysis.get("action_confusions", []),
+            left_key="expected_action",
+            right_key="predicted_action",
+        )
+    )
+    lines.extend(
+        _format_named_confusions(
+            title="Risk confusion",
+            items=error_analysis.get("risk_confusions", []),
+            left_key="expected_risk",
+            right_key="predicted_risk",
+        )
+    )
+    lines.extend(_format_policy_confusions(error_analysis.get("policy_confusions", [])))
+    lines.extend(_format_top_summary(error_analysis.get("top_summary", {})))
+    return lines
+
+
+def _format_named_confusions(
+    *,
+    title: str,
+    items: list[dict[str, Any]],
+    left_key: str,
+    right_key: str,
+) -> list[str]:
+    lines = [title + ":"]
+    if not items:
+        lines.append("- none")
+        return lines
+
+    for item in items:
+        lines.append(
+            f"- {item[left_key]} -> {item[right_key]}: {item['count']}"
+        )
+    return lines
+
+
+def _format_policy_confusions(items: list[dict[str, Any]]) -> list[str]:
+    lines = ["Policy divergences:"]
+    if not items:
+        lines.append("- none")
+        return lines
+
+    for item in items:
+        lines.append(
+            f"- expected {item['expected_policy_rules']} -> predicted "
+            f"{item['predicted_policy_rules']}: {item['count']}"
+        )
+    return lines
+
+
+def _format_top_summary(top_summary: dict[str, Any]) -> list[str]:
+    lines = ["Pattern summary:"]
+    lines.extend(
+        _format_top_named_entries(
+            title="Top category mismatches",
+            items=top_summary.get("top_category_mismatches", []),
+            left_key="expected_category",
+            right_key="predicted_category",
+        )
+    )
+    lines.extend(
+        _format_top_named_entries(
+            title="Top action mismatches",
+            items=top_summary.get("top_action_mismatches", []),
+            left_key="expected_action",
+            right_key="predicted_action",
+        )
+    )
+    lines.extend(
+        _format_top_named_entries(
+            title="Top risk mismatches",
+            items=top_summary.get("top_risk_mismatches", []),
+            left_key="expected_risk",
+            right_key="predicted_risk",
+        )
+    )
+    lines.extend(
+        _format_top_policy_entries(
+            title="Top policy mismatches",
+            items=top_summary.get("top_policy_mismatches", []),
+        )
+    )
+    return lines
+
+
+def _format_top_named_entries(
+    *,
+    title: str,
+    items: list[dict[str, Any]],
+    left_key: str,
+    right_key: str,
+) -> list[str]:
+    if not items:
+        return [f"- {title}: none"]
+    return [
+        f"- {title}: "
+        + "; ".join(
+            f"{item[left_key]} -> {item[right_key]} ({item['count']})"
+            for item in items
+        )
+    ]
+
+
+def _format_top_policy_entries(
+    *,
+    title: str,
+    items: list[dict[str, Any]],
+) -> list[str]:
+    if not items:
+        return [f"- {title}: none"]
+    return [
+        f"- {title}: "
+        + "; ".join(
+            f"{item['expected_policy_rules']} -> {item['predicted_policy_rules']} "
+            f"({item['count']})"
+            for item in items
+        )
+    ]

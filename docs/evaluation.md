@@ -1190,3 +1190,82 @@ Mesmo apos a calibragem, ainda restam desvios importantes:
 - no `blind`, `blind-023`, `blind-025` e `blind-026` ainda mostram a fronteira instavel entre `personal_attack` e `offensive_language`.
 
 O experimento continua opcional, observavel com LangSmith quando habilitado, e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
+
+## LLM error taxonomy and severity calibration - Etapa 030
+
+### Objetivo
+
+Adicionar taxonomia de erro ao runner de avaliacao para identificar padroes recorrentes antes de qualquer nova calibragem de prompt, normalizacao ou regras. O foco desta etapa nao foi mudar comportamento do LLM, e sim melhorar a leitura dos erros para evitar tuning reativo em exemplos isolados.
+
+### Analises adicionadas
+
+O runner agora exibe, alem das metricas e divergencias por exemplo:
+
+- `category confusion`, agrupando `expected_category -> predicted_category`;
+- `action confusion`, agrupando `expected_action -> predicted_action`;
+- `risk confusion`, agrupando `expected_risk -> predicted_risk`;
+- `policy divergences`, agrupando `expected_policy_rules -> predicted_policy_rules`;
+- `pattern summary`, com os principais mismatches por categoria, acao, risco e policy.
+
+Compatibilidade preservada:
+
+- `heuristic`;
+- `llm`;
+- `compare`;
+- `--runs > 1`.
+
+No modo `compare`, a analise aparece separadamente em `Heuristic results` e `LLM results`. Em `--runs > 1`, as metricas agregadas continuam iguais e a taxonomia de erro e mostrada apenas para a ultima rodada, com indicacao explicita.
+
+### Como executar
+
+Exemplos:
+
+```bash
+docker compose exec backend python scripts/evaluate_moderation.py --dataset safety --mode llm
+docker compose exec backend python scripts/evaluate_moderation.py --dataset safety --mode compare
+docker compose exec backend python scripts/evaluate_moderation.py --dataset blind --mode llm --runs 3
+docker compose exec backend python scripts/evaluate_moderation.py --dataset blind --mode compare
+```
+
+Exemplo resumido de saida:
+
+```text
+Error analysis:
+Category confusion:
+- hate_or_discrimination -> personal_attack: 1
+- offensive_language -> personal_attack: 1
+Action confusion:
+- remove -> flag: 1
+Risk confusion:
+- high -> medium: 1
+Policy divergences:
+- expected ['R-004'] -> predicted ['R-002']: 1
+Pattern summary:
+- Top category mismatches: hate_or_discrimination -> personal_attack (1)
+```
+
+### Como interpretar divergencias
+
+Leituras uteis:
+
+- `category confusion` mostra fronteiras semanticas instaveis, como `personal_attack` vs `offensive_language` ou `hate_or_discrimination` vs categorias mais brandas;
+- `action confusion` mostra se o sistema esta agressivo ou permissivo demais, como `flag -> remove` ou `remove -> flag`;
+- `risk confusion` ajuda a enxergar descalibragem de severidade, como `medium -> high` em spam explicito;
+- `policy divergences` mostra incoerencia entre categoria final e referencia normativa retornada.
+
+Na pratica, a etapa 030 deixou mais visivel que:
+
+- no `safety`, o principal gargalo remanescente do LLM esta em `hate_or_discrimination -> personal_attack` e `offensive_language -> personal_attack`;
+- no `blind`, a descalibragem dominante atual esta em `medium -> high`, concentrada em spam explicito;
+- no `compare`, o baseline heuristico continua expondo falhas estruturais diferentes, especialmente `needs_human_review` e `unknown` em excesso.
+
+### Uso para evitar overfitting
+
+Este relatorio existe para orientar calibracao por padrao, nao por frase exata. Em vez de ajustar o sistema para um unico ID do dataset, a ideia e observar grupos de erro recorrentes, como:
+
+- `offensive_language -> personal_attack`;
+- `medium -> high` em spam explicito;
+- `R-004` escapando para categoria mais branda;
+- policy secundaria aparecendo no lugar da policy principal.
+
+So depois dessa leitura agrupada faz sentido decidir se a proxima etapa deve mexer em prompt, normalizacao, schema ou ate no proprio dataset. Isso reduz o risco de overfitting local e melhora a defensabilidade tecnica das calibracoes futuras.
