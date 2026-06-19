@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from statistics import pstdev
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
@@ -231,22 +232,41 @@ def _predict_with_llm(
 def run_evaluation(
     dataset_path: Path,
     mode: str = "heuristic",
+    runs: int = 1,
 ) -> dict[str, Any]:
+    if runs < 1:
+        raise ValueError("runs must be >= 1")
     if mode == "llm":
         _ensure_llm_evaluation_available()
     examples = load_dataset(dataset_path)
     available_guidelines = repository.list_guidelines_for_analysis()
     predictor = _resolve_predictor(mode)
-    return _run_prediction_pass(
-        examples,
-        available_guidelines,
-        predictor,
-        mode=mode,
-        dataset_name=dataset_path.stem,
-    )
+    if runs == 1:
+        return _run_prediction_pass(
+            examples,
+            available_guidelines,
+            predictor,
+            mode=mode,
+            dataset_name=dataset_path.stem,
+        )
+
+    run_summaries = [
+        _run_prediction_pass(
+            examples,
+            available_guidelines,
+            predictor,
+            mode=mode,
+            dataset_name=dataset_path.stem,
+            run_label=f"run_{index}",
+        )
+        for index in range(1, runs + 1)
+    ]
+    return summarize_multi_run_results(run_summaries)
 
 
-def run_compare_evaluation(dataset_path: Path) -> dict[str, Any]:
+def run_compare_evaluation(dataset_path: Path, runs: int = 1) -> dict[str, Any]:
+    if runs != 1:
+        raise ValueError("runs > 1 is not supported for compare mode.")
     _ensure_llm_evaluation_available()
     heuristic_summary = run_evaluation(dataset_path, mode="heuristic")
     llm_summary = run_evaluation(dataset_path, mode="llm")
@@ -299,6 +319,7 @@ def _run_prediction_pass(
     *,
     mode: str,
     dataset_name: str,
+    run_label: str | None = None,
 ) -> dict[str, Any]:
     results: list[EvaluationResult] = []
 
@@ -312,6 +333,7 @@ def _run_prediction_pass(
                     "dataset": dataset_name,
                     "mode": mode,
                     "example_id": example.id,
+                    "run_label": run_label,
                 },
             )
             latency_ms = max(0, round((perf_counter() - started_at) * 1000))
@@ -342,6 +364,34 @@ def _run_prediction_pass(
             )
 
     return summarize_results(results)
+
+
+def summarize_multi_run_results(run_summaries: list[dict[str, Any]]) -> dict[str, Any]:
+    if not run_summaries:
+        raise ValueError("At least one run summary is required.")
+
+    metric_names = (
+        "accuracy_action",
+        "accuracy_risk_level",
+        "accuracy_category",
+        "policy_match_rate",
+        "average_latency_ms",
+        "failed_runs",
+    )
+    aggregate: dict[str, Any] = {}
+    for metric_name in metric_names:
+        values = [float(summary[metric_name]) for summary in run_summaries]
+        aggregate[metric_name] = {
+            "mean": round(sum(values) / len(values), 2),
+            "stddev": round(pstdev(values), 2),
+            "min": round(min(values), 2),
+            "max": round(max(values), 2),
+        }
+
+    return {
+        "runs": run_summaries,
+        "aggregate": aggregate,
+    }
 
 
 def summarize_results(results: list[EvaluationResult]) -> dict[str, Any]:
@@ -413,6 +463,9 @@ def _percentage(matches: int, total: int) -> float:
 
 
 def format_report(summary: dict[str, Any]) -> str:
+    if "runs" in summary and "aggregate" in summary:
+        return format_multi_run_report(summary)
+
     lines = [
         "ModerationFlow AI Evaluation",
         "----------------------------",
@@ -457,6 +510,75 @@ def format_report(summary: dict[str, Any]) -> str:
             )
             lines.append(f"  comment: {result.example.comment}")
 
+    return "\n".join(lines)
+
+
+def format_multi_run_report(summary: dict[str, Any]) -> str:
+    lines = [
+        "ModerationFlow AI Evaluation",
+        "----------------------------",
+        f"Runs executed: {len(summary['runs'])}",
+        "",
+        "Per-run metrics:",
+    ]
+
+    for index, run_summary in enumerate(summary["runs"], start=1):
+        lines.extend(
+            [
+                (
+                    f"- run {index}: action={run_summary['accuracy_action']:.2f}% "
+                    f"risk={run_summary['accuracy_risk_level']:.2f}% "
+                    f"category={run_summary['accuracy_category']:.2f}% "
+                    f"policy={run_summary['policy_match_rate']:.2f}% "
+                    f"latency={run_summary['average_latency_ms']}ms "
+                    f"failed={run_summary['failed_runs']}"
+                )
+            ]
+        )
+
+    aggregate = summary["aggregate"]
+    lines.extend(
+        [
+            "",
+            "Aggregate metrics:",
+            (
+                f"- accuracy_action mean={aggregate['accuracy_action']['mean']:.2f}% "
+                f"stddev={aggregate['accuracy_action']['stddev']:.2f} "
+                f"min={aggregate['accuracy_action']['min']:.2f}% "
+                f"max={aggregate['accuracy_action']['max']:.2f}%"
+            ),
+            (
+                f"- accuracy_risk_level mean={aggregate['accuracy_risk_level']['mean']:.2f}% "
+                f"stddev={aggregate['accuracy_risk_level']['stddev']:.2f} "
+                f"min={aggregate['accuracy_risk_level']['min']:.2f}% "
+                f"max={aggregate['accuracy_risk_level']['max']:.2f}%"
+            ),
+            (
+                f"- accuracy_category mean={aggregate['accuracy_category']['mean']:.2f}% "
+                f"stddev={aggregate['accuracy_category']['stddev']:.2f} "
+                f"min={aggregate['accuracy_category']['min']:.2f}% "
+                f"max={aggregate['accuracy_category']['max']:.2f}%"
+            ),
+            (
+                f"- policy_match_rate mean={aggregate['policy_match_rate']['mean']:.2f}% "
+                f"stddev={aggregate['policy_match_rate']['stddev']:.2f} "
+                f"min={aggregate['policy_match_rate']['min']:.2f}% "
+                f"max={aggregate['policy_match_rate']['max']:.2f}%"
+            ),
+            (
+                f"- average_latency_ms mean={aggregate['average_latency_ms']['mean']:.2f} "
+                f"stddev={aggregate['average_latency_ms']['stddev']:.2f} "
+                f"min={aggregate['average_latency_ms']['min']:.2f} "
+                f"max={aggregate['average_latency_ms']['max']:.2f}"
+            ),
+            (
+                f"- failed_runs mean={aggregate['failed_runs']['mean']:.2f} "
+                f"stddev={aggregate['failed_runs']['stddev']:.2f} "
+                f"min={aggregate['failed_runs']['min']:.2f} "
+                f"max={aggregate['failed_runs']['max']:.2f}"
+            ),
+        ]
+    )
     return "\n".join(lines)
 
 

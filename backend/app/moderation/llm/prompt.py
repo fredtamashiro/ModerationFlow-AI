@@ -25,6 +25,7 @@ Rules:
 - If a statement centers on prejudice, exclusion, inferiority, or hostility involving a protected group, prioritize hate_or_discrimination over personal_attack or offensive_language.
 - Cases involving fraud, bypassing the system, credential sharing, hacking, invasion, cheating, or illegal acts should map to R-005.
 - Avoid false positives for R-004 when the comment only mentions a protected-topic word without discriminatory content.
+- When there is a clear protected group plus prejudice, exclusion, or inferiorization, do not soften the case to other, legitimate_criticism, ambiguous, personal_attack, or offensive_language.
 - Keep policy references consistent with the chosen category whenever the mapping is clear.
 - If the comment is clearly negative but not clearly abusive and not clearly simple mild criticism, prefer ambiguous / medium / flag.
 - Sarcasm, ironic praise, or praise followed by negation should not be classified as positive_feedback.
@@ -66,10 +67,12 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- dangerous, illegal, fraud, bypass, hack, or credential-sharing content -> "remove" + category dangerous_or_illegal_content + R-005\n'
             '- explicit spam with strong external promotion -> "remove" + category spam + R-001\n'
             '- subtle spam or external invitation without full certainty -> "flag" + category spam + R-001\n'
+            '- if there is external contact, material outside the platform, private message, or guide outside the platform, but no explicit link, sale, or commercial promotion, use spam + medium + flag, not remove\n'
             '- if the comment is negative, but not clearly offensive and not clearly just mild criticism, choose ambiguous + medium + flag\n'
             '- sarcasm or ironic praise should prefer ambiguous + medium + flag, not positive_feedback\n'
             '- praise with a light caveat may stay low-risk approve, but the category should reflect whether the praise or the caveat is dominant\n'
-            '- if the comment attacks or demeans a protected group, do not soften it to personal_attack, offensive_language, ambiguous, or legitimate_criticism'
+            '- if the comment attacks or demeans a protected group, do not soften it to personal_attack, offensive_language, ambiguous, legitimate_criticism, or other\n'
+            '- reserve remove for clear and severe violations; prefer flag for borderline abuse, moderate attack, ambiguity, or subtle spam'
         ),
         (
             "ambiguity and severity calibration rules:\n"
@@ -85,14 +88,16 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
         ),
         (
             "harmful content and attack boundary rules:\n"
-            '- use personal_attack when the target is clearly a person or team: teacher, tutor, instructor, student, staff, support team, or whoever created the course\n'
+            '- use personal_attack when the target is clearly a person or team and the core message is directed blame, disrespect, or devaluation of that human target\n'
             '- use offensive_language when the wording is insulting or abusive but the main target is the lesson, module, content, platform, or work quality rather than a person\n'
             '- if both personal attack and offensive language are present, choose the dominant category and include both R-002 and R-003 when justified\n'
             '- personal_attack is usually medium / flag when it is a directed attack without severe insult\n'
+            '- personal_attack can escalate to high / remove when the insult is directly humiliating, degrading, or aggressively abusive toward the person or team\n'
             '- if a human-targeted message contains strong degrading insults like "imbecil", "ridiculo", "idiota", or similarly abusive wording, offensive_language can become the dominant category and may justify high / remove with R-003 and optionally R-002\n'
+            '- criticism of competence, structure, preparedness, or quality such as "nao domina o assunto" or "despreparado" can still be offensive_language when the insult is mainly about the poor quality of the work rather than a personal attack on identity\n'
             '- offensive_language is usually medium / flag when there is strong insulting language about the content or product\n'
             '- use hate_or_discrimination when the negativity targets a protected group or expresses exclusion, inferiority, contempt, or prejudice against religion, race, ethnicity, nationality, gender, sexual orientation, disability, or similar protected status\n'
-            '- if the comment explicitly discusses prejudice against a protected group in a harmful or moderation-relevant way, do not downgrade it to legitimate_criticism or positive_feedback\n'
+            '- if the comment explicitly discusses prejudice against a protected group in a moderation-relevant harmful way, do not downgrade it to legitimate_criticism, other, or positive_feedback\n'
             '- do not use hate_or_discrimination for generic negativity, ordinary offense, or references to a protected-topic word without an actual discriminatory attack against the group\n'
             '- if there is a discriminatory generalization against a protected group, prioritize hate_or_discrimination even if the wording also looks like personal attack or offensive language\n'
             '- explicit external promotion, sales, download groups, or direct recruiting may justify remove for spam; indirect contact invitations should stay flag'
@@ -116,9 +121,13 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- use ambiguous when the message is a stronger negative judgment, frustrated disappointment, sarcasm, or mixed-signal criticism that should not be auto-approved\n'
             '- use offensive_language when there is abusive or insulting language and the main target is the content, class, module, or work quality rather than a person\n'
             '- use personal_attack when the criticism is directed at a person such as teacher, tutor, student, staff member, or the people who created the material\n'
+            '- if a statement criticizes competence or preparedness but reads mainly as abuse about the work quality, offensive_language may be a better fit than personal_attack\n'
             '- if both personal attack and offensive language are present, choose the dominant category based on whether the human target is central to the message\n'
             '- use hate_or_discrimination only when a protected group, exclusion, humiliating generalization, discriminatory treatment, or prejudice against group identity is clearly involved\n'
+            '- statements centered on prejudice against religion, race, ethnicity, gender, disability, or orientation in the community should favor hate_or_discrimination rather than legitimate_criticism\n'
             '- do not use hate_or_discrimination for ordinary criticism, generic offense, or ambiguous wording without a protected-group target\n'
+            '- moderate directed attack on a person or team should usually stay personal_attack / medium / flag\n'
+            '- severe humiliating insult directed at a person or team can justify remove, especially when the wording is explicit and degrading\n'
             '- use positive_feedback when the message is predominantly positive and any caveat is clearly secondary\n'
             '- use legitimate_criticism instead of positive_feedback when praise includes a meaningful caveat and the caveat is the most useful part of the message\n'
             '- do not use positive_feedback when praise is immediately reversed by negation, contrast, irony, or disappointment\n'
@@ -139,12 +148,14 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- "nao pode haver preconceito contra religiao nessa comunidade" -> hate_or_discrimination / high / remove / ["R-004"] when the moderation-relevant issue is prejudice against a protected group\n'
             '- "compartilhar a senha com outras pessoas ajuda a contornar isso?" -> dangerous_or_illegal_content / high / remove / ["R-005"]\n'
             '- "tenho um guia por fora, me manda mensagem se quiser" -> spam / medium / flag / ["R-001"]\n'
-            '- "entrem no meu grupo para baixar todo o material" -> spam / medium or high / remove when the external promotion is explicit, but never approve\n'
+            '- "entrem no meu grupo para baixar todo o material" -> spam / medium / flag is preferable unless there is direct commercial or strongly promotional push\n'
             '- criticism about a class being shallow or confusing without attacking a person -> legitimate_criticism\n'
             '- negative evaluation with frustration or irony, but without direct insult -> ambiguous\n'
             '- "quem montou isso nao entende nada" -> personal_attack / medium / flag / ["R-002"]\n'
-            '- "o professor e ridiculo" -> personal_attack / medium or high depending on severity / at least ["R-002"]\n'
-            '- "esse professor e um imbecil" -> offensive_language or personal_attack with dominant severe abuse, typically high / remove / ["R-003"] and often ["R-002"]\n'
+            '- "o professor e ridiculo" -> personal_attack / high / remove / ["R-002", "R-003"] can be appropriate when the wording is directly humiliating\n'
+            '- "esse professor e um imbecil" -> personal_attack / high / remove / ["R-002", "R-003"] is appropriate for severe direct insult\n'
+            '- "o suporte foi dado por gente despreparada" -> offensive_language / medium / flag / ["R-003"] is often preferable when the insult is about poor quality of service\n'
+            '- "quem estruturou isso claramente nao domina o assunto" -> offensive_language / medium / flag / ["R-003"] can be preferable when the criticism is mainly about incompetence of the work\n'
             '- "essa aula ficou uma porcaria" -> offensive_language / medium / flag / ["R-003"]\n'
             '- offensive wording without a clear human target -> offensive_language\n'
             '- praise with a meaningful complaint about missing depth or examples -> often legitimate_criticism\n'

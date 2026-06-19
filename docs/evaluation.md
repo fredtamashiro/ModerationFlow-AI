@@ -734,3 +734,234 @@ Os erros remanescentes ficaram concentrados em:
 - `blind-028`, ainda instavel em `R-004` entre execucoes diferentes.
 
 O experimento continua opcional, observavel com LangSmith e sujeito a variancia. Ele nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
+
+## LLM variance and boundary stabilization - Etapa 026
+
+### Metricas antes
+
+Referencia da etapa 025:
+
+Melhor execucao isolada `--mode llm`:
+
+- accuracy_action: 90.62%
+- accuracy_risk_level: 93.75%
+- accuracy_category: 84.38%
+- policy_match_rate: 96.88%
+- failed_runs: 0
+
+Execucao pareada `--mode compare`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 81.25%
+- policy_match_rate: 90.62%
+
+### Problema observado
+
+A etapa 025 melhorou o experimento LLM, mas ainda havia dois problemas:
+
+- variancia entre execucoes independentes, especialmente em `category` e `policy_match_rate`;
+- fronteiras ainda instaveis em spam sutil, `personal_attack` vs `offensive_language` e `hate_or_discrimination` / `R-004`.
+
+Casos prioritarios:
+
+- `blind-017`: spam sutil ainda agressivo demais;
+- `blind-023` e `blind-024`: oscilacao entre `personal_attack` e `offensive_language`;
+- `blind-026`: severidade ainda subestimada em algumas execucoes;
+- `blind-028`: instabilidade importante em `R-004`.
+
+### Ajustes realizados
+
+- reforco do prompt para forcar `flag` em spam com contato externo ou material por fora quando nao houver link, venda explicita ou promocao comercial clara;
+- reforco da fronteira entre `personal_attack` e `offensive_language`, com instrucao explicita para tratar critica de incompetencia ou baixa qualidade de trabalho como `offensive_language` quando o foco principal for a qualidade do servico ou do material;
+- reforco da regra de `R-004` para nao suavizar comentarios sobre preconceito contra grupo protegido para `positive_feedback`, `other` ou `legitimate_criticism`;
+- inclusao de exemplos conceituais adicionais para suporte despreparado, estruturacao ruim do conteudo e preconceito contra religiao;
+- adicao da opcao `--runs` no runner para executar multiplas rodadas no mesmo dataset e reportar media, desvio, minimo e maximo, sem alterar o comportamento padrao.
+
+Exemplo:
+
+```bash
+docker compose exec backend python scripts/evaluate_moderation.py --dataset blind --mode llm --runs 3
+```
+
+### Metricas apos estabilizacao
+
+Execucao isolada `--mode llm`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 90.62%
+- accuracy_category: 84.38%
+- policy_match_rate: 93.75%
+- average_latency_ms: 6704ms
+- failed_runs: 0
+
+Execucao pareada `--mode compare`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 90.62%
+- accuracy_category: 87.50%
+- policy_match_rate: 93.75%
+- average_latency_ms: 6424ms
+- failed_runs: 0
+
+### Variancia observada
+
+Rodando `--mode llm --runs 3` no dataset `blind`:
+
+- accuracy_action mean: 89.58% | stddev: 1.47 | min: 87.50% | max: 90.62%
+- accuracy_risk_level mean: 91.66% | stddev: 1.48 | min: 90.62% | max: 93.75%
+- accuracy_category mean: 85.42% | stddev: 1.47 | min: 84.38% | max: 87.50%
+- policy_match_rate mean: 94.79% | stddev: 1.48 | min: 93.75% | max: 96.88%
+- average_latency_ms mean: 6179.33 | stddev: 173.85 | min: 6006 | max: 6417
+- failed_runs mean: 0.00 | stddev: 0.00
+
+### Comparacao com heuristico
+
+Heuristic blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+
+LLM blind no `compare`:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 90.62%
+- accuracy_category: 87.50%
+- policy_match_rate: 93.75%
+
+Delta LLM vs heuristic:
+
+- action_accuracy_delta: 18.75%
+- risk_level_accuracy_delta: 21.87%
+- category_accuracy_delta: 15.62%
+- policy_match_rate_delta: -6.25%
+
+### Observacoes
+
+Esta etapa melhorou o patamar do `compare` em `risk_level`, `category` e `policy_match_rate`, manteve `failed_runs = 0` e adicionou uma forma objetiva de medir variancia. A dispersao observada em tres rodadas ficou relativamente baixa, o que sugere ganho real de estabilidade em relacao a etapa 025.
+
+Ainda restam erros relevantes:
+
+- `blind-017` continua agressivo demais para spam sutil;
+- `blind-023` ainda pode cair em `personal_attack` em vez de `offensive_language`;
+- `blind-026` ainda subestima severidade em uma das fronteiras de insulto direto;
+- `blind-028` continua sendo o caso mais sensivel de `R-004`, embora com melhor estabilidade agregada.
+
+O experimento segue opcional, observavel com LangSmith e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
+
+## LLM R-004 and severity calibration - Etapa 027
+
+### Metricas antes
+
+Referencia da etapa 026:
+
+LLM:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 90.62%
+- accuracy_category: 84.38%
+- policy_match_rate: 93.75%
+- failed_runs: 0
+
+Compare:
+
+- accuracy_action: 87.50%
+- accuracy_risk_level: 90.62%
+- accuracy_category: 87.50%
+- policy_match_rate: 93.75%
+- failed_runs: 0
+
+Runs 3 media:
+
+- action: 89.58%
+- risk: 91.66%
+- category: 85.42%
+- policy: 94.79%
+
+### Problema observado
+
+Mesmo apos a etapa 026, ainda restavam quatro gargalos mais sensiveis:
+
+- `blind-017`: spam sutil ainda podia sair agressivo demais;
+- `blind-023`: ainda oscilava para `personal_attack` em vez de `offensive_language`;
+- `blind-026`: severidade de insulto direto ainda subestimava em parte das execucoes;
+- `blind-028`: seguia como o caso mais problematico de `R-004`.
+
+### Ajustes realizados
+
+- reforco do prompt para nao suavizar casos de grupo protegido com preconceito claro para `other`, `legitimate_criticism`, `ambiguous`, `personal_attack` ou `offensive_language`;
+- reforco da regra `remove` vs `flag`, deixando `remove` mais explicitamente reservado para violacao clara e severa;
+- reforco de severidade para insulto direto humilhante contra pessoa ou equipe, permitindo `personal_attack / high / remove` com `R-002` e `R-003` quando houver abuso explicito;
+- reforco de spam sutil como `flag`, inclusive no exemplo de grupo externo sem empurrao comercial claro;
+- revisao de exemplos conceituais para professor ridiculo, professor imbecil e grupo externo de download.
+
+Nenhuma mudanca foi feita no grafo heuristico, endpoint `/analyze`, frontend, banco, migrations ou datasets.
+
+### Metricas apos calibragem
+
+Execucao `--mode llm`:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 93.75%
+- accuracy_category: 84.38%
+- policy_match_rate: 93.75%
+- average_latency_ms: 7145ms
+- failed_runs: 0
+
+Execucao `--mode compare`:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 93.75%
+- accuracy_category: 84.38%
+- policy_match_rate: 93.75%
+- average_latency_ms: 7262ms
+- failed_runs: 0
+
+### Variancia observada
+
+Rodando `--mode llm --runs 3` no dataset `blind`:
+
+- accuracy_action mean: 93.75% | stddev: 0.00 | min: 93.75% | max: 93.75%
+- accuracy_risk_level mean: 93.75% | stddev: 0.00 | min: 93.75% | max: 93.75%
+- accuracy_category mean: 85.42% | stddev: 1.47 | min: 84.38% | max: 87.50%
+- policy_match_rate mean: 93.75% | stddev: 0.00 | min: 93.75% | max: 93.75%
+- average_latency_ms mean: 8637.67 | stddev: 1659.08 | min: 7107 | max: 10943
+- failed_runs mean: 0.00 | stddev: 0.00
+
+### Comparacao com heuristico
+
+Heuristic blind:
+
+- accuracy_action: 68.75%
+- accuracy_risk_level: 68.75%
+- accuracy_category: 71.88%
+- policy_match_rate: 100.00%
+
+LLM blind no `compare`:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 93.75%
+- accuracy_category: 84.38%
+- policy_match_rate: 93.75%
+
+Delta LLM vs heuristic:
+
+- action_accuracy_delta: 25.00%
+- risk_level_accuracy_delta: 25.00%
+- category_accuracy_delta: 12.50%
+- policy_match_rate_delta: -6.25%
+
+### Observacoes
+
+Esta etapa melhorou `accuracy_action` e `accuracy_risk_level` tanto em `llm` quanto em `compare`, manteve `policy_match_rate`, zerou `failed_runs` e reduziu fortemente a variancia observada nessas metricas. O ganho mais claro foi em estabilidade operacional de `action` e `risk`.
+
+Ainda restam limitacoes importantes:
+
+- `blind-028` continua escapando de `R-004`, embora o restante das metricas tenha estabilizado;
+- `blind-025` e `blind-026` ainda ficam em `personal_attack` em vez de `offensive_language`, apesar de acao e risco terem melhorado;
+- `blind-005` e `blind-021` seguem como fronteira entre `positive_feedback` e `legitimate_criticism`;
+- a latencia ficou mais alta na rodada `--runs 3`, com maior dispersao de tempo.
+
+O experimento continua opcional, observavel com LangSmith e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.

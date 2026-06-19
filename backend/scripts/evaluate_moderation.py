@@ -48,6 +48,12 @@ def parse_args() -> argparse.Namespace:
         default="heuristic",
         help="Seleciona o modo de avaliacao. Default: heuristic.",
     )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        help="Executa multiplas rodadas para medir variancia. Default: 1.",
+    )
     return parser.parse_args()
 
 
@@ -73,10 +79,10 @@ def main() -> int:
     try:
         dataset_path = resolve_dataset_path(args)
         if args.mode == "compare":
-            summary = run_compare_evaluation(dataset_path)
+            summary = run_compare_evaluation(dataset_path, runs=args.runs)
             report = format_compare_report(summary)
         else:
-            summary = run_evaluation(dataset_path, mode=args.mode)
+            summary = run_evaluation(dataset_path, mode=args.mode, runs=args.runs)
             report = format_report(summary)
     except Exception as error:
         print(str(error), file=sys.stderr)
