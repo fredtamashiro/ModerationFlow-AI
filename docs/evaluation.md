@@ -1412,3 +1412,81 @@ Depois da etapa 031, ainda permanecem:
 - a calibragem de alvo principal melhorou o `safety`, mas nao generalizou o suficiente para eliminar a mesma fronteira no `blind`.
 
 O experimento continua opcional, observavel com LangSmith quando houver cota disponivel, e nao substitui o fluxo principal heuristico nem a revisao humana obrigatoria.
+
+## Human feedback example curation - Etapa 033
+
+### Objetivo
+
+Criar uma base versionada e validada de exemplos sinteticos de feedback humano para uso futuro em experimentos few-shot e recuperacao de exemplos corrigidos, sem alterar o fluxo principal de moderacao.
+
+### Estrutura do dataset
+
+Arquivo criado:
+
+- `backend/app/evaluation/datasets/moderation_feedback_examples.json`
+
+Utilitario criado:
+
+- `backend/app/evaluation/feedback_examples.py`
+
+Cada item inclui:
+
+- `id`
+- `comment`
+- `human_category`
+- `human_risk_level`
+- `human_action`
+- `human_policy_rules`
+- `moderator_note`
+- `source_type`
+
+Nesta etapa, `source_type` permanece fixo em `curated_example`.
+
+### Separacao entre feedback e avaliacao
+
+Os exemplos de feedback nao fazem parte dos datasets de benchmark.
+Eles nao devem ser usados para medir qualidade.
+Eles serao usados posteriormente em um experimento few-shot isolado.
+
+Nenhuma integracao automatica foi adicionada ao `llm_risk_analyzer`, ao runner atual ou ao endpoint `/admin/moderation/comments/{comment_id}/analyze`.
+
+### Cobertura de cenarios
+
+O dataset foi curado com 24 exemplos sinteticos, cobrindo:
+
+- critica legitima vs critica ambigua;
+- sarcasmo e ironia;
+- spam sutil vs spam explicito;
+- `personal_attack` vs `offensive_language`;
+- `R-004` / `hate_or_discrimination`;
+- duvida e suporte;
+- feedback positivo com ressalva;
+- fronteira `remove` vs `flag`.
+
+### Validacoes realizadas
+
+O modulo `app.evaluation.feedback_examples` valida:
+
+- quantidade carregada de exemplos;
+- IDs unicos;
+- comments nao vazios;
+- ausencia de comment duplicado dentro do proprio dataset;
+- schema esperado;
+- categorias, riscos, acoes e `source_type` permitidos;
+- `human_policy_rules` validas e compativeis com a categoria humana;
+- ausencia de duplicidade literal de `comment` com os datasets `main`, `holdout`, `blind` e `safety`.
+
+Comando documentado:
+
+```bash
+docker compose exec backend python -m app.evaluation.feedback_examples
+```
+
+### Proximo uso planejado
+
+O proximo uso planejado e uma comparacao controlada entre:
+
+- LLM baseline;
+- LLM com few-shot examples.
+
+Essa comparacao deve acontecer em uma etapa isolada, sem reaproveitar automaticamente o dataset de feedback como benchmark.

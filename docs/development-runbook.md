@@ -122,6 +122,12 @@ ObservaÃ§Ãµes:
 docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset safety --mode llm
 ```
 
+- para validar o dataset curado de feedback humano, use:
+
+```bash
+docker compose exec backend python -m app.evaluation.feedback_examples
+```
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;

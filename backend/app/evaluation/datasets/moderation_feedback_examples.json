@@ -1,0 +1,242 @@
+[
+  {
+    "id": "feedback-001",
+    "comment": "A sequencia do modulo ficou confusa, mas a critica faz sentido e pode melhorar bastante com uma reorganizacao.",
+    "human_category": "legitimate_criticism",
+    "human_risk_level": "low",
+    "human_action": "approve",
+    "human_policy_rules": ["R-006"],
+    "moderator_note": "Critica especifica ao conteudo, sem ofensa direta nem indicio de violacao.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-002",
+    "comment": "Gostei da proposta, porem a explicacao do exercicio final ficou rasa demais para quem esta comecando.",
+    "human_category": "legitimate_criticism",
+    "human_risk_level": "low",
+    "human_action": "approve",
+    "human_policy_rules": ["R-006"],
+    "moderator_note": "Ha elogio inicial, mas a parte dominante e uma critica legitima com ressalva concreta.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-003",
+    "comment": "Dizer que isso esta pronto para publicacao e um exagero bem otimista.",
+    "human_category": "ambiguous",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-006"],
+    "moderator_note": "Comentario negativo amplo e ironico, sem violacao explicita, melhor manter em revisao humana.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-004",
+    "comment": "Nossa, que aula revolucionaria, conseguiu complicar ate a parte mais basica.",
+    "human_category": "ambiguous",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-003", "R-006"],
+    "moderator_note": "Sarcasmo com tom depreciativo; nao e elogio real e merece moderacao leve.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-005",
+    "comment": "Parabens pelo feito de transformar uma resposta simples em mais duvidas ainda.",
+    "human_category": "ambiguous",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-006"],
+    "moderator_note": "Ironia clara, mas sem insulto direto suficiente para remocao.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-006",
+    "comment": "Tenho um resumo complementar fora da plataforma e envio para quem chamar no chat.",
+    "human_category": "spam",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-001"],
+    "moderator_note": "Oferta externa discreta com redirecionamento individual; caso tipico de spam sutil.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-007",
+    "comment": "Se alguem quiser minhas anotacoes completas, deixo o contato no perfil.",
+    "human_category": "spam",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-001"],
+    "moderator_note": "Direcionamento comercial ou promocional leve para contato externo.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-008",
+    "comment": "Comprem meu pacote premium no canal externo e baixem tudo hoje com desconto.",
+    "human_category": "spam",
+    "human_risk_level": "high",
+    "human_action": "remove",
+    "human_policy_rules": ["R-001"],
+    "moderator_note": "Promocao explicita com chamada de compra e redirecionamento externo; caso de remocao.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-009",
+    "comment": "Entrem no grupo que eu vendo a lista completa de respostas sem espera.",
+    "human_category": "spam",
+    "human_risk_level": "high",
+    "human_action": "remove",
+    "human_policy_rules": ["R-001"],
+    "moderator_note": "Spam explicito com grupo externo e oferta comercial direta.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-010",
+    "comment": "O monitor respondeu de forma grosseira e totalmente despreparada.",
+    "human_category": "personal_attack",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-002"],
+    "moderator_note": "Ataque dirigido a uma pessoa especifica, com severidade moderada.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-011",
+    "comment": "Esse material esta malfeito e irritantemente ruim de acompanhar.",
+    "human_category": "offensive_language",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-003"],
+    "moderator_note": "Linguagem agressiva focada no conteudo, nao em uma pessoa especifica.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-012",
+    "comment": "Voce e patetico e nao deveria orientar ninguem aqui.",
+    "human_category": "personal_attack",
+    "human_risk_level": "high",
+    "human_action": "remove",
+    "human_policy_rules": ["R-002", "R-003"],
+    "moderator_note": "Insulto humilhante direcionado a pessoa; remoção proporcional.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-013",
+    "comment": "A apostila esta um desastre e cheia de explicacao torta.",
+    "human_category": "offensive_language",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-003"],
+    "moderator_note": "Ofensa recai sobre o material e nao configura ataque pessoal predominante.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-014",
+    "comment": "Aluno trans nao deveria ter espaco de fala aqui porque sempre complica a turma.",
+    "human_category": "hate_or_discrimination",
+    "human_risk_level": "high",
+    "human_action": "remove",
+    "human_policy_rules": ["R-004"],
+    "moderator_note": "Exclusao e inferiorizacao de grupo protegido; caso claro de R-004.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-015",
+    "comment": "Gente com essa nacionalidade estraga qualquer comunidade tecnica.",
+    "human_category": "hate_or_discrimination",
+    "human_risk_level": "high",
+    "human_action": "remove",
+    "human_policy_rules": ["R-004"],
+    "moderator_note": "Generalizacao depreciativa contra grupo protegido, sem ambiguidade relevante.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-016",
+    "comment": "Meu progresso travou no modulo dois; alguem da equipe consegue verificar isso?",
+    "human_category": "question_or_support_request",
+    "human_risk_level": "low",
+    "human_action": "approve",
+    "human_policy_rules": ["R-007"],
+    "moderator_note": "Pedido claro de suporte com foco operacional, sem indicio de abuso.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-017",
+    "comment": "Estou frustrado porque o certificado nao liberou, mas preciso de ajuda para resolver hoje.",
+    "human_category": "question_or_support_request",
+    "human_risk_level": "low",
+    "human_action": "approve",
+    "human_policy_rules": ["R-007"],
+    "moderator_note": "Mistura reclamacao e pedido de ajuda; o alvo principal ainda e suporte.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-018",
+    "comment": "Curti bastante a clareza da aula e a demonstracao final fechou bem o tema.",
+    "human_category": "positive_feedback",
+    "human_risk_level": "low",
+    "human_action": "approve",
+    "human_policy_rules": ["R-008"],
+    "moderator_note": "Feedback majoritariamente positivo, sem ressalva que altere a classificacao.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-019",
+    "comment": "A aula foi muito boa no geral, so faltou um exemplo extra no encerramento.",
+    "human_category": "positive_feedback",
+    "human_risk_level": "low",
+    "human_action": "approve",
+    "human_policy_rules": ["R-008"],
+    "moderator_note": "Elogio predominante com caveat secundario; permanece como feedback positivo.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-020",
+    "comment": "Que atendimento espetacular, levou so tres dias para responder o obvio.",
+    "human_category": "ambiguous",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-003", "R-006"],
+    "moderator_note": "Sarcasmo hostil direcionado ao servico, sem insulto direto a uma pessoa especifica.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-021",
+    "comment": "A ideia da trilha e boa, mas o texto de apoio ficou superficial e repetitivo.",
+    "human_category": "legitimate_criticism",
+    "human_risk_level": "low",
+    "human_action": "approve",
+    "human_policy_rules": ["R-006"],
+    "moderator_note": "Comentario critico com justificativa concreta e tom civil.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-022",
+    "comment": "A equipe de suporte foi arrogante e tratou a pergunta com descaso.",
+    "human_category": "personal_attack",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-002"],
+    "moderator_note": "Ataque direcionado a pessoas da equipe, mas ainda sem insulto extremo.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-023",
+    "comment": "O curso inteiro esta com um tom irritante e cansativo de acompanhar.",
+    "human_category": "offensive_language",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-003"],
+    "moderator_note": "Linguagem depreciativa recai sobre o curso como objeto, nao sobre pessoa especifica.",
+    "source_type": "curated_example"
+  },
+  {
+    "id": "feedback-024",
+    "comment": "A frase passou do limite, mas ainda parece mais um caso de revisao e alerta do que remocao imediata.",
+    "human_category": "ambiguous",
+    "human_risk_level": "medium",
+    "human_action": "flag",
+    "human_policy_rules": ["R-006"],
+    "moderator_note": "Exemplo curado para a fronteira entre flag e remove em casos de baixa explicitacao.",
+    "source_type": "curated_example"
+  }
+]
