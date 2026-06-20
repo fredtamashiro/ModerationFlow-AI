@@ -134,6 +134,12 @@ docker compose exec backend python -m app.evaluation.feedback_examples
 docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode few-shot
 ```
 
+- para comparar `heuristic`, baseline LLM e few-shot LLM no mesmo dataset, use:
+
+```bash
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode compare-few-shot
+```
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;

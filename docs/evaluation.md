@@ -1546,15 +1546,84 @@ O modo `compare` anterior foi preservado sem alteracao de comportamento.
 
 ### Metricas no blind dataset
 
-Pendentes de preenchimento apos validacao da etapa.
+Validacao simples:
+
+Baseline LLM:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 87.50%
+- policy_match_rate: 93.75%
+- average_latency_ms: 7651ms
+- failed_runs: 0
+
+Few-shot LLM:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 87.50%
+- policy_match_rate: 93.75%
+- average_latency_ms: 6721ms
+- failed_runs: 0
+
+Leitura:
+
+- o few-shot nao melhorou as metricas do `blind` na rodada simples;
+- houve reducao de latencia de aproximadamente 930ms;
+- os erros dominantes continuaram em spam explicito com severidade alta, `offensive_language -> personal_attack` e fronteira `positive_feedback` vs `legitimate_criticism`.
 
 ### Metricas no safety dataset
 
-Pendentes de preenchimento apos validacao da etapa.
+Validacao simples:
+
+Baseline LLM:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 95.83%
+- policy_match_rate: 95.83%
+- average_latency_ms: 7017ms
+- failed_runs: 0
+
+Few-shot LLM:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 95.83%
+- policy_match_rate: 95.83%
+- average_latency_ms: 5764ms
+- failed_runs: 0
+
+Leitura:
+
+- o few-shot tambem empatou com o baseline no `safety`;
+- houve reducao de latencia de aproximadamente 1253ms;
+- o caso residual continuou sendo `safety-005`, com `hate_or_discrimination -> personal_attack`.
 
 ### Variancia observada
 
-Pendentes de preenchimento apos rodadas `--runs 3` no `blind` e no `safety`.
+Few-shot `--runs 3` no `blind`:
+
+- accuracy_action mean: 93.75% | stddev: 0.00
+- accuracy_risk_level mean: 87.50% | stddev: 0.00
+- accuracy_category mean: 85.42% | stddev: 1.47
+- policy_match_rate mean: 93.75% | stddev: 0.00
+- average_latency_ms mean: 6354.00 | stddev: 251.40
+- failed_runs mean: 0.00 | stddev: 0.00
+
+Few-shot `--runs 3` no `safety`:
+
+- accuracy_action mean: 97.22% | stddev: 1.97
+- accuracy_risk_level mean: 97.22% | stddev: 1.97
+- accuracy_category mean: 95.83% | stddev: 0.00
+- policy_match_rate mean: 95.83% | stddev: 0.00
+- average_latency_ms mean: 6468.00 | stddev: 440.38
+- failed_runs mean: 0.00 | stddev: 0.00
+
+Observacao adicional:
+
+- no `compare-few-shot`, a rodada comparativa do `blind` mostrou variacao entre baseline e few-shot, com o baseline LLM chegando a 90.62% em `accuracy_category` e 96.88% em `policy_match_rate`, enquanto o few-shot ficou em 87.50% e 93.75% na mesma rodada;
+- isso reforca que o few-shot, nesta etapa, nao trouxe ganho consistente de qualidade e permanece sujeito a variancia de inferencia.
 
 ### Limitacoes e riscos de overfitting
 
