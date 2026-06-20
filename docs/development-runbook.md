@@ -116,6 +116,12 @@ ObservaÃ§Ãµes:
 
 - a observabilidade opcional do experimento LLM com LangSmith estÃ¡ documentada em `docs/observability.md`.
 
+- para rodar a avaliacao LLM sem tracing, use:
+
+```bash
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset safety --mode llm
+```
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;

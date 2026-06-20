@@ -81,3 +81,12 @@ LANGSMITH_TRACING=false
 ```
 
 Ou deixe `LANGSMITH_API_KEY` vazio.
+
+## Fail-open behavior
+
+LangSmith is optional and best-effort.
+
+If tracing fails due to quota, network, timeout, authentication or endpoint errors,
+the system logs a warning and continues without tracing.
+
+Observability failures must not interrupt LLM inference or evaluation.
