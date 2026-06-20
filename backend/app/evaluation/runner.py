@@ -10,7 +10,10 @@ from typing import Any, Callable
 
 from app.config import get_settings
 from app.moderation.graph import moderation_graph
-from app.moderation.llm import analyze_comment_with_llm
+from app.moderation.llm.analyzer import (
+    analyze_comment_with_few_shot_llm,
+    analyze_comment_with_llm,
+)
 from app.moderation import repository
 
 
@@ -317,6 +320,33 @@ def _predict_with_llm(
     )
 
 
+def _predict_with_few_shot_llm(
+    example: EvaluationExample,
+    available_guidelines: list[dict],
+    evaluation_context: dict[str, Any],
+) -> PredictionOutput:
+    response = analyze_comment_with_few_shot_llm(
+        example.comment,
+        available_guidelines,
+        trace_metadata={
+            **evaluation_context,
+            "comment": example.comment,
+            "expected_category": example.expected_category,
+            "expected_risk_level": example.expected_risk_level,
+            "expected_action": example.expected_action,
+            "expected_policy_rules": example.expected_policy_rules,
+        },
+    )
+    return PredictionOutput(
+        predicted_action=response.get("recommended_action"),
+        predicted_risk_level=response.get("risk_level"),
+        predicted_category=response.get("category"),
+        predicted_policy_rules=[
+            str(rule) for rule in response.get("policy_references", [])
+        ],
+    )
+
+
 def run_evaluation(
     dataset_path: Path,
     mode: str = "heuristic",
@@ -324,7 +354,7 @@ def run_evaluation(
 ) -> dict[str, Any]:
     if runs < 1:
         raise ValueError("runs must be >= 1")
-    if mode == "llm":
+    if mode in {"llm", "few-shot"}:
         _ensure_llm_evaluation_available()
     examples = load_dataset(dataset_path)
     available_guidelines = repository.list_guidelines_for_analysis()
@@ -385,6 +415,85 @@ def run_compare_evaluation(dataset_path: Path, runs: int = 1) -> dict[str, Any]:
     }
 
 
+def run_compare_few_shot_evaluation(dataset_path: Path, runs: int = 1) -> dict[str, Any]:
+    if runs != 1:
+        raise ValueError("runs > 1 is not supported for compare-few-shot mode.")
+    _ensure_llm_evaluation_available()
+    heuristic_summary = run_evaluation(dataset_path, mode="heuristic")
+    llm_summary = run_evaluation(dataset_path, mode="llm")
+    few_shot_summary = run_evaluation(dataset_path, mode="few-shot")
+    return {
+        "heuristic": heuristic_summary,
+        "llm": llm_summary,
+        "few_shot": few_shot_summary,
+        "comparison": {
+            "llm_vs_heuristic": {
+                "action_accuracy_delta": round(
+                    llm_summary["accuracy_action"] - heuristic_summary["accuracy_action"],
+                    2,
+                ),
+                "risk_level_accuracy_delta": round(
+                    llm_summary["accuracy_risk_level"]
+                    - heuristic_summary["accuracy_risk_level"],
+                    2,
+                ),
+                "category_accuracy_delta": round(
+                    llm_summary["accuracy_category"]
+                    - heuristic_summary["accuracy_category"],
+                    2,
+                ),
+                "policy_match_rate_delta": round(
+                    llm_summary["policy_match_rate"]
+                    - heuristic_summary["policy_match_rate"],
+                    2,
+                ),
+            },
+            "few_shot_vs_heuristic": {
+                "action_accuracy_delta": round(
+                    few_shot_summary["accuracy_action"] - heuristic_summary["accuracy_action"],
+                    2,
+                ),
+                "risk_level_accuracy_delta": round(
+                    few_shot_summary["accuracy_risk_level"]
+                    - heuristic_summary["accuracy_risk_level"],
+                    2,
+                ),
+                "category_accuracy_delta": round(
+                    few_shot_summary["accuracy_category"]
+                    - heuristic_summary["accuracy_category"],
+                    2,
+                ),
+                "policy_match_rate_delta": round(
+                    few_shot_summary["policy_match_rate"]
+                    - heuristic_summary["policy_match_rate"],
+                    2,
+                ),
+            },
+            "few_shot_vs_llm": {
+                "action_accuracy_delta": round(
+                    few_shot_summary["accuracy_action"] - llm_summary["accuracy_action"],
+                    2,
+                ),
+                "risk_level_accuracy_delta": round(
+                    few_shot_summary["accuracy_risk_level"]
+                    - llm_summary["accuracy_risk_level"],
+                    2,
+                ),
+                "category_accuracy_delta": round(
+                    few_shot_summary["accuracy_category"]
+                    - llm_summary["accuracy_category"],
+                    2,
+                ),
+                "policy_match_rate_delta": round(
+                    few_shot_summary["policy_match_rate"]
+                    - llm_summary["policy_match_rate"],
+                    2,
+                ),
+            },
+        },
+    }
+
+
 def _resolve_predictor(
     mode: str,
 ) -> Callable[[EvaluationExample, list[dict], dict[str, Any]], PredictionOutput]:
@@ -392,6 +501,8 @@ def _resolve_predictor(
         return _predict_with_heuristic
     if mode == "llm":
         return _predict_with_llm
+    if mode == "few-shot":
+        return _predict_with_few_shot_llm
     raise ValueError(f"Unsupported evaluation mode: {mode}")
 
 
@@ -712,6 +823,83 @@ def format_compare_report(compare_summary: dict[str, Any]) -> str:
         ),
         f"category_accuracy_delta: {comparison['category_accuracy_delta']:.2f}%",
         f"policy_match_rate_delta: {comparison['policy_match_rate_delta']:.2f}%",
+    ]
+    return "\n".join(lines)
+
+
+def format_compare_few_shot_report(compare_summary: dict[str, Any]) -> str:
+    heuristic_report = format_report(compare_summary["heuristic"])
+    llm_report = format_report(compare_summary["llm"])
+    few_shot_report = format_report(compare_summary["few_shot"])
+    comparison = compare_summary["comparison"]
+    lines = [
+        "Heuristic results",
+        "-----------------",
+        *heuristic_report.splitlines()[2:],
+        "",
+        "LLM results",
+        "-----------",
+        *llm_report.splitlines()[2:],
+        "",
+        "Few-shot LLM results",
+        "--------------------",
+        *few_shot_report.splitlines()[2:],
+        "",
+        "Comparison",
+        "----------",
+        "LLM vs heuristic:",
+        (
+            f"action_accuracy_delta: "
+            f"{comparison['llm_vs_heuristic']['action_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"risk_level_accuracy_delta: "
+            f"{comparison['llm_vs_heuristic']['risk_level_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"category_accuracy_delta: "
+            f"{comparison['llm_vs_heuristic']['category_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"policy_match_rate_delta: "
+            f"{comparison['llm_vs_heuristic']['policy_match_rate_delta']:.2f}%"
+        ),
+        "",
+        "Few-shot vs heuristic:",
+        (
+            f"action_accuracy_delta: "
+            f"{comparison['few_shot_vs_heuristic']['action_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"risk_level_accuracy_delta: "
+            f"{comparison['few_shot_vs_heuristic']['risk_level_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"category_accuracy_delta: "
+            f"{comparison['few_shot_vs_heuristic']['category_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"policy_match_rate_delta: "
+            f"{comparison['few_shot_vs_heuristic']['policy_match_rate_delta']:.2f}%"
+        ),
+        "",
+        "Few-shot vs baseline LLM:",
+        (
+            f"action_accuracy_delta: "
+            f"{comparison['few_shot_vs_llm']['action_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"risk_level_accuracy_delta: "
+            f"{comparison['few_shot_vs_llm']['risk_level_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"category_accuracy_delta: "
+            f"{comparison['few_shot_vs_llm']['category_accuracy_delta']:.2f}%"
+        ),
+        (
+            f"policy_match_rate_delta: "
+            f"{comparison['few_shot_vs_llm']['policy_match_rate_delta']:.2f}%"
+        ),
     ]
     return "\n".join(lines)
 

@@ -1490,3 +1490,78 @@ O proximo uso planejado e uma comparacao controlada entre:
 - LLM com few-shot examples.
 
 Essa comparacao deve acontecer em uma etapa isolada, sem reaproveitar automaticamente o dataset de feedback como benchmark.
+
+## Few-shot LLM analyzer experiment - Etapa 034
+
+### Objetivo
+
+Criar um experimento comparativo isolado entre o baseline `llm_risk_analyzer` e uma variante few-shot guiada por exemplos humanos curados, sem alterar o fluxo principal de producao.
+
+### Fonte dos exemplos
+
+Os exemplos few-shot sao carregados exclusivamente de:
+
+- `backend/app/evaluation/datasets/moderation_feedback_examples.json`
+
+Eles sao validados por:
+
+- `backend/app/evaluation/feedback_examples.py`
+
+Few-shot nao significa producao.
+E um experimento comparativo isolado.
+Os exemplos humanos nao pertencem aos datasets de benchmark.
+
+### Estrategia de selecao
+
+Nesta etapa, a selecao e estatica e deterministica. Foram usados 9 exemplos curados, escolhidos para cobrir:
+
+- critica ambigua;
+- sarcasmo;
+- spam sutil;
+- spam explicito;
+- `personal_attack` moderado e severo;
+- `offensive_language`;
+- `hate_or_discrimination`;
+- feedback positivo com ressalva.
+
+Nao houve retrieval semantico, RAG ou selecao dinamica por similaridade. O baseline `--mode llm` continua sem receber exemplos few-shot por acidente.
+
+### Comparacao: baseline vs few-shot
+
+O runner agora suporta:
+
+```bash
+python scripts/evaluate_moderation.py --dataset blind --mode few-shot
+python scripts/evaluate_moderation.py --dataset safety --mode few-shot
+python scripts/evaluate_moderation.py --dataset blind --mode compare-few-shot
+```
+
+O modo `compare-few-shot` compara:
+
+- heuristic;
+- baseline llm;
+- few-shot llm.
+
+O modo `compare` anterior foi preservado sem alteracao de comportamento.
+
+### Metricas no blind dataset
+
+Pendentes de preenchimento apos validacao da etapa.
+
+### Metricas no safety dataset
+
+Pendentes de preenchimento apos validacao da etapa.
+
+### Variancia observada
+
+Pendentes de preenchimento apos rodadas `--runs 3` no `blind` e no `safety`.
+
+### Limitacoes e riscos de overfitting
+
+O experimento few-shot continua sujeito a riscos importantes:
+
+- os exemplos sao poucos e estaticos;
+- o conjunto foi curado manualmente e pode enviesar fronteiras especificas;
+- melhora em um dataset nao garante generalizacao em outro;
+- maior contexto tende a aumentar latencia;
+- o baseline heuristico e o caminho principal de producao permanecem inalterados.

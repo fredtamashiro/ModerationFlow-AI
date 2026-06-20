@@ -128,6 +128,12 @@ docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_m
 docker compose exec backend python -m app.evaluation.feedback_examples
 ```
 
+- para rodar o experimento few-shot isolado, use:
+
+```bash
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode few-shot
+```
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;

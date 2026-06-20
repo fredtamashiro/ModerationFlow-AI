@@ -6,7 +6,12 @@ from typing import Any
 from langchain_openai import ChatOpenAI
 
 from app.config import get_settings
-from app.moderation.llm.prompt import SYSTEM_PROMPT, build_llm_prompt
+from app.moderation.llm.few_shot import load_selected_few_shot_examples
+from app.moderation.llm.prompt import (
+    SYSTEM_PROMPT,
+    build_few_shot_llm_prompt,
+    build_llm_prompt,
+)
 from app.moderation.llm.schemas import LLMRiskAnalyzerResponse
 from app.observability import finalize_langsmith_run, start_langsmith_run
 
@@ -35,12 +40,57 @@ def analyze_comment_with_llm(
     available_guidelines: list[dict],
     trace_metadata: dict[str, Any] | None = None,
 ) -> dict:
+    prompt = build_llm_prompt(comment, available_guidelines)
+    return _analyze_comment_with_prompt(
+        comment=comment,
+        available_guidelines=available_guidelines,
+        prompt=prompt,
+        trace_metadata=trace_metadata,
+        strategy="baseline_llm",
+        few_shot_examples_count=0,
+    )
+
+
+def analyze_comment_with_few_shot_llm(
+    comment: str,
+    available_guidelines: list[dict],
+    trace_metadata: dict[str, Any] | None = None,
+) -> dict:
+    selected_examples = load_selected_few_shot_examples()
+    prompt = build_few_shot_llm_prompt(
+        comment,
+        available_guidelines,
+        selected_examples,
+    )
+    return _analyze_comment_with_prompt(
+        comment=comment,
+        available_guidelines=available_guidelines,
+        prompt=prompt,
+        trace_metadata=trace_metadata,
+        strategy="few_shot_llm",
+        few_shot_examples_count=len(selected_examples),
+    )
+
+
+def _analyze_comment_with_prompt(
+    *,
+    comment: str,
+    available_guidelines: list[dict],
+    prompt: str,
+    trace_metadata: dict[str, Any] | None,
+    strategy: str,
+    few_shot_examples_count: int,
+) -> dict:
     settings = get_settings()
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY is required for LLM evaluation mode.")
 
-    prompt = build_llm_prompt(comment, available_guidelines)
     started_at = perf_counter()
+    metadata = {
+        **(trace_metadata or {}),
+        "strategy": strategy,
+        "few_shot_examples_count": few_shot_examples_count,
+    }
     run_context = start_langsmith_run(
         name="llm_risk_analyzer",
         inputs={
@@ -48,8 +98,8 @@ def analyze_comment_with_llm(
             "prompt": prompt,
             "guidelines": available_guidelines,
         },
-        metadata=trace_metadata or {},
-        tags=["moderation-flow-ai", "llm-experiment"],
+        metadata=metadata,
+        tags=["moderation-flow-ai", "llm-experiment", strategy],
     )
 
     llm = ChatOpenAI(
@@ -90,7 +140,7 @@ def analyze_comment_with_llm(
                 "parsed_response": normalized,
             },
             metadata={
-                **(trace_metadata or {}),
+                **metadata,
                 "schema_valid": True,
                 "latency_ms": latency_ms,
                 "predicted_category": normalized.get("category"),
@@ -108,11 +158,11 @@ def analyze_comment_with_llm(
             outputs={"raw_response": raw_response_payload} if raw_response_payload else None,
             error=str(error),
             metadata={
-                **(trace_metadata or {}),
+                **metadata,
                 "schema_valid": False,
                 "latency_ms": latency_ms,
             },
-            tags=["error"],
+            tags=["error", strategy],
         )
         raise
 

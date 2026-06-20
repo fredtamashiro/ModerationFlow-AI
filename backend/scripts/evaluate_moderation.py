@@ -11,8 +11,10 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.evaluation.runner import (
     format_compare_report,
+    format_compare_few_shot_report,
     format_report,
     run_compare_evaluation,
+    run_compare_few_shot_evaluation,
     run_evaluation,
 )
 
@@ -51,7 +53,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mode",
-        choices=("heuristic", "llm", "compare"),
+        choices=("heuristic", "llm", "few-shot", "compare", "compare-few-shot"),
         default="heuristic",
         help="Seleciona o modo de avaliacao. Default: heuristic.",
     )
@@ -90,6 +92,9 @@ def main() -> int:
         if args.mode == "compare":
             summary = run_compare_evaluation(dataset_path, runs=args.runs)
             report = format_compare_report(summary)
+        elif args.mode == "compare-few-shot":
+            summary = run_compare_few_shot_evaluation(dataset_path, runs=args.runs)
+            report = format_compare_few_shot_report(summary)
         else:
             summary = run_evaluation(dataset_path, mode=args.mode, runs=args.runs)
             report = format_report(summary)

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+from app.evaluation.feedback_examples import FeedbackExample
+
 
 SYSTEM_PROMPT = """
 You are an auxiliary moderation risk analyzer for online course comments.
@@ -195,3 +197,44 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
         "Return only the JSON object.",
     ]
     return "\n\n".join(sections)
+
+
+def build_few_shot_llm_prompt(
+    comment: str,
+    guidelines: list[dict],
+    few_shot_examples: list[FeedbackExample],
+) -> str:
+    if not few_shot_examples:
+        raise ValueError("few_shot_examples must not be empty.")
+
+    examples_section = "\n\n".join(
+        _format_few_shot_example(example) for example in few_shot_examples
+    )
+    return "\n\n".join(
+        [
+            (
+                "human decision references:\n"
+                "The examples below are references of curated human moderation decisions.\n"
+                "Use them to improve consistency on similar edge cases, but do not copy them mechanically.\n"
+                "Analyze the new comment on its own merits using the guidelines and the same output schema."
+            ),
+            examples_section,
+            build_llm_prompt(comment, guidelines),
+        ]
+    )
+
+
+def _format_few_shot_example(example: FeedbackExample) -> str:
+    payload = {
+        "category": example.human_category,
+        "risk_level": example.human_risk_level,
+        "recommended_action": example.human_action,
+        "policy_references": example.human_policy_rules,
+    }
+    return "\n".join(
+        [
+            "reference example:",
+            f'comment: "{example.comment}"',
+            f"classification: {json.dumps(payload, ensure_ascii=True)}",
+        ]
+    )
