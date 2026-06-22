@@ -6,6 +6,7 @@ from typing import Any
 from langchain_openai import ChatOpenAI
 
 from app.config import get_settings
+from app.moderation.llm.dynamic_few_shot import select_dynamic_few_shot_examples
 from app.moderation.llm.few_shot import load_selected_few_shot_examples
 from app.moderation.llm.prompt import (
     SYSTEM_PROMPT,
@@ -69,6 +70,32 @@ def analyze_comment_with_few_shot_llm(
         trace_metadata=trace_metadata,
         strategy="few_shot_llm",
         few_shot_examples_count=len(selected_examples),
+    )
+
+
+def analyze_comment_with_dynamic_few_shot_llm(
+    comment: str,
+    available_guidelines: list[dict],
+    trace_metadata: dict[str, Any] | None = None,
+) -> dict:
+    selection = select_dynamic_few_shot_examples(comment)
+    prompt = build_few_shot_llm_prompt(
+        comment,
+        available_guidelines,
+        selection.examples,
+    )
+    return _analyze_comment_with_prompt(
+        comment=comment,
+        available_guidelines=available_guidelines,
+        prompt=prompt,
+        trace_metadata={
+            **(trace_metadata or {}),
+            "few_shot_selection_tags": selection.matched_tags,
+            "few_shot_selection_fallback": selection.used_fallback,
+            "selected_feedback_example_ids": selection.selected_example_ids,
+        },
+        strategy="dynamic_few_shot_llm",
+        few_shot_examples_count=len(selection.examples),
     )
 
 

@@ -140,6 +140,18 @@ docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_m
 docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode compare-few-shot
 ```
 
+- para rodar a selecao dinamica few-shot, use:
+
+```bash
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode dynamic-few-shot
+```
+
+- para comparar `heuristic`, baseline LLM, few-shot estatico e few-shot dinamico, use:
+
+```bash
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode compare-all
+```
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;

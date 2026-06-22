@@ -11,6 +11,7 @@ from typing import Any, Callable
 from app.config import get_settings
 from app.moderation.graph import moderation_graph
 from app.moderation.llm.analyzer import (
+    analyze_comment_with_dynamic_few_shot_llm,
     analyze_comment_with_few_shot_llm,
     analyze_comment_with_llm,
 )
@@ -347,6 +348,33 @@ def _predict_with_few_shot_llm(
     )
 
 
+def _predict_with_dynamic_few_shot_llm(
+    example: EvaluationExample,
+    available_guidelines: list[dict],
+    evaluation_context: dict[str, Any],
+) -> PredictionOutput:
+    response = analyze_comment_with_dynamic_few_shot_llm(
+        example.comment,
+        available_guidelines,
+        trace_metadata={
+            **evaluation_context,
+            "comment": example.comment,
+            "expected_category": example.expected_category,
+            "expected_risk_level": example.expected_risk_level,
+            "expected_action": example.expected_action,
+            "expected_policy_rules": example.expected_policy_rules,
+        },
+    )
+    return PredictionOutput(
+        predicted_action=response.get("recommended_action"),
+        predicted_risk_level=response.get("risk_level"),
+        predicted_category=response.get("category"),
+        predicted_policy_rules=[
+            str(rule) for rule in response.get("policy_references", [])
+        ],
+    )
+
+
 def run_evaluation(
     dataset_path: Path,
     mode: str = "heuristic",
@@ -354,7 +382,7 @@ def run_evaluation(
 ) -> dict[str, Any]:
     if runs < 1:
         raise ValueError("runs must be >= 1")
-    if mode in {"llm", "few-shot"}:
+    if mode in {"llm", "few-shot", "dynamic-few-shot"}:
         _ensure_llm_evaluation_available()
     examples = load_dataset(dataset_path)
     available_guidelines = repository.list_guidelines_for_analysis()
@@ -494,6 +522,44 @@ def run_compare_few_shot_evaluation(dataset_path: Path, runs: int = 1) -> dict[s
     }
 
 
+def run_compare_all_evaluation(dataset_path: Path, runs: int = 1) -> dict[str, Any]:
+    if runs != 1:
+        raise ValueError("runs > 1 is not supported for compare-all mode.")
+    _ensure_llm_evaluation_available()
+    heuristic_summary = run_evaluation(dataset_path, mode="heuristic")
+    llm_summary = run_evaluation(dataset_path, mode="llm")
+    few_shot_summary = run_evaluation(dataset_path, mode="few-shot")
+    dynamic_few_shot_summary = run_evaluation(dataset_path, mode="dynamic-few-shot")
+    return {
+        "heuristic": heuristic_summary,
+        "llm": llm_summary,
+        "few_shot": few_shot_summary,
+        "dynamic_few_shot": dynamic_few_shot_summary,
+        "comparison": {
+            "llm_vs_heuristic": _build_comparison_delta(
+                heuristic_summary,
+                llm_summary,
+            ),
+            "few_shot_vs_heuristic": _build_comparison_delta(
+                heuristic_summary,
+                few_shot_summary,
+            ),
+            "dynamic_few_shot_vs_heuristic": _build_comparison_delta(
+                heuristic_summary,
+                dynamic_few_shot_summary,
+            ),
+            "dynamic_few_shot_vs_llm": _build_comparison_delta(
+                llm_summary,
+                dynamic_few_shot_summary,
+            ),
+            "dynamic_few_shot_vs_few_shot": _build_comparison_delta(
+                few_shot_summary,
+                dynamic_few_shot_summary,
+            ),
+        },
+    }
+
+
 def _resolve_predictor(
     mode: str,
 ) -> Callable[[EvaluationExample, list[dict], dict[str, Any]], PredictionOutput]:
@@ -503,7 +569,34 @@ def _resolve_predictor(
         return _predict_with_llm
     if mode == "few-shot":
         return _predict_with_few_shot_llm
+    if mode == "dynamic-few-shot":
+        return _predict_with_dynamic_few_shot_llm
     raise ValueError(f"Unsupported evaluation mode: {mode}")
+
+
+def _build_comparison_delta(
+    left_summary: dict[str, Any],
+    right_summary: dict[str, Any],
+) -> dict[str, float]:
+    return {
+        "action_accuracy_delta": round(
+            right_summary["accuracy_action"] - left_summary["accuracy_action"],
+            2,
+        ),
+        "risk_level_accuracy_delta": round(
+            right_summary["accuracy_risk_level"]
+            - left_summary["accuracy_risk_level"],
+            2,
+        ),
+        "category_accuracy_delta": round(
+            right_summary["accuracy_category"] - left_summary["accuracy_category"],
+            2,
+        ),
+        "policy_match_rate_delta": round(
+            right_summary["policy_match_rate"] - left_summary["policy_match_rate"],
+            2,
+        ),
+    }
 
 
 def _ensure_llm_evaluation_available() -> None:
@@ -902,6 +995,78 @@ def format_compare_few_shot_report(compare_summary: dict[str, Any]) -> str:
         ),
     ]
     return "\n".join(lines)
+
+
+def format_compare_all_report(compare_summary: dict[str, Any]) -> str:
+    heuristic_report = format_report(compare_summary["heuristic"])
+    llm_report = format_report(compare_summary["llm"])
+    few_shot_report = format_report(compare_summary["few_shot"])
+    dynamic_few_shot_report = format_report(compare_summary["dynamic_few_shot"])
+    comparison = compare_summary["comparison"]
+    lines = [
+        "Heuristic results",
+        "-----------------",
+        *heuristic_report.splitlines()[2:],
+        "",
+        "LLM results",
+        "-----------",
+        *llm_report.splitlines()[2:],
+        "",
+        "Few-shot LLM results",
+        "--------------------",
+        *few_shot_report.splitlines()[2:],
+        "",
+        "Dynamic few-shot LLM results",
+        "----------------------------",
+        *dynamic_few_shot_report.splitlines()[2:],
+        "",
+        "Comparison",
+        "----------",
+        "LLM vs heuristic:",
+    ]
+    lines.extend(_format_comparison_delta_block(comparison["llm_vs_heuristic"]))
+    lines.extend(
+        [
+            "",
+            "Few-shot vs heuristic:",
+        ]
+    )
+    lines.extend(_format_comparison_delta_block(comparison["few_shot_vs_heuristic"]))
+    lines.extend(
+        [
+            "",
+            "Dynamic few-shot vs heuristic:",
+        ]
+    )
+    lines.extend(
+        _format_comparison_delta_block(comparison["dynamic_few_shot_vs_heuristic"])
+    )
+    lines.extend(
+        [
+            "",
+            "Dynamic few-shot vs baseline LLM:",
+        ]
+    )
+    lines.extend(_format_comparison_delta_block(comparison["dynamic_few_shot_vs_llm"]))
+    lines.extend(
+        [
+            "",
+            "Dynamic few-shot vs static few-shot:",
+        ]
+    )
+    lines.extend(
+        _format_comparison_delta_block(comparison["dynamic_few_shot_vs_few_shot"])
+    )
+    return "\n".join(lines)
+
+
+def _format_comparison_delta_block(comparison: dict[str, float]) -> list[str]:
+    return [
+        f"action_accuracy_delta: {comparison['action_accuracy_delta']:.2f}%",
+        f"risk_level_accuracy_delta: {comparison['risk_level_accuracy_delta']:.2f}%",
+        f"category_accuracy_delta: {comparison['category_accuracy_delta']:.2f}%",
+        f"policy_match_rate_delta: {comparison['policy_match_rate_delta']:.2f}%",
+    ]
 
 
 def _format_error_analysis(error_analysis: dict[str, Any]) -> list[str]:

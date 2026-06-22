@@ -1634,3 +1634,195 @@ O experimento few-shot continua sujeito a riscos importantes:
 - melhora em um dataset nao garante generalizacao em outro;
 - maior contexto tende a aumentar latencia;
 - o baseline heuristico e o caminho principal de producao permanecem inalterados.
+
+## Dynamic few-shot selection experiment - Etapa 035
+
+### Objetivo
+
+Criar um experimento local de selecao dinamica e deterministica de exemplos few-shot para comparar:
+
+- baseline LLM;
+- few-shot estatico;
+- few-shot dinamico.
+
+A selecao dinamica e uma estrategia experimental local.
+Ela nao usa benchmark labels, embeddings, RAG ou decisao extra de LLM.
+
+### Estrategia de selecao
+
+O caminho dinamico usa apenas o comentario de entrada e o dataset:
+
+- `backend/app/evaluation/datasets/moderation_feedback_examples.json`
+
+Foi criado um seletor local que detecta tags lexicais simples como:
+
+- `ambiguous_criticism`
+- `sarcasm`
+- `subtle_spam`
+- `explicit_spam`
+- `personal_attack`
+- `offensive_language`
+- `hate_or_discrimination`
+- `positive_feedback`
+- `support_request`
+
+As regras observam apenas sinais do texto, como:
+
+- link, perfil, grupo, comprar, desconto, mensagem privada e contato externo para spam;
+- professor, tutor, equipe, suporte e `voce` com termos hostis para `personal_attack`;
+- aula, curso, modulo, conteudo, material e servico com termos hostis para `offensive_language`;
+- religiao, raca, genero, deficiencia, origem, nacionalidade e preconceito para `hate_or_discrimination`;
+- `...`, `parabens`, `nossa`, `espetacular` e `so que nao` para sarcasmo;
+- login, acesso, certificado, travou, ajuda e verificar para suporte.
+
+O seletor nao classifica o comentario. Ele apenas escolhe referencias.
+
+### Tags e fallback
+
+O prompt dinamico usa no maximo 4 exemplos.
+
+Quando ha match de tags, o seletor monta uma lista deterministica por prioridade e corta em 4 exemplos.
+
+Quando nao ha match suficiente, usa fallback curto e diverso com:
+
+- `feedback-003`
+- `feedback-006`
+- `feedback-016`
+- `feedback-019`
+
+O tracing, quando habilitado, registra:
+
+- `strategy: dynamic_few_shot_llm`
+- `few_shot_examples_count`
+- `few_shot_selection_tags`
+- `few_shot_selection_fallback`
+- `selected_feedback_example_ids`
+
+### Comparacao: baseline vs estatico vs dinamico
+
+O runner agora suporta:
+
+```bash
+python scripts/evaluate_moderation.py --dataset blind --mode dynamic-few-shot
+python scripts/evaluate_moderation.py --dataset safety --mode dynamic-few-shot
+python scripts/evaluate_moderation.py --dataset blind --mode compare-all
+```
+
+O modo `compare-all` compara:
+
+- heuristic;
+- baseline llm;
+- few-shot llm;
+- dynamic few-shot llm.
+
+### Resultados no blind dataset
+
+Validacao simples:
+
+Baseline LLM:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 87.50%
+- policy_match_rate: 93.75%
+- average_latency_ms: 7651ms
+- failed_runs: 0
+
+Few-shot estatico:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 87.50%
+- policy_match_rate: 93.75%
+- average_latency_ms: 6721ms
+- failed_runs: 0
+
+Few-shot dinamico:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 87.50%
+- policy_match_rate: 100.00%
+- average_latency_ms: 6980ms
+- failed_runs: 0
+
+Leitura:
+
+- na rodada simples validada, o dinamico empatou com o baseline em `action`, `risk` e `category`;
+- ele ficou acima do few-shot estatico em `accuracy_action`, `accuracy_risk_level`, `accuracy_category` e `policy_match_rate`;
+- o principal trade-off residual permaneceu em spam explicito e na fronteira `offensive_language -> personal_attack`.
+
+### Resultados no safety dataset
+
+Validacao simples:
+
+Baseline LLM:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 95.83%
+- policy_match_rate: 95.83%
+- average_latency_ms: 7017ms
+- failed_runs: 0
+
+Few-shot estatico:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 95.83%
+- policy_match_rate: 95.83%
+- average_latency_ms: 5764ms
+- failed_runs: 0
+
+Few-shot dinamico:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 91.67%
+- policy_match_rate: 91.67%
+- average_latency_ms: 7834ms
+- failed_runs: 0
+
+Leitura:
+
+- na rodada simples validada, o dinamico ficou abaixo do baseline e do few-shot estatico em `category` e `policy_match_rate`;
+- o erro adicional apareceu em `safety-013`, com `personal_attack -> offensive_language`;
+- ainda assim, `failed_runs` permaneceu em zero.
+
+### Variancia observada
+
+Few-shot dinamico:
+
+No `blind --runs 3`:
+
+- accuracy_action mean: 93.75% | stddev: 0.00
+- accuracy_risk_level mean: 87.50% | stddev: 0.00
+- accuracy_category mean: 90.62% | stddev: 2.55
+- policy_match_rate mean: 96.88% | stddev: 2.55
+- average_latency_ms mean: 5816.33 | stddev: 57.28
+- failed_runs mean: 0.00 | stddev: 0.00
+
+No `safety --runs 3`:
+
+- accuracy_action mean: 100.00% | stddev: 0.00
+- accuracy_risk_level mean: 100.00% | stddev: 0.00
+- accuracy_category mean: 98.61% | stddev: 1.97
+- policy_match_rate mean: 98.61% | stddev: 1.97
+- average_latency_ms mean: 6315.33 | stddev: 660.22
+- failed_runs mean: 0.00 | stddev: 0.00
+
+Leitura:
+
+- no `blind`, o dinamico ficou mais estavel que o few-shot estatico nas rodadas executadas e elevou a media de `accuracy_category` e `policy_match_rate`;
+- no `safety`, ele mostrou o melhor comportamento agregado da etapa, com duas rodadas perfeitas e media superior ao baseline e ao few-shot estatico;
+- as rodadas simples continuam sujeitas a variancia, entao a leitura principal deve priorizar o agregado de `--runs 3`.
+
+### Riscos de overfitting e limitacoes
+
+- a selecao continua baseada em heuristicas locais;
+- tags lexicais podem induzir escolhas imperfeitas;
+- exemplos demais podem aumentar latencia, por isso o limite foi mantido em 4;
+- melhora em um dataset pode nao se repetir em outro;
+- o baseline principal e o few-shot estatico permanecem como referencias separadas;
+- a rodada simples do `safety` mostrou regressao local do dinamico, enquanto `--runs 3` mostrou melhora agregada, o que reforca que a variancia do modelo ainda e relevante;
+- `compare-all` confirmou ganho do dinamico sobre o few-shot estatico no `blind` e ganho sobre baseline e estatico no `safety`, mas esses deltas ainda dependem da variabilidade da inferencia.
