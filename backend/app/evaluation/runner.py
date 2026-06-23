@@ -12,7 +12,10 @@ from app.config import get_settings
 from app.moderation.graph import moderation_graph
 from app.moderation.llm.dynamic_few_shot import select_dynamic_few_shot_examples
 from app.moderation.llm.analyzer import (
+    analyze_comment_with_dynamic_few_shot_base_llm,
     analyze_comment_with_dynamic_few_shot_llm,
+    analyze_comment_with_dynamic_few_shot_guardrailed_llm,
+    analyze_comment_with_dynamic_few_shot_guided_llm,
     analyze_comment_with_few_shot_llm,
     analyze_comment_with_llm,
 )
@@ -362,8 +365,62 @@ def _predict_with_dynamic_few_shot_llm(
     available_guidelines: list[dict],
     evaluation_context: dict[str, Any],
 ) -> PredictionOutput:
+    return _predict_with_dynamic_few_shot_variant(
+        example,
+        available_guidelines,
+        evaluation_context,
+        analyzer=analyze_comment_with_dynamic_few_shot_llm,
+    )
+
+
+def _predict_with_dynamic_few_shot_base_llm(
+    example: EvaluationExample,
+    available_guidelines: list[dict],
+    evaluation_context: dict[str, Any],
+) -> PredictionOutput:
+    return _predict_with_dynamic_few_shot_variant(
+        example,
+        available_guidelines,
+        evaluation_context,
+        analyzer=analyze_comment_with_dynamic_few_shot_base_llm,
+    )
+
+
+def _predict_with_dynamic_few_shot_guided_llm(
+    example: EvaluationExample,
+    available_guidelines: list[dict],
+    evaluation_context: dict[str, Any],
+) -> PredictionOutput:
+    return _predict_with_dynamic_few_shot_variant(
+        example,
+        available_guidelines,
+        evaluation_context,
+        analyzer=analyze_comment_with_dynamic_few_shot_guided_llm,
+    )
+
+
+def _predict_with_dynamic_few_shot_guardrailed_llm(
+    example: EvaluationExample,
+    available_guidelines: list[dict],
+    evaluation_context: dict[str, Any],
+) -> PredictionOutput:
+    return _predict_with_dynamic_few_shot_variant(
+        example,
+        available_guidelines,
+        evaluation_context,
+        analyzer=analyze_comment_with_dynamic_few_shot_guardrailed_llm,
+    )
+
+
+def _predict_with_dynamic_few_shot_variant(
+    example: EvaluationExample,
+    available_guidelines: list[dict],
+    evaluation_context: dict[str, Any],
+    *,
+    analyzer: Callable[[str, list[dict], dict[str, Any] | None], dict],
+) -> PredictionOutput:
     selection = select_dynamic_few_shot_examples(example.comment)
-    response = analyze_comment_with_dynamic_few_shot_llm(
+    response = analyzer(
         example.comment,
         available_guidelines,
         trace_metadata={
@@ -396,7 +453,14 @@ def run_evaluation(
 ) -> dict[str, Any]:
     if runs < 1:
         raise ValueError("runs must be >= 1")
-    if mode in {"llm", "few-shot", "dynamic-few-shot"}:
+    if mode in {
+        "llm",
+        "few-shot",
+        "dynamic-few-shot",
+        "dynamic-few-shot-base",
+        "dynamic-few-shot-guided",
+        "dynamic-few-shot-guardrailed",
+    }:
         _ensure_llm_evaluation_available()
     examples = load_dataset(dataset_path)
     available_guidelines = repository.list_guidelines_for_analysis()
@@ -574,6 +638,49 @@ def run_compare_all_evaluation(dataset_path: Path, runs: int = 1) -> dict[str, A
     }
 
 
+def run_compare_ablation_evaluation(dataset_path: Path, runs: int = 1) -> dict[str, Any]:
+    if runs != 1:
+        raise ValueError("runs > 1 is not supported for compare-ablation mode.")
+    _ensure_llm_evaluation_available()
+    llm_summary = run_evaluation(dataset_path, mode="llm")
+    dynamic_few_shot_base_summary = run_evaluation(
+        dataset_path,
+        mode="dynamic-few-shot-base",
+    )
+    dynamic_few_shot_guided_summary = run_evaluation(
+        dataset_path,
+        mode="dynamic-few-shot-guided",
+    )
+    dynamic_few_shot_guardrailed_summary = run_evaluation(
+        dataset_path,
+        mode="dynamic-few-shot-guardrailed",
+    )
+    return {
+        "llm": llm_summary,
+        "dynamic_few_shot_base": dynamic_few_shot_base_summary,
+        "dynamic_few_shot_guided": dynamic_few_shot_guided_summary,
+        "dynamic_few_shot_guardrailed": dynamic_few_shot_guardrailed_summary,
+        "comparison": {
+            "base_vs_llm": _build_comparison_delta(
+                llm_summary,
+                dynamic_few_shot_base_summary,
+            ),
+            "guided_vs_base": _build_comparison_delta(
+                dynamic_few_shot_base_summary,
+                dynamic_few_shot_guided_summary,
+            ),
+            "guardrailed_vs_guided": _build_comparison_delta(
+                dynamic_few_shot_guided_summary,
+                dynamic_few_shot_guardrailed_summary,
+            ),
+            "guardrailed_vs_llm": _build_comparison_delta(
+                llm_summary,
+                dynamic_few_shot_guardrailed_summary,
+            ),
+        },
+    }
+
+
 def _resolve_predictor(
     mode: str,
 ) -> Callable[[EvaluationExample, list[dict], dict[str, Any]], PredictionOutput]:
@@ -585,6 +692,12 @@ def _resolve_predictor(
         return _predict_with_few_shot_llm
     if mode == "dynamic-few-shot":
         return _predict_with_dynamic_few_shot_llm
+    if mode == "dynamic-few-shot-base":
+        return _predict_with_dynamic_few_shot_base_llm
+    if mode == "dynamic-few-shot-guided":
+        return _predict_with_dynamic_few_shot_guided_llm
+    if mode == "dynamic-few-shot-guardrailed":
+        return _predict_with_dynamic_few_shot_guardrailed_llm
     raise ValueError(f"Unsupported evaluation mode: {mode}")
 
 
@@ -1272,6 +1385,60 @@ def format_compare_all_report(compare_summary: dict[str, Any]) -> str:
     lines.extend(
         _format_comparison_delta_block(comparison["dynamic_few_shot_vs_few_shot"])
     )
+    return "\n".join(lines)
+
+
+def format_compare_ablation_report(compare_summary: dict[str, Any]) -> str:
+    llm_report = format_report(compare_summary["llm"])
+    dynamic_few_shot_base_report = format_report(compare_summary["dynamic_few_shot_base"])
+    dynamic_few_shot_guided_report = format_report(compare_summary["dynamic_few_shot_guided"])
+    dynamic_few_shot_guardrailed_report = format_report(
+        compare_summary["dynamic_few_shot_guardrailed"]
+    )
+    comparison = compare_summary["comparison"]
+    lines = [
+        "Baseline LLM results",
+        "--------------------",
+        *llm_report.splitlines()[2:],
+        "",
+        "Dynamic few-shot base results",
+        "-----------------------------",
+        *dynamic_few_shot_base_report.splitlines()[2:],
+        "",
+        "Dynamic few-shot guided results",
+        "-------------------------------",
+        *dynamic_few_shot_guided_report.splitlines()[2:],
+        "",
+        "Dynamic few-shot guardrailed results",
+        "------------------------------------",
+        *dynamic_few_shot_guardrailed_report.splitlines()[2:],
+        "",
+        "Comparison",
+        "----------",
+        "Base vs baseline LLM:",
+    ]
+    lines.extend(_format_comparison_delta_block(comparison["base_vs_llm"]))
+    lines.extend(
+        [
+            "",
+            "Guided vs base:",
+        ]
+    )
+    lines.extend(_format_comparison_delta_block(comparison["guided_vs_base"]))
+    lines.extend(
+        [
+            "",
+            "Guardrailed vs guided:",
+        ]
+    )
+    lines.extend(_format_comparison_delta_block(comparison["guardrailed_vs_guided"]))
+    lines.extend(
+        [
+            "",
+            "Guardrailed vs baseline LLM:",
+        ]
+    )
+    lines.extend(_format_comparison_delta_block(comparison["guardrailed_vs_llm"]))
     return "\n".join(lines)
 
 

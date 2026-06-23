@@ -158,6 +158,15 @@ docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_m
 docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode compare-all
 ```
 
+- para rodar a ablacao do few-shot dinamico, use:
+
+```bash
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset safety --mode dynamic-few-shot-base
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset safety --mode dynamic-few-shot-guided
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset safety --mode dynamic-few-shot-guardrailed
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset safety --mode compare-ablation
+```
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;

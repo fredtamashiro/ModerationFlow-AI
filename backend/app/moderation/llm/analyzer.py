@@ -78,10 +78,78 @@ def analyze_comment_with_dynamic_few_shot_llm(
     available_guidelines: list[dict],
     trace_metadata: dict[str, Any] | None = None,
 ) -> dict:
-    selection = select_dynamic_few_shot_examples(comment)
-    selection_guidance = _build_dynamic_selection_guidance(
+    return _analyze_comment_with_dynamic_few_shot_variant(
         comment=comment,
-        matched_tags=selection.matched_tags,
+        available_guidelines=available_guidelines,
+        trace_metadata=trace_metadata,
+        include_selection_guidance=True,
+        include_guardrail=True,
+        strategy_label="dynamic_few_shot_llm",
+    )
+
+
+def analyze_comment_with_dynamic_few_shot_base_llm(
+    comment: str,
+    available_guidelines: list[dict],
+    trace_metadata: dict[str, Any] | None = None,
+) -> dict:
+    return _analyze_comment_with_dynamic_few_shot_variant(
+        comment=comment,
+        available_guidelines=available_guidelines,
+        trace_metadata=trace_metadata,
+        include_selection_guidance=False,
+        include_guardrail=False,
+        strategy_label="dynamic_few_shot_base_llm",
+    )
+
+
+def analyze_comment_with_dynamic_few_shot_guided_llm(
+    comment: str,
+    available_guidelines: list[dict],
+    trace_metadata: dict[str, Any] | None = None,
+) -> dict:
+    return _analyze_comment_with_dynamic_few_shot_variant(
+        comment=comment,
+        available_guidelines=available_guidelines,
+        trace_metadata=trace_metadata,
+        include_selection_guidance=True,
+        include_guardrail=False,
+        strategy_label="dynamic_few_shot_guided_llm",
+    )
+
+
+def analyze_comment_with_dynamic_few_shot_guardrailed_llm(
+    comment: str,
+    available_guidelines: list[dict],
+    trace_metadata: dict[str, Any] | None = None,
+) -> dict:
+    return _analyze_comment_with_dynamic_few_shot_variant(
+        comment=comment,
+        available_guidelines=available_guidelines,
+        trace_metadata=trace_metadata,
+        include_selection_guidance=True,
+        include_guardrail=True,
+        strategy_label="dynamic_few_shot_guardrailed_llm",
+    )
+
+
+def _analyze_comment_with_dynamic_few_shot_variant(
+    *,
+    comment: str,
+    available_guidelines: list[dict],
+    trace_metadata: dict[str, Any] | None,
+    include_selection_guidance: bool,
+    include_guardrail: bool,
+    strategy_label: str,
+) -> dict:
+    selection = select_dynamic_few_shot_examples(comment)
+    selection_guidance = (
+        _build_dynamic_selection_guidance(
+            comment=comment,
+            matched_tags=selection.matched_tags,
+        )
+        if include_selection_guidance
+        else []
     )
     prompt = build_few_shot_llm_prompt(
         comment,
@@ -99,8 +167,9 @@ def analyze_comment_with_dynamic_few_shot_llm(
             "few_shot_selection_fallback": selection.used_fallback,
             "selected_feedback_example_ids": selection.selected_example_ids,
             "dynamic_selection_guidance": selection_guidance,
+            "dynamic_guardrail_enabled": include_guardrail,
         },
-        strategy="dynamic_few_shot_llm",
+        strategy=strategy_label,
         few_shot_examples_count=len(selection.examples),
     )
 
@@ -313,6 +382,10 @@ def _apply_strategy_specific_calibration(
     trace_metadata: dict[str, Any],
 ) -> tuple[dict[str, Any], str | None]:
     if strategy != "dynamic_few_shot_llm":
+        if strategy != "dynamic_few_shot_guardrailed_llm":
+            return payload, None
+
+    if not trace_metadata.get("dynamic_guardrail_enabled", False):
         return payload, None
 
     selection_tags = [

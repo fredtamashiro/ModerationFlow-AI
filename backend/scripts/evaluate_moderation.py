@@ -10,10 +10,12 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.evaluation.runner import (
+    format_compare_ablation_report,
     format_compare_all_report,
     format_compare_report,
     format_compare_few_shot_report,
     format_report,
+    run_compare_ablation_evaluation,
     run_compare_all_evaluation,
     run_compare_evaluation,
     run_compare_few_shot_evaluation,
@@ -60,9 +62,13 @@ def parse_args() -> argparse.Namespace:
             "llm",
             "few-shot",
             "dynamic-few-shot",
+            "dynamic-few-shot-base",
+            "dynamic-few-shot-guided",
+            "dynamic-few-shot-guardrailed",
             "compare",
             "compare-few-shot",
             "compare-all",
+            "compare-ablation",
         ),
         default="heuristic",
         help="Seleciona o modo de avaliacao. Default: heuristic.",
@@ -108,6 +114,9 @@ def main() -> int:
         elif args.mode == "compare-all":
             summary = run_compare_all_evaluation(dataset_path, runs=args.runs)
             report = format_compare_all_report(summary)
+        elif args.mode == "compare-ablation":
+            summary = run_compare_ablation_evaluation(dataset_path, runs=args.runs)
+            report = format_compare_ablation_report(summary)
         else:
             summary = run_evaluation(dataset_path, mode=args.mode, runs=args.runs)
             report = format_report(summary)

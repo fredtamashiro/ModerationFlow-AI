@@ -2030,3 +2030,112 @@ Ou seja:
 - a calibragem foi bem-sucedida para `R-004` e para alvos de qualidade de conteudo no `safety`;
 - ela nao resolveu o trade-off de severidade em `explicit_spam`;
 - o `dynamic-few-shot` continua melhor como experimento controlado do que como substituto do baseline principal.
+
+## Dynamic few-shot guardrail ablation experiment - Etapa 038
+
+### Objetivo
+
+Separar o efeito de tres componentes do experimento dinamico:
+
+- `dynamic few-shot selection`
+- `selection_guidance`
+- `safety guardrail` defensivo para `R-004`
+
+O objetivo aqui nao e melhorar metricas por si so, mas medir contribuicao causal aproximada de cada camada.
+
+### Estrategias comparadas
+
+- `dynamic-few-shot-base`
+  - selecao dinamica;
+  - sem `selection_guidance`;
+  - sem guardrail defensivo.
+- `dynamic-few-shot-guided`
+  - selecao dinamica;
+  - com `selection_guidance`;
+  - sem guardrail defensivo.
+- `dynamic-few-shot-guardrailed`
+  - selecao dinamica;
+  - com `selection_guidance`;
+  - com guardrail defensivo de `R-004`.
+- `dynamic-few-shot`
+  - mantido como alias funcional da estrategia completa atual.
+
+### Resultados no blind dataset
+
+`compare-ablation` no `blind`:
+
+- baseline `llm`: `93.75 / 87.50 / 90.62 / 96.88`
+- `dynamic-few-shot-base`: `93.75 / 87.50 / 90.62 / 96.88`
+- `dynamic-few-shot-guided`: `93.75 / 87.50 / 87.50 / 93.75`
+- `dynamic-few-shot-guardrailed`: `93.75 / 87.50 / 90.62 / 96.88`
+
+Leitura:
+
+- a selecao dinamica sozinha ja empatou com o baseline `llm` no `blind`;
+- a `selection_guidance`, nesta rodada comparativa, piorou `accuracy_category` e `policy_match_rate`;
+- o guardrail de `R-004` recuperou esse desvio e trouxe a estrategia de volta ao nivel do baseline `llm`;
+- o problema de `explicit_spam` permaneceu nas tres variantes dinamicas;
+- a fronteira `offensive_language -> personal_attack` continuou ativa no `blind`.
+
+Variancia `dynamic-few-shot-guardrailed --runs 3` no `blind`:
+
+- accuracy_action mean: `93.75%`
+- accuracy_risk_level mean: `87.50%`
+- accuracy_category mean: `88.54%`
+- policy_match_rate mean: `94.79%`
+- failed_runs mean: `0.00`
+
+### Resultados no safety dataset
+
+`compare-ablation` no `safety`:
+
+- baseline `llm`: `95.83 / 95.83 / 95.83 / 95.83`
+- `dynamic-few-shot-base`: `95.83 / 95.83 / 95.83 / 95.83`
+- `dynamic-few-shot-guided`: `95.83 / 95.83 / 95.83 / 95.83`
+- `dynamic-few-shot-guardrailed`: `100.00 / 100.00 / 100.00 / 100.00`
+
+Leitura:
+
+- a selecao dinamica base ja melhorou `action` e `risk` contra o baseline, mas nao resolveu `category` nem `policy`;
+- a `selection_guidance` nao adicionou ganho sobre a variante base e ainda devolveu `action/risk` ao patamar do baseline nesta rodada;
+- o ganho adicional apareceu apenas quando o guardrail defensivo de `R-004` foi ligado;
+- isso mostra que o resultado final da estrategia completa nao deve ser atribuido apenas aos exemplos few-shot.
+
+Variancia `dynamic-few-shot-guardrailed --runs 3` no `safety`:
+
+- accuracy_action mean: `100.00%`
+- accuracy_risk_level mean: `100.00%`
+- accuracy_category mean: `100.00%`
+- policy_match_rate mean: `100.00%`
+- failed_runs mean: `0.00`
+
+### Contribuicao da selection guidance
+
+Contribuicao principal observada:
+
+- nao houve ganho consistente isolado;
+- no `blind`, a guidance piorou a rodada comparativa de `accuracy_category` e `policy_match_rate`;
+- no `safety`, ela nao trouxe melhoria adicional sobre a variante base.
+
+Em termos praticos:
+
+- a guidance nao se mostrou a principal fonte dos ganhos desta etapa;
+- ela nao resolveu o bloco `explicit_spam`;
+- ela tambem nao foi suficiente para eliminar o erro de `R-004` sem o guardrail.
+
+### Contribuicao do safety guardrail
+
+Contribuicao principal observada:
+
+- foi o componente decisivo para remover o erro residual `hate_or_discrimination -> personal_attack`;
+- eliminou tambem o escape `R-004 -> R-002` no `safety`;
+- no `blind`, nao trouxe ganho adicional sobre a variante base, mas corrigiu a piora introduzida pela guidance;
+- isso e coerente com o fato de o gargalo principal do `blind` continuar em `explicit_spam`, nao em `R-004`.
+
+### Trade-offs e limitacoes
+
+- o ganho mais forte da estrategia completa no `safety` veio do guardrail, nao apenas dos exemplos dinamicos;
+- no `blind`, a guidance isolada mostrou risco real de regressao local;
+- `explicit_spam` continua como principal gargalo do `blind`;
+- `offensive_language` vs `personal_attack` segue instavel em casos com alvo humano explicito;
+- o `dynamic-few-shot-guardrailed` continua sendo o melhor experimento geral, mas sua superioridade no `safety` depende fortemente da camada defensiva de `R-004`.
