@@ -1826,3 +1826,61 @@ Leitura:
 - o baseline principal e o few-shot estatico permanecem como referencias separadas;
 - a rodada simples do `safety` mostrou regressao local do dinamico, enquanto `--runs 3` mostrou melhora agregada, o que reforca que a variancia do modelo ainda e relevante;
 - `compare-all` confirmou ganho do dinamico sobre o few-shot estatico no `blind` e ganho sobre baseline e estatico no `safety`, mas esses deltas ainda dependem da variabilidade da inferencia.
+
+## Dynamic few-shot selection observability - Etapa 036
+
+### Objetivo
+
+Adicionar observabilidade estruturada ao modo `dynamic-few-shot` para inspecionar a estrategia de selecao sem alterar prompt, regras de match, datasets ou logica de classificacao do LLM.
+
+### Dados observados
+
+Para cada exemplo avaliado em `dynamic-few-shot`, o runner agora registra em memoria:
+
+- `selection_tags`
+- `selected_feedback_example_ids`
+- `selection_fallback_used`
+- `few_shot_examples_count`
+
+Esses dados alimentam uma secao adicional no terminal com:
+
+- frequencia de tags;
+- frequencia de exemplos selecionados;
+- uso de fallback;
+- metricas por tag;
+- divergencias agrupadas por tag;
+- resumo interpretavel da selecao.
+
+### Como executar
+
+```bash
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode dynamic-few-shot
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset safety --mode dynamic-few-shot --runs 3
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset blind --mode compare-all
+```
+
+### Como interpretar tags e fallback
+
+- cada tag representa um grupo lexical detectado pelo seletor dinamico atual, como `explicit_spam`, `offensive_language`, `support_request` ou `sarcasm`;
+- um mesmo comentario pode contribuir para mais de uma tag;
+- `fallback` indica que a selecao nao encontrou tags suficientes para dirigir a escolha dos exemplos e recorreu ao conjunto curto padrao;
+- a frequencia dos exemplos mostra quais itens curados aparecem mais vezes no contexto few-shot.
+
+### Metricas por tag
+
+O relatorio passa a exibir, para cada tag observada:
+
+- `total_examples`
+- `accuracy_action`
+- `accuracy_risk_level`
+- `accuracy_category`
+- `policy_match_rate`
+
+Isso ajuda a identificar fronteiras mais frageis, como tags com boa acao mas categoria pior, ou tags onde a policy continua escapando para regras secundarias.
+
+### Limitacoes
+
+- a observabilidade nao muda a selecao nem reduz a variancia do modelo por si so;
+- em `--runs 3`, a analise de selecao e mostrada apenas para a ultima rodada;
+- casos com multiplas tags contribuem para mais de um agrupamento;
+- a leitura continua sendo diagnostica e nao deve ser usada como benchmark separado.

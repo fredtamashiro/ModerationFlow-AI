@@ -10,6 +10,7 @@ from typing import Any, Callable
 
 from app.config import get_settings
 from app.moderation.graph import moderation_graph
+from app.moderation.llm.dynamic_few_shot import select_dynamic_few_shot_examples
 from app.moderation.llm.analyzer import (
     analyze_comment_with_dynamic_few_shot_llm,
     analyze_comment_with_few_shot_llm,
@@ -71,6 +72,10 @@ class EvaluationResult:
     predicted_risk_level: str | None
     predicted_category: str | None
     predicted_policy_rules: list[str]
+    selection_tags: list[str] | None = None
+    selected_feedback_example_ids: list[str] | None = None
+    selection_fallback_used: bool | None = None
+    few_shot_examples_count: int | None = None
     error_message: str | None = None
 
 
@@ -80,6 +85,10 @@ class PredictionOutput:
     predicted_risk_level: str | None
     predicted_category: str | None
     predicted_policy_rules: list[str]
+    selection_tags: list[str] | None = None
+    selected_feedback_example_ids: list[str] | None = None
+    selection_fallback_used: bool | None = None
+    few_shot_examples_count: int | None = None
 
 
 def _build_error_analysis(results: list[EvaluationResult]) -> dict[str, Any]:
@@ -353,6 +362,7 @@ def _predict_with_dynamic_few_shot_llm(
     available_guidelines: list[dict],
     evaluation_context: dict[str, Any],
 ) -> PredictionOutput:
+    selection = select_dynamic_few_shot_examples(example.comment)
     response = analyze_comment_with_dynamic_few_shot_llm(
         example.comment,
         available_guidelines,
@@ -372,6 +382,10 @@ def _predict_with_dynamic_few_shot_llm(
         predicted_policy_rules=[
             str(rule) for rule in response.get("policy_references", [])
         ],
+        selection_tags=selection.matched_tags,
+        selected_feedback_example_ids=selection.selected_example_ids,
+        selection_fallback_used=selection.used_fallback,
+        few_shot_examples_count=len(selection.examples),
     )
 
 
@@ -638,6 +652,10 @@ def _run_prediction_pass(
                     predicted_risk_level=prediction.predicted_risk_level,
                     predicted_category=prediction.predicted_category,
                     predicted_policy_rules=prediction.predicted_policy_rules,
+                    selection_tags=prediction.selection_tags,
+                    selected_feedback_example_ids=prediction.selected_feedback_example_ids,
+                    selection_fallback_used=prediction.selection_fallback_used,
+                    few_shot_examples_count=prediction.few_shot_examples_count,
                 )
             )
         except Exception as error:
@@ -651,6 +669,10 @@ def _run_prediction_pass(
                     predicted_risk_level=None,
                     predicted_category=None,
                     predicted_policy_rules=[],
+                    selection_tags=None,
+                    selected_feedback_example_ids=None,
+                    selection_fallback_used=None,
+                    few_shot_examples_count=None,
                     error_message=str(error),
                 )
             )
@@ -685,6 +707,9 @@ def summarize_multi_run_results(run_summaries: list[dict[str, Any]]) -> dict[str
         "aggregate": aggregate,
         "error_analysis_last_run": run_summaries[-1].get("error_analysis", {}),
         "error_analysis_last_run_index": len(run_summaries),
+        "dynamic_selection_analysis_last_run": run_summaries[-1].get(
+            "dynamic_selection_analysis"
+        ),
     }
 
 
@@ -748,7 +773,184 @@ def summarize_results(results: list[EvaluationResult]) -> dict[str, Any]:
         "divergences": divergences[:20],
         "failures": failed_results[:20],
         "error_analysis": _build_error_analysis(results),
+        "dynamic_selection_analysis": _build_dynamic_selection_analysis(results),
     }
+
+
+def _build_dynamic_selection_analysis(
+    results: list[EvaluationResult],
+) -> dict[str, Any] | None:
+    dynamic_results = [
+        result for result in results if result.selection_tags is not None
+    ]
+    if not dynamic_results:
+        return None
+
+    successful_dynamic_results = [
+        result for result in dynamic_results if result.success
+    ]
+    tag_frequency: Counter[str] = Counter()
+    selected_example_frequency: Counter[str] = Counter()
+    fallback_used = 0
+
+    for result in dynamic_results:
+        for tag in result.selection_tags or []:
+            tag_frequency[tag] += 1
+        if result.selection_fallback_used:
+            tag_frequency["fallback"] += 1
+            fallback_used += 1
+        for example_id in result.selected_feedback_example_ids or []:
+            selected_example_frequency[example_id] += 1
+
+    metrics_by_tag: list[dict[str, Any]] = []
+    divergences_by_tag: list[dict[str, Any]] = []
+    observed_tags = sorted(
+        tag for tag in tag_frequency if tag != "fallback"
+    )
+
+    for tag in observed_tags:
+        tagged_results = [
+            result
+            for result in successful_dynamic_results
+            if tag in (result.selection_tags or [])
+        ]
+        if not tagged_results:
+            continue
+
+        action_matches = sum(
+            1
+            for result in tagged_results
+            if result.predicted_action == result.example.expected_action
+        )
+        risk_matches = sum(
+            1
+            for result in tagged_results
+            if result.predicted_risk_level == result.example.expected_risk_level
+        )
+        category_matches = sum(
+            1
+            for result in tagged_results
+            if result.predicted_category == result.example.expected_category
+        )
+        policy_matches = sum(
+            1
+            for result in tagged_results
+            if set(result.predicted_policy_rules).intersection(
+                result.example.expected_policy_rules
+            )
+        )
+        metrics_by_tag.append(
+            {
+                "tag": tag,
+                "total_examples": len(tagged_results),
+                "accuracy_action": _percentage(action_matches, len(tagged_results)),
+                "accuracy_risk_level": _percentage(risk_matches, len(tagged_results)),
+                "accuracy_category": _percentage(category_matches, len(tagged_results)),
+                "policy_match_rate": _percentage(policy_matches, len(tagged_results)),
+            }
+        )
+
+        divergence_counter: Counter[str] = Counter()
+        for result in tagged_results:
+            if result.predicted_action != result.example.expected_action:
+                divergence_counter[
+                    f"action {result.example.expected_action} -> {result.predicted_action}"
+                ] += 1
+            if result.predicted_risk_level != result.example.expected_risk_level:
+                divergence_counter[
+                    f"risk {result.example.expected_risk_level} -> {result.predicted_risk_level}"
+                ] += 1
+            if result.predicted_category != result.example.expected_category:
+                divergence_counter[
+                    f"category {result.example.expected_category} -> {result.predicted_category}"
+                ] += 1
+            if not set(result.predicted_policy_rules).intersection(
+                result.example.expected_policy_rules
+            ):
+                divergence_counter[
+                    "policy "
+                    + f"{result.example.expected_policy_rules} -> "
+                    + f"{result.predicted_policy_rules}"
+                ] += 1
+
+        if divergence_counter:
+            divergences_by_tag.append(
+                {
+                    "tag": tag,
+                    "items": [
+                        {"label": label, "count": count}
+                        for label, count in divergence_counter.most_common()
+                    ],
+                }
+            )
+
+    total_dynamic_examples = len(dynamic_results)
+    most_used_tag = _pick_most_common(tag_frequency, exclude_keys={"fallback"})
+    most_used_feedback_example = _pick_most_common(selected_example_frequency)
+    lowest_action_tag = _pick_lowest_accuracy_tag(
+        metrics_by_tag,
+        metric_name="accuracy_action",
+    )
+    lowest_category_tag = _pick_lowest_accuracy_tag(
+        metrics_by_tag,
+        metric_name="accuracy_category",
+    )
+
+    return {
+        "tag_frequency": [
+            {"tag": tag, "count": count}
+            for tag, count in tag_frequency.most_common()
+        ],
+        "selected_feedback_examples": [
+            {"example_id": example_id, "count": count}
+            for example_id, count in selected_example_frequency.most_common()
+        ],
+        "fallback_usage": {
+            "used": fallback_used,
+            "not_used": total_dynamic_examples - fallback_used,
+        },
+        "metrics_by_tag": sorted(
+            metrics_by_tag,
+            key=lambda item: (-item["total_examples"], item["tag"]),
+        ),
+        "divergences_by_tag": divergences_by_tag,
+        "summary": {
+            "most_used_tag": most_used_tag,
+            "most_used_feedback_example": most_used_feedback_example,
+            "fallback_rate": _percentage(fallback_used, total_dynamic_examples),
+            "lowest_action_accuracy_tag": lowest_action_tag,
+            "lowest_category_accuracy_tag": lowest_category_tag,
+        },
+    }
+
+
+def _pick_most_common(
+    counter: Counter[str],
+    *,
+    exclude_keys: set[str] | None = None,
+) -> str | None:
+    exclude_keys = exclude_keys or set()
+    filtered_items = [
+        (key, count) for key, count in counter.items() if key not in exclude_keys
+    ]
+    if not filtered_items:
+        return None
+    filtered_items.sort(key=lambda item: (-item[1], item[0]))
+    return filtered_items[0][0]
+
+
+def _pick_lowest_accuracy_tag(
+    metrics_by_tag: list[dict[str, Any]],
+    *,
+    metric_name: str,
+) -> str | None:
+    if not metrics_by_tag:
+        return None
+    ordered = sorted(
+        metrics_by_tag,
+        key=lambda item: (item[metric_name], -item["total_examples"], item["tag"]),
+    )
+    return ordered[0]["tag"]
 
 
 def _percentage(matches: int, total: int) -> float:
@@ -808,6 +1010,10 @@ def format_report(summary: dict[str, Any]) -> str:
     error_analysis = summary.get("error_analysis")
     if error_analysis:
         lines.extend(_format_error_analysis(error_analysis))
+
+    dynamic_selection_analysis = summary.get("dynamic_selection_analysis")
+    if dynamic_selection_analysis:
+        lines.extend(_format_dynamic_selection_analysis(dynamic_selection_analysis))
 
     return "\n".join(lines)
 
@@ -891,6 +1097,15 @@ def format_multi_run_report(summary: dict[str, Any]) -> str:
             ]
         )
         lines.extend(_format_error_analysis(error_analysis))
+    dynamic_selection_analysis = summary.get("dynamic_selection_analysis_last_run")
+    if dynamic_selection_analysis:
+        lines.extend(
+            [
+                "",
+                "Selection analysis shown for the last run only.",
+            ]
+        )
+        lines.extend(_format_dynamic_selection_analysis(dynamic_selection_analysis))
     return "\n".join(lines)
 
 
@@ -1201,3 +1416,95 @@ def _format_top_policy_entries(
             for item in items
         )
     ]
+
+
+def _format_dynamic_selection_analysis(
+    selection_analysis: dict[str, Any],
+) -> list[str]:
+    lines = ["", "Dynamic few-shot selection analysis:"]
+    lines.extend(
+        _format_selection_frequency(
+            "Selection tag frequency:",
+            selection_analysis.get("tag_frequency", []),
+            value_key="tag",
+        )
+    )
+    lines.extend(
+        _format_selection_frequency(
+            "Selected feedback examples:",
+            selection_analysis.get("selected_feedback_examples", []),
+            value_key="example_id",
+        )
+    )
+
+    fallback_usage = selection_analysis.get("fallback_usage", {})
+    lines.extend(
+        [
+            "Fallback usage:",
+            f"- used: {fallback_usage.get('used', 0)}",
+            f"- not used: {fallback_usage.get('not_used', 0)}",
+        ]
+    )
+
+    lines.append("Metrics by selection tag:")
+    metrics_by_tag = selection_analysis.get("metrics_by_tag", [])
+    if not metrics_by_tag:
+        lines.append("- none")
+    else:
+        for item in metrics_by_tag:
+            lines.append(
+                "- "
+                + f"{item['tag']} | total: {item['total_examples']} | "
+                + f"action: {item['accuracy_action']:.2f}% | "
+                + f"risk: {item['accuracy_risk_level']:.2f}% | "
+                + f"category: {item['accuracy_category']:.2f}% | "
+                + f"policy: {item['policy_match_rate']:.2f}%"
+            )
+
+    lines.append("Tag divergences:")
+    divergences_by_tag = selection_analysis.get("divergences_by_tag", [])
+    if not divergences_by_tag:
+        lines.append("- none")
+    else:
+        for item in divergences_by_tag:
+            lines.append(f"- {item['tag']}:")
+            for divergence in item.get("items", []):
+                lines.append(f"  - {divergence['label']}: {divergence['count']}")
+
+    summary = selection_analysis.get("summary", {})
+    lines.extend(
+        [
+            "Dynamic few-shot selection summary:",
+            f"- Most used tag: {summary.get('most_used_tag') or 'n/a'}",
+            (
+                "- Most used feedback example: "
+                + f"{summary.get('most_used_feedback_example') or 'n/a'}"
+            ),
+            f"- Fallback rate: {summary.get('fallback_rate', 0.0):.2f}%",
+            (
+                "- Tag with lowest action accuracy: "
+                + f"{summary.get('lowest_action_accuracy_tag') or 'n/a'}"
+            ),
+            (
+                "- Tag with lowest category accuracy: "
+                + f"{summary.get('lowest_category_accuracy_tag') or 'n/a'}"
+            ),
+        ]
+    )
+    return lines
+
+
+def _format_selection_frequency(
+    title: str,
+    items: list[dict[str, Any]],
+    *,
+    value_key: str,
+) -> list[str]:
+    lines = [title]
+    if not items:
+        lines.append("- none")
+        return lines
+
+    for item in items:
+        lines.append(f"- {item[value_key]}: {item['count']}")
+    return lines
