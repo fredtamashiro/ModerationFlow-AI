@@ -1884,3 +1884,149 @@ Isso ajuda a identificar fronteiras mais frageis, como tags com boa acao mas cat
 - em `--runs 3`, a analise de selecao e mostrada apenas para a ultima rodada;
 - casos com multiplas tags contribuem para mais de um agrupamento;
 - a leitura continua sendo diagnostica e nao deve ser usada como benchmark separado.
+
+## Dynamic few-shot observability-guided calibration - Etapa 037
+
+### Padroes identificados
+
+A etapa 036 deixou tres grupos de calibragem mais claros no `dynamic-few-shot`:
+
+- `explicit_spam` seguia como pior tag no `blind`, com padrao recorrente `medium -> high` e um caso `flag -> remove`;
+- `hate_or_discrimination` ainda podia escapar para `personal_attack`, com `R-004 -> R-002` no `safety`;
+- a fronteira `offensive_language` vs `personal_attack` ainda precisava de melhor separacao quando a critica recai mais sobre material, servico, conteudo ou trabalho entregue do que sobre a dignidade de uma pessoa.
+
+### Ajustes realizados
+
+Os ajustes desta etapa ficaram restritos ao caminho dinamico:
+
+- adicao de `selection_guidance` opcional no prompt few-shot, usado apenas pelo `dynamic-few-shot`;
+- reforco dinamico para:
+  - diferenciar `explicit_spam` de promocao mais leve;
+  - manter `hate_or_discrimination / high / remove / R-004` quando houver grupo protegido com exclusao ou generalizacao negativa;
+  - preferir `offensive_language / R-003` quando a queixa principal for qualidade ruim de curso, material, plataforma, servico ou trabalho entregue, mesmo com mencao indireta a quem preparou;
+- ajuste do seletor dinamico para:
+  - incluir um exemplo `medium / flag` junto da trilha `explicit_spam`;
+  - criar a tag `offensive_language_quality_target`;
+  - detectar melhor alvo de qualidade de conteudo, material ou servico;
+- adicao de pos-calibracao defensiva apenas para `dynamic_few_shot_llm` em casos reais de grupo protegido + exclusao/preconceito, sem alterar `llm` baseline nem `few-shot` estatico.
+
+### Metricas antes
+
+`blind --mode dynamic-few-shot`:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 90.62%
+- policy_match_rate: 96.88%
+- failed_runs: 0
+
+`blind --mode dynamic-few-shot --runs 3`:
+
+- accuracy_action mean: 93.75%
+- accuracy_risk_level mean: 87.50%
+- accuracy_category mean: 86.46%
+- policy_match_rate mean: 94.79%
+- failed_runs mean: 0.00
+
+`safety --mode dynamic-few-shot`:
+
+- accuracy_action: 95.83%
+- accuracy_risk_level: 95.83%
+- accuracy_category: 95.83%
+- policy_match_rate: 95.83%
+- failed_runs: 0
+
+`safety --mode dynamic-few-shot --runs 3`:
+
+- accuracy_action mean: 98.61%
+- accuracy_risk_level mean: 98.61%
+- accuracy_category mean: 95.83%
+- policy_match_rate mean: 95.83%
+- failed_runs mean: 0.00
+
+### Metricas depois
+
+`blind --mode dynamic-few-shot`:
+
+- accuracy_action: 93.75%
+- accuracy_risk_level: 87.50%
+- accuracy_category: 90.62%
+- policy_match_rate: 96.88%
+- failed_runs: 0
+
+`blind --mode dynamic-few-shot --runs 3`:
+
+- accuracy_action mean: 93.75%
+- accuracy_risk_level mean: 87.50%
+- accuracy_category mean: 88.54%
+- policy_match_rate mean: 94.79%
+- failed_runs mean: 0.00
+
+`safety --mode dynamic-few-shot`:
+
+- accuracy_action: 100.00%
+- accuracy_risk_level: 100.00%
+- accuracy_category: 100.00%
+- policy_match_rate: 100.00%
+- failed_runs: 0
+
+`safety --mode dynamic-few-shot --runs 3`:
+
+- accuracy_action mean: 100.00%
+- accuracy_risk_level mean: 100.00%
+- accuracy_category mean: 100.00%
+- policy_match_rate mean: 100.00%
+- failed_runs mean: 0.00
+
+### Efeito no blind
+
+O efeito no `blind` foi misto e limitado:
+
+- a rodada simples manteve exatamente as mesmas metricas principais;
+- no agregado `--runs 3`, `accuracy_category` subiu de `86.46%` para `88.54%`;
+- `policy_match_rate` agregada ficou em `94.79%`, sem ganho material sobre a etapa anterior;
+- o bloco `explicit_spam` continuou concentrando os erros `medium -> high` e o caso `flag -> remove`;
+- a fronteira `offensive_language -> personal_attack` continuou aparecendo, inclusive com um caso novo em `blind-023` em uma rodada comparativa.
+
+No `compare-all` do `blind`, o `dynamic-few-shot` ficou acima de baseline e few-shot estatico em:
+
+- accuracy_category: `93.75%`
+- policy_match_rate: `100.00%`
+
+Delta dinamico vs baseline LLM:
+
+- action_accuracy_delta: `0.00%`
+- risk_level_accuracy_delta: `0.00%`
+- category_accuracy_delta: `+3.12%`
+- policy_match_rate_delta: `+3.12%`
+
+### Efeito no safety
+
+O ganho no `safety` foi claro:
+
+- o caso residual `hate_or_discrimination -> personal_attack` deixou de aparecer;
+- `R-004 -> R-002` deixou de aparecer;
+- a rodada simples passou de `95.83%` para `100.00%` em `action`, `risk`, `category` e `policy`;
+- o agregado `--runs 3` tambem passou para `100.00%` em todas as metricas.
+
+No `compare-all` do `safety`, o `dynamic-few-shot` ficou acima do baseline LLM e do few-shot estatico:
+
+- action_accuracy_delta vs baseline: `+4.17%`
+- risk_level_accuracy_delta vs baseline: `+4.17%`
+- category_accuracy_delta vs baseline: `+4.17%`
+- policy_match_rate_delta vs baseline: `+4.17%`
+
+### Limitacoes conhecidas
+
+Depois da etapa 037, ainda permanecem:
+
+- `explicit_spam` como pior tag no `blind`, sem resolucao do padrao `medium -> high`;
+- um caso `flag -> remove` ainda associado a `explicit_spam` no `blind`;
+- fronteira `offensive_language` vs `personal_attack` ainda instavel em comentarios com alvo humano explicito ou semi-explicito;
+- variancia relevante no `blind`, mesmo com melhora parcial em `accuracy_category`.
+
+Ou seja:
+
+- a calibragem foi bem-sucedida para `R-004` e para alvos de qualidade de conteudo no `safety`;
+- ela nao resolveu o trade-off de severidade em `explicit_spam`;
+- o `dynamic-few-shot` continua melhor como experimento controlado do que como substituto do baseline principal.

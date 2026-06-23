@@ -203,6 +203,7 @@ def build_few_shot_llm_prompt(
     comment: str,
     guidelines: list[dict],
     few_shot_examples: list[FeedbackExample],
+    selection_guidance: list[str] | None = None,
 ) -> str:
     if not few_shot_examples:
         raise ValueError("few_shot_examples must not be empty.")
@@ -210,18 +211,22 @@ def build_few_shot_llm_prompt(
     examples_section = "\n\n".join(
         _format_few_shot_example(example) for example in few_shot_examples
     )
-    return "\n\n".join(
-        [
-            (
-                "human decision references:\n"
-                "The examples below are references of curated human moderation decisions.\n"
-                "Use them to improve consistency on similar edge cases, but do not copy them mechanically.\n"
-                "Analyze the new comment on its own merits using the guidelines and the same output schema."
-            ),
-            examples_section,
-            build_llm_prompt(comment, guidelines),
-        ]
-    )
+    sections = [
+        (
+            "human decision references:\n"
+            "The examples below are references of curated human moderation decisions.\n"
+            "Use them to improve consistency on similar edge cases, but do not copy them mechanically.\n"
+            "Analyze the new comment on its own merits using the guidelines and the same output schema."
+        ),
+        examples_section,
+    ]
+    if selection_guidance:
+        sections.append(
+            "dynamic selection guidance:\n"
+            + "\n".join(f"- {item}" for item in selection_guidance)
+        )
+    sections.append(build_llm_prompt(comment, guidelines))
+    return "\n\n".join(sections)
 
 
 def _format_few_shot_example(example: FeedbackExample) -> str:

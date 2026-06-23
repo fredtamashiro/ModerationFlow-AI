@@ -16,9 +16,10 @@ TAGGED_FEEDBACK_EXAMPLE_IDS = {
     "ambiguous_criticism": ("feedback-003", "feedback-024"),
     "sarcasm": ("feedback-004", "feedback-020"),
     "subtle_spam": ("feedback-006", "feedback-007"),
-    "explicit_spam": ("feedback-008", "feedback-009"),
+    "explicit_spam": ("feedback-008", "feedback-006"),
     "personal_attack": ("feedback-010", "feedback-022"),
     "personal_attack_severe": ("feedback-012", "feedback-010"),
+    "offensive_language_quality_target": ("feedback-013", "feedback-023"),
     "offensive_language": ("feedback-011", "feedback-023"),
     "hate_or_discrimination": ("feedback-014", "feedback-015"),
     "positive_feedback": ("feedback-019", "feedback-018"),
@@ -120,7 +121,13 @@ def _detect_selection_tags(comment: str) -> list[str]:
             "site",
             "grupo",
             "canal",
+            "acesse",
+            "acessem",
+            "entre no grupo",
+            "entrem no grupo",
             "compr",
+            "vendo",
+            "venda",
             "desconto",
             "promoc",
             "promoç",
@@ -212,6 +219,21 @@ def _detect_selection_tags(comment: str) -> list[str]:
             "explicacao",
             "explicação",
             "trilha",
+            "plataforma",
+            "trabalho entregue",
+        ),
+    )
+    content_quality_target = _contains_any(
+        text,
+        (
+            "quem montou",
+            "quem estruturou",
+            "quem preparou",
+            "quem fez",
+            "nao domina o assunto",
+            "nÃ£o domina o assunto",
+            "mal organizado",
+            "mal explicado",
         ),
     )
     hostile_words = _contains_any(
@@ -253,6 +275,8 @@ def _detect_selection_tags(comment: str) -> list[str]:
         tags.append("personal_attack_severe")
     if person_target and hostile_words:
         tags.append("personal_attack")
+    if content_target and (hostile_words or content_quality_target):
+        tags.append("offensive_language_quality_target")
     if content_target and hostile_words:
         tags.append("offensive_language")
 

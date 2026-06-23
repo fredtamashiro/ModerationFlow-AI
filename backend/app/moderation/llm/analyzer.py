@@ -79,10 +79,15 @@ def analyze_comment_with_dynamic_few_shot_llm(
     trace_metadata: dict[str, Any] | None = None,
 ) -> dict:
     selection = select_dynamic_few_shot_examples(comment)
+    selection_guidance = _build_dynamic_selection_guidance(
+        comment=comment,
+        matched_tags=selection.matched_tags,
+    )
     prompt = build_few_shot_llm_prompt(
         comment,
         available_guidelines,
         selection.examples,
+        selection_guidance=selection_guidance,
     )
     return _analyze_comment_with_prompt(
         comment=comment,
@@ -93,6 +98,7 @@ def analyze_comment_with_dynamic_few_shot_llm(
             "few_shot_selection_tags": selection.matched_tags,
             "few_shot_selection_fallback": selection.used_fallback,
             "selected_feedback_example_ids": selection.selected_example_ids,
+            "dynamic_selection_guidance": selection_guidance,
         },
         strategy="dynamic_few_shot_llm",
         few_shot_examples_count=len(selection.examples),
@@ -158,7 +164,12 @@ def _analyze_comment_with_prompt(
         if parsed_response is None:
             raise ValueError("LLM response could not be parsed into the expected schema.")
 
-        normalized = _normalize_and_validate_response(parsed_response).model_dump()
+        normalized = _normalize_and_validate_response(
+            parsed_response,
+            strategy=strategy,
+            comment=comment,
+            trace_metadata=metadata,
+        ).model_dump()
         latency_ms = max(0, round((perf_counter() - started_at) * 1000))
         finalize_langsmith_run(
             run_context,
@@ -194,7 +205,13 @@ def _analyze_comment_with_prompt(
         raise
 
 
-def _normalize_and_validate_response(payload: LLMRiskAnalyzerResponse | dict[str, Any]) -> LLMRiskAnalyzerResponse:
+def _normalize_and_validate_response(
+    payload: LLMRiskAnalyzerResponse | dict[str, Any],
+    *,
+    strategy: str,
+    comment: str,
+    trace_metadata: dict[str, Any],
+) -> LLMRiskAnalyzerResponse:
     if isinstance(payload, LLMRiskAnalyzerResponse):
         raw_payload = payload.model_dump()
     else:
@@ -225,9 +242,6 @@ def _normalize_and_validate_response(payload: LLMRiskAnalyzerResponse | dict[str
         category=category,
         policy_references=policy_references,
     )
-    if calibration_note:
-        justification = f"{justification} [policy calibration: {calibration_note}]"
-
     normalized_payload = {
         "category": category,
         "risk_level": risk_level,
@@ -236,7 +250,138 @@ def _normalize_and_validate_response(payload: LLMRiskAnalyzerResponse | dict[str
         "policy_references": policy_references,
         "justification": justification,
     }
+    normalized_payload, strategy_calibration_note = _apply_strategy_specific_calibration(
+        normalized_payload,
+        strategy=strategy,
+        comment=comment,
+        trace_metadata=trace_metadata,
+    )
+    justification = str(normalized_payload["justification"]).strip()
+    if calibration_note:
+        justification = f"{justification} [policy calibration: {calibration_note}]"
+    if strategy_calibration_note:
+        justification = f"{justification} [strategy calibration: {strategy_calibration_note}]"
+
+    normalized_payload["justification"] = justification
     return LLMRiskAnalyzerResponse.model_validate(normalized_payload)
+
+
+def _build_dynamic_selection_guidance(
+    *,
+    comment: str,
+    matched_tags: list[str],
+) -> list[str]:
+    guidance: list[str] = []
+    normalized_comment = comment.lower()
+
+    if "explicit_spam" in matched_tags:
+        guidance.append(
+            "If the message has direct external redirect, explicit group recruiting, clear sale, explicit download invitation, or forceful promotional push, prefer spam / high / remove / R-001."
+        )
+        guidance.append(
+            "If there is only external contact, profile mention, private invitation, or mild commercial tone without strong redirect, prefer spam / medium / flag / R-001."
+        )
+
+    if "hate_or_discrimination" in matched_tags:
+        guidance.append(
+            "If a protected group is the real target and there is exclusion, inferiorization, or negative generalization, keep hate_or_discrimination / high / remove / R-004 and do not soften it to personal_attack."
+        )
+
+    if (
+        "offensive_language_quality_target" in matched_tags
+        or (
+            "offensive_language" in matched_tags
+            and "personal_attack" in matched_tags
+            and not _contains_any(
+                normalized_comment,
+                ("voce", "vocÃª", "professor", "tutor", "instrutor", "monitor"),
+            )
+        )
+    ):
+        guidance.append(
+            "If the complaint is mainly about the poor quality of the class, course, content, material, platform, service, or work delivered, prefer offensive_language / R-003 even if unnamed creators or preparers are mentioned indirectly."
+        )
+
+    return guidance
+
+
+def _apply_strategy_specific_calibration(
+    payload: dict[str, Any],
+    *,
+    strategy: str,
+    comment: str,
+    trace_metadata: dict[str, Any],
+) -> tuple[dict[str, Any], str | None]:
+    if strategy != "dynamic_few_shot_llm":
+        return payload, None
+
+    selection_tags = [
+        str(tag)
+        for tag in trace_metadata.get("few_shot_selection_tags", [])
+        if isinstance(tag, str)
+    ]
+    if (
+        "hate_or_discrimination" in selection_tags
+        and payload.get("category") != "hate_or_discrimination"
+        and _looks_like_protected_group_exclusion(comment)
+    ):
+        calibrated_payload = dict(payload)
+        calibrated_payload["category"] = "hate_or_discrimination"
+        calibrated_payload["risk_level"] = "high"
+        calibrated_payload["recommended_action"] = "remove"
+        calibrated_payload["policy_references"] = ["R-004"]
+        return (
+            calibrated_payload,
+            "protected-group exclusion kept as hate_or_discrimination / high / remove / R-004",
+        )
+
+    return payload, None
+
+
+def _looks_like_protected_group_exclusion(comment: str) -> bool:
+    text = comment.lower()
+    protected_group_terms = (
+        "religiao",
+        "religiÃ£o",
+        "origem",
+        "raca",
+        "raÃ§a",
+        "genero",
+        "gÃªnero",
+        "mulher",
+        "mulheres",
+        "homem",
+        "trans",
+        "gay",
+        "lesb",
+        "deficiencia",
+        "deficiÃªncia",
+        "nacionalidade",
+        "orientacao",
+        "orientaÃ§Ã£o",
+        "tipo de gente",
+    )
+    exclusion_or_prejudice_terms = (
+        "manda embora",
+        "nao quero dividir",
+        "nÃ£o quero dividir",
+        "nao deveria ter espaco",
+        "nÃ£o deveria ter espaÃ§o",
+        "estraga qualquer comunidade",
+        "nao deveria falar aqui",
+        "nÃ£o deveria falar aqui",
+        "menos capazes",
+        "complica a turma",
+        "preconceito",
+    )
+    return _contains_any(text, protected_group_terms) and _contains_any(
+        text,
+        exclusion_or_prejudice_terms,
+    )
+
+
+def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
+    return any(needle in text for needle in needles)
 
 
 def _calibrate_policy_references(
