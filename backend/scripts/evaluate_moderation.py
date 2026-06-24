@@ -39,6 +39,13 @@ SAFETY_DATASET = (
     / "datasets"
     / "moderation_safety_regression_eval.json"
 )
+ADVERSARIAL_DATASET = (
+    BACKEND_ROOT
+    / "app"
+    / "evaluation"
+    / "datasets"
+    / "moderation_post_tuning_adversarial_eval.json"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,7 +54,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--dataset",
-        choices=("main", "holdout", "blind", "safety"),
+        choices=("main", "holdout", "blind", "safety", "adversarial"),
         default="main",
         help="Seleciona um dataset predefinido. Default: main.",
     )
@@ -97,6 +104,8 @@ def resolve_dataset_path(args: argparse.Namespace) -> Path:
         return BLIND_DATASET
     if args.dataset == "safety":
         return SAFETY_DATASET
+    if args.dataset == "adversarial":
+        return ADVERSARIAL_DATASET
     return DEFAULT_DATASET
 
 

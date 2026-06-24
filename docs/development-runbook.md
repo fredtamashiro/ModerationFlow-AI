@@ -167,6 +167,14 @@ docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_m
 docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset safety --mode compare-ablation
 ```
 
+- para rodar a validacao adversarial pos-tuning, use:
+
+```bash
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset adversarial --mode dynamic-few-shot
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset adversarial --mode dynamic-few-shot --runs 3
+docker compose exec -e LANGSMITH_TRACING=false backend python scripts/evaluate_moderation.py --dataset adversarial --mode compare-ablation
+```
+
 Objetivo:
 
 - ganhar tempo reaproveitando infraestrutura, autenticação, layout e deploy;

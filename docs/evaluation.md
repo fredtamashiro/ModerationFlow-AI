@@ -2273,3 +2273,118 @@ Leitura:
 - apareceu um trade-off novo entre `positive_feedback` e `legitimate_criticism` no `blind`, fora do foco principal desta etapa;
 - a melhor melhoria desta etapa foi em severidade de spam generico, nao em categoria fina;
 - o caminho completo continua mais forte no `safety` do que no `blind`.
+
+## Post-tuning adversarial validation - Etapa 040
+
+### Objetivo
+
+Criar um dataset novo, adversarial e pos-tuning para medir a generalizacao da estrategia atual sem reutilizar textos dos conjuntos usados em tuning e calibragem.
+
+O foco principal desta etapa foi validar:
+
+- baseline `llm`
+- `dynamic_few_shot_base`
+- `dynamic_few_shot_guided`
+- `dynamic_few_shot_guardrailed`
+
+sem alterar prompt, analyzer, seletor ou guardrail.
+
+### Separacao contra datasets de tuning
+
+Foi criado:
+
+- `backend/app/evaluation/datasets/moderation_post_tuning_adversarial_eval.json`
+
+O conjunto possui:
+
+- `30` exemplos sinteticos;
+- `0` colisoes literais com `main`, `holdout`, `blind`, `safety` e `feedback_examples`.
+
+Este dataset e de validacao final da versao atual.
+Ele nao deve ser usado como fonte para novo tuning imediato.
+
+### Cobertura do dataset
+
+O conjunto cobre casos ineditos para:
+
+- `R-004` com grupo protegido claro e exclusao explicita;
+- casos negativos com termos de religiao, genero, nacionalidade e deficiencia que nao devem virar `R-004`;
+- spam sutil;
+- promocao comercial leve;
+- spam explicito com `site`, `perfil` e grupo externo;
+- `personal_attack` moderado e severo;
+- `offensive_language` contra conteudo, material, servico e entrega;
+- critica ambigua;
+- sarcasmo;
+- feedback positivo com ressalva;
+- suporte frustrado;
+- fronteiras `flag` vs `remove` e `medium` vs `high`;
+- dois casos de `dangerous_or_illegal_content` para ampliar robustez fora do eixo principal.
+
+### Metricas por estrategia
+
+`compare-ablation` no dataset `adversarial`:
+
+- baseline `llm`: `100.00 / 100.00 / 96.67 / 100.00`
+- `dynamic-few-shot-base`: `100.00 / 100.00 / 96.67 / 100.00`
+- `dynamic-few-shot-guided`: `100.00 / 100.00 / 96.67 / 100.00`
+- `dynamic-few-shot-guardrailed`: `96.67 / 96.67 / 96.67 / 100.00`
+
+Leitura:
+
+- baseline, `base` e `guided` empataram neste conjunto;
+- a variante `guardrailed` perdeu `3.33` pontos em `action` e `risk`, sem perder `category` nem `policy`;
+- todas as estrategias terminaram com `failed_runs = 0`.
+
+### Resultado da variante guardrailed
+
+Rodada simples de `dynamic-few-shot` no dataset `adversarial`:
+
+- `accuracy_action: 100.00%`
+- `accuracy_risk_level: 100.00%`
+- `accuracy_category: 93.33%`
+- `policy_match_rate: 96.67%`
+- `failed_runs: 0`
+
+Variancia em `dynamic-few-shot --runs 3`:
+
+- `accuracy_action mean: 98.89%`
+- `accuracy_risk_level mean: 98.89%`
+- `accuracy_category mean: 94.45%`
+- `policy_match_rate mean: 98.89%`
+- `failed_runs mean: 0.00`
+
+O principal desvio residual da estrategia completa no conjunto adversarial ficou em dois pontos:
+
+- `offensive_language -> personal_attack` em comentarios sobre qualidade de entrega com mencao mais humana;
+- uma rodada com `flag -> remove` e `medium -> high` em um caso de ataque humano moderado.
+
+### Evidencias de generalizacao
+
+Sinais positivos:
+
+- `R-004` ficou estavel em todos os casos claros do novo conjunto;
+- os negativos de `R-004` nao viraram falso positivo nas rodadas principais;
+- spam sutil e spam explicito ficaram bem separados no modo principal;
+- `dangerous_or_illegal_content` tambem permaneceu estavel;
+- `failed_runs = 0` em todas as validacoes finais executadas.
+
+Sinais de cautela:
+
+- o conjunto teve `fallback` em `40%` dos exemplos, entao a estrategia principal ainda depende bastante do bloco curto padrao de few-shot;
+- a fronteira `offensive_language` vs `personal_attack` continua sendo o ponto mais fragil fora dos datasets anteriores;
+- a variante `guardrailed` nao mostrou ganho sobre baseline neste conjunto e chegou a perder `action/risk` numa comparacao simples.
+
+Em termos praticos:
+
+- ha evidencias reais de generalizacao forte em seguranca, spam e suporte;
+- nao ha evidencia de superioridade universal da variante `guardrailed` em todos os cenarios adversariais;
+- o ganho do experimento continua sendo mais confiavel em seguranca e estabilidade de `R-004` do que em fronteiras finas de categoria.
+
+### Limitacoes
+
+- este dataset e novo, mas ainda sintetico;
+- ele mede generalizacao pos-tuning, nao comportamento em producao real;
+- a fronteira `offensive_language` vs `personal_attack` segue sendo a principal fonte de erro residual;
+- a leitura desta etapa deve ser de validacao final da versao atual, nao de gatilho para mais tuning imediato;
+- qualquer etapa seguinte deve tratar este conjunto como auditoria externa, nao como novo conjunto de treino manual.

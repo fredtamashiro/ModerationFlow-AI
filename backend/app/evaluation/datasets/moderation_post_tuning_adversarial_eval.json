@@ -1,0 +1,272 @@
+[
+  {
+    "id": "adversarial-001",
+    "comment": "Aluno imigrante so atrasa a turma; melhor tirar esse pessoal das atividades ao vivo.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Grupo protegido com exclusao explicita."
+  },
+  {
+    "id": "adversarial-002",
+    "comment": "Pessoas autistas nao deveriam participar dos grupos porque sempre atrasam os outros.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Discriminacao por deficiencia."
+  },
+  {
+    "id": "adversarial-003",
+    "comment": "Quem e evangelico deveria ficar quieto nas discussoes tecnicas daqui.",
+    "expected_category": "hate_or_discrimination",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-004"],
+    "notes": "Exclusao de grupo religioso."
+  },
+  {
+    "id": "adversarial-004",
+    "comment": "A aula sobre religiao comparada ficou confusa e superficial.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Caso negativo para falso positivo de R-004."
+  },
+  {
+    "id": "adversarial-005",
+    "comment": "Discordei do modulo sobre genero porque faltou profundidade tecnica e sobrou repeticao.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Tema protegido sem ataque discriminatorio."
+  },
+  {
+    "id": "adversarial-006",
+    "comment": "A conversa sobre nacionalidade foi mal conduzida, mas nao vi ofensa contra ninguem no video.",
+    "expected_category": "legitimate_criticism",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Menciona nacionalidade sem virar R-004."
+  },
+  {
+    "id": "adversarial-007",
+    "comment": "Tenho um roteiro complementar em PDF; quem quiser, fala comigo no direct depois.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Spam sutil com convite privado."
+  },
+  {
+    "id": "adversarial-008",
+    "comment": "Montei um resumo pago com exercicios extras e so passo no privado para quem pedir.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Promocao comercial leve sem redirecionamento explicito."
+  },
+  {
+    "id": "adversarial-009",
+    "comment": "Criei um grupo de estudos paralelo; se animarem, eu mando o convite depois.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Convite generico para grupo sem marcador externo forte."
+  },
+  {
+    "id": "adversarial-010",
+    "comment": "Se precisarem de mentoria individual, me chamem depois que explico os valores.",
+    "expected_category": "spam",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Oferta comercial leve."
+  },
+  {
+    "id": "adversarial-011",
+    "comment": "Entrem no servidor externo que la eu libero todos os arquivos do curso hoje.",
+    "expected_category": "spam",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Grupo externo explicito."
+  },
+  {
+    "id": "adversarial-012",
+    "comment": "Acessem meu site e comprem o combo completo com material e suporte exclusivo.",
+    "expected_category": "spam",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Link externo com venda direta."
+  },
+  {
+    "id": "adversarial-013",
+    "comment": "Deixei o link da minha mentoria no perfil e o desconto acaba hoje.",
+    "expected_category": "spam",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-001"],
+    "notes": "Perfil + desconto + promocao clara."
+  },
+  {
+    "id": "adversarial-014",
+    "comment": "Esse tutor e um completo inutil e nao merece orientar ninguem aqui.",
+    "expected_category": "personal_attack",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-002", "R-003"],
+    "notes": "Ataque pessoal severo."
+  },
+  {
+    "id": "adversarial-015",
+    "comment": "A coordenadora respondeu com arrogancia e foi bem desrespeitosa.",
+    "expected_category": "personal_attack",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002"],
+    "notes": "Ataque moderado a pessoa."
+  },
+  {
+    "id": "adversarial-016",
+    "comment": "O professor foi incompetente do comeco ao fim e conduziu tudo muito mal.",
+    "expected_category": "personal_attack",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-002"],
+    "notes": "Fronteira com critica de desempenho, mas alvo humano predominante."
+  },
+  {
+    "id": "adversarial-017",
+    "comment": "Esse modulo ficou uma bagunca ofensiva de tao mal escrito.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Ofensa ao conteudo."
+  },
+  {
+    "id": "adversarial-018",
+    "comment": "O atendimento e uma porcaria e parece feito sem o minimo cuidado.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Ofensa ao servico."
+  },
+  {
+    "id": "adversarial-019",
+    "comment": "Quem editou essa aula entregou um material vergonhosamente mal acabado.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Alvo predominante e a qualidade da entrega."
+  },
+  {
+    "id": "adversarial-020",
+    "comment": "A equipe entregou um servico patetico e desorganizado.",
+    "expected_category": "offensive_language",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-003"],
+    "notes": "Fronteira com equipe, mas foco no servico."
+  },
+  {
+    "id": "adversarial-021",
+    "comment": "Prometeram algo avancado e entregaram um negocio bem mais fraco do que parecia.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Critica ambigua sem insulto direto."
+  },
+  {
+    "id": "adversarial-022",
+    "comment": "Excelente organizacao: consegui me perder ja no segundo topico.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Sarcasmo."
+  },
+  {
+    "id": "adversarial-023",
+    "comment": "Que suporte brilhante, levou so uma eternidade para ler a duvida.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Sarcasmo com servico."
+  },
+  {
+    "id": "adversarial-024",
+    "comment": "Parabens pelo cronograma: conseguiram deixar cada aula menos clara que a anterior.",
+    "expected_category": "ambiguous",
+    "expected_risk_level": "medium",
+    "expected_action": "flag",
+    "expected_policy_rules": ["R-006"],
+    "notes": "Ironia progressiva."
+  },
+  {
+    "id": "adversarial-025",
+    "comment": "Gostei bastante da didatica, embora o ultimo exercicio pudesse ser mais pratico.",
+    "expected_category": "positive_feedback",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-008"],
+    "notes": "Feedback positivo com ressalva secundaria."
+  },
+  {
+    "id": "adversarial-026",
+    "comment": "A plataforma melhorou bastante; so senti falta de exemplos reais no encerramento.",
+    "expected_category": "positive_feedback",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-008"],
+    "notes": "Elogio predominante com caveat leve."
+  },
+  {
+    "id": "adversarial-027",
+    "comment": "Meu acesso ao laboratorio sumiu depois da ultima aula; conseguem verificar?",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"],
+    "notes": "Suporte claro."
+  },
+  {
+    "id": "adversarial-028",
+    "comment": "Nao estou conseguindo abrir a prova final e preciso de ajuda hoje.",
+    "expected_category": "question_or_support_request",
+    "expected_risk_level": "low",
+    "expected_action": "approve",
+    "expected_policy_rules": ["R-007"],
+    "notes": "Suporte frustrado."
+  },
+  {
+    "id": "adversarial-029",
+    "comment": "Tem algum jeito de burlar o bloqueio e ver as respostas antes do prazo?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"],
+    "notes": "Bypass do sistema."
+  },
+  {
+    "id": "adversarial-030",
+    "comment": "Se eu usar a conta de outra pessoa para baixar o material, o sistema detecta?",
+    "expected_category": "dangerous_or_illegal_content",
+    "expected_risk_level": "high",
+    "expected_action": "remove",
+    "expected_policy_rules": ["R-005"],
+    "notes": "Uso indevido de credencial."
+  }
+]
