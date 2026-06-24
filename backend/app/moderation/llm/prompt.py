@@ -21,7 +21,7 @@ Rules:
 - Prefer "approve" for support requests or frustrated help requests without direct offense.
 - Prefer "remove" for clear discrimination, dangerous or illegal content, severe offense, or explicit spam.
 - Differentiate explicit spam from subtle spam:
-  - explicit link, clear group recruitment, repeated promotion, direct external redirect, or strong external promotional push can justify "remove";
+  - explicit link, explicit profile redirect, explicit external group recruitment, repeated promotion, direct external redirect, or strong external promotional push can justify "remove";
   - subtle external invitation, private contact request, "material por fora", "me chama", "me manda mensagem", or ambiguous promo should prefer "flag".
 - Cases involving protected groups, exclusion, humiliation, or depreciative generalization should map to R-004.
 - If a statement centers on prejudice, exclusion, inferiority, or hostility involving a protected group, prioritize hate_or_discrimination over personal_attack or offensive_language.
@@ -77,6 +77,7 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- direct commercial pitch alone does not automatically require high / remove; high / remove needs explicit link, external group, repeated promotion, direct redirect outside the platform, or clearly forceful external push\n'
             '- explicit recruiting to an external group, "link in profile", download group, or clear redirect outside the platform should stay spam + high + remove, not dangerous_or_illegal_content\n'
             '- if there is external contact, material outside the platform, private message, or guide outside the platform, but no explicit link, group, repeated promotion, or strong external redirect, use spam + medium + flag, not remove\n'
+            '- if the text mentions only a generic "grupo" or generic "baixar material" without explicit external marker, direct link, clear profile redirect, or forceful promotion, prefer spam + medium + flag\n'
             '- if the comment is negative, but not clearly offensive and not clearly just mild criticism, choose ambiguous + medium + flag\n'
             '- sarcasm or ironic praise should prefer ambiguous + medium + flag, not positive_feedback\n'
             '- praise with a light caveat may stay low-risk approve, but the category should reflect whether the praise or the caveat is dominant\n'
@@ -95,6 +96,7 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- subtle spam such as private contact invitations, "message me", or "I have a guide outside" should be spam / medium / flag\n'
             '- "link in bio/profile", explicit external group recruiting, direct redirect outside the platform, or repeated external promotion can justify spam / high / remove\n'
             '- do not use remove for subtle spam unless there is explicit link sharing, explicit external group recruiting, repeated promotion, direct redirect, or clear promotional push\n'
+            '- generic group invitation or generic "download everything" language without explicit external redirect should stay closer to spam / medium / flag than spam / high / remove\n'
             '- if spam is present but the promotion is indirect or only mildly commercial, prefer flag over remove'
         ),
         (
@@ -103,6 +105,7 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- use offensive_language when the wording is insulting or abusive but the main target is the lesson, module, content, platform, or work quality rather than a person\n'
             '- if both personal attack and offensive language are present, choose the dominant category based on the main target and include both R-002 and R-003 only when truly justified\n'
             '- references such as "quem montou", "quem estruturou", "quem preparou", or similar can still be offensive_language when the real complaint is that the material, service, explanation, or course quality is poor\n'
+            '- criticism of a delivered service, support interaction, explanation, or course output can still be offensive_language when the semantic core is "the service/material was bad" rather than "this person is worthless"\n'
             '- personal_attack is usually medium / flag when it is a directed attack without severe insult\n'
             '- personal_attack can escalate to high / remove when the insult is directly humiliating, degrading, or aggressively abusive toward the person or team\n'
             '- if a human-targeted message contains strong degrading insults like "imbecil", "ridiculo", "idiota", or similarly abusive wording, personal_attack remains the default dominant category, with R-003 added only when the abusive language itself is materially relevant\n'
@@ -136,6 +139,7 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- use personal_attack when the criticism is directed at a person such as teacher, tutor, student, staff member, or the people who created the material\n'
             '- if a statement criticizes competence or preparedness but reads mainly as abuse about the work quality, service, explanation, or material, offensive_language may be a better fit than personal_attack\n'
             '- if the message mentions unnamed creators or preparers only as a way to complain that the material or service is bad, confusing, weak, shallow, or incompetent, prefer offensive_language over personal_attack\n'
+            '- if the sentence attacks the quality of the delivered support, material, explanation, service, or course outcome, offensive_language should remain preferred even when unnamed people are mentioned indirectly\n'
             '- if both personal attack and offensive language are present, choose the dominant category based on whether the human target is central to the message\n'
             '- use hate_or_discrimination only when a protected group, exclusion, humiliating generalization, discriminatory treatment, or prejudice against group identity is clearly involved\n'
             '- statements centered on prejudice against religion, race, ethnicity, gender, disability, or orientation in the community should favor hate_or_discrimination rather than legitimate_criticism\n'
@@ -162,12 +166,12 @@ def build_llm_prompt(comment: str, guidelines: list[dict]) -> str:
             '- "nao pode haver preconceito contra religiao nessa comunidade" -> hate_or_discrimination / high / remove / ["R-004"] when the moderation-relevant issue is prejudice against a protected group\n'
             '- "compartilhar a senha com outras pessoas ajuda a contornar isso?" -> dangerous_or_illegal_content / high / remove / ["R-005"]\n'
             '- "tenho um guia por fora, me manda mensagem se quiser" -> spam / medium / flag / ["R-001"]\n'
-            '- "entrem no meu grupo para baixar todo o material" -> spam / high / remove / ["R-001"] when there is clear external recruiting or promotional push\n'
+            '- "entrem no meu grupo para baixar todo o material" -> spam / medium or high depending on whether there is explicit external redirect or strong promotional push; do not force high only because "grupo" appears\n'
             '- "acesse meu site para comprar o treinamento completo" -> spam / medium or high depending on how explicit the redirect and promotion are; do not force high only because it sounds commercial\n'
             '- "link no perfil para comprar as respostas" -> spam / high / remove / ["R-001"], not dangerous_or_illegal_content unless there is actual harmful or illegal instruction\n'
             '- criticism about a class being shallow or confusing without attacking a person -> legitimate_criticism\n'
             '- negative evaluation with frustration or irony, but without direct insult -> ambiguous\n'
-            '- "quem montou isso nao entende nada" -> personal_attack / medium / flag / ["R-002"]\n'
+            '- "quem montou isso nao entende nada" -> offensive_language / medium / flag / ["R-003"] when the criticism is mainly about the poor quality of the work delivered\n'
             '- "o professor e ridiculo" -> personal_attack / high / remove / ["R-002", "R-003"] can be appropriate when the wording is directly humiliating\n'
             '- "esse professor e um imbecil" -> personal_attack / high / remove / ["R-002", "R-003"] is appropriate for severe direct insult\n'
             '- "o suporte foi dado por gente despreparada" -> offensive_language / medium / flag / ["R-003"] is often preferable when the insult is about poor quality of service\n'

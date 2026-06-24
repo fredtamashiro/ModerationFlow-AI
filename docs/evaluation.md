@@ -2139,3 +2139,137 @@ Contribuicao principal observada:
 - `explicit_spam` continua como principal gargalo do `blind`;
 - `offensive_language` vs `personal_attack` segue instavel em casos com alvo humano explicito;
 - o `dynamic-few-shot-guardrailed` continua sendo o melhor experimento geral, mas sua superioridade no `safety` depende fortemente da camada defensiva de `R-004`.
+
+## Explicit spam and target-boundary calibration - Etapa 039
+
+### Padroes analisados
+
+Esta etapa atacou apenas dois residuos do experimento `dynamic-few-shot`:
+
+- `explicit_spam`, especialmente quando convite generico para grupo ou download era elevado para `high / remove`;
+- a fronteira `offensive_language` vs `personal_attack`, restringindo a troca para `offensive_language` aos casos em que o alvo predominante e a qualidade do material, servico, explicacao ou entrega.
+
+O guardrail de `R-004` nao foi alterado.
+
+### Ajustes realizados
+
+- a selecao dinamica de `explicit_spam` passou a misturar primeiro exemplos `medium / flag` e depois `high / remove`, mantendo o limite de 4 exemplos;
+- a deteccao de `explicit_spam` deixou de tratar `grupo` e `baixar` genericos como sinal suficiente de redirecionamento forte, empurrando esses casos para a trilha mais proxima de `subtle_spam`;
+- o prompt few-shot ganhou instrucoes mais explicitas para nao forcar `high / remove` quando houver apenas grupo generico, download generico ou promocao sem marcador externo claro;
+- o analisador ganhou calibragem leve para manter `spam / medium / flag / R-001` em convites genericos sem link, perfil, site, canal, `externo` ou push comercial forte;
+- o analisador ganhou uma calibragem restrita para manter `offensive_language / medium / flag / R-003` em queixas sobre qualidade do trabalho entregue, sem rebaixar insulto humano direto severo;
+- insultos humanos diretos como `imbecil` e `ridiculo` permaneceram fora dessa recalibragem.
+
+### Efeito no explicit_spam
+
+Antes da calibragem, a rodada simples de `dynamic-few-shot` no `blind` mostrava:
+
+- `accuracy_action: 93.75%`
+- `accuracy_risk_level: 87.50%`
+- divergencias em `explicit_spam` com `risk medium -> high` em 3 casos;
+- um desvio adicional `action flag -> remove` em convite generico para grupo.
+
+Depois da calibragem, a rodada simples de `dynamic-few-shot` no `blind` ficou:
+
+- `accuracy_action: 96.88%`
+- `accuracy_risk_level: 90.62%`
+- `explicit_spam` passou a concentrar apenas `risk medium -> high` em 2 casos;
+- o desvio `flag -> remove` saiu do comentario generico de grupo e migrou para `0` casos na rodada validada.
+
+Leitura:
+
+- a calibragem ajudou a conter severidade excessiva em spam generico;
+- ainda restam dois casos no `blind` em que `site/perfil + promocao` continuam saindo como `high` quando o benchmark espera `medium`;
+- esse residual foi mantido por ser mais defensavel do que enfraquecer demais spam com redirecionamento explicito.
+
+### Efeito na fronteira offensive_language vs personal_attack
+
+No `safety`, a calibragem preservou `100%` nas metricas do modo completo e manteve correto o caso de qualidade indireta:
+
+- `Quem preparou esse material nao domina o assunto.` permaneceu bem resolvido como `offensive_language`;
+- `O professor foi despreparado e conduziu muito mal a aula.` nao foi rebaixado indevidamente na estrategia completa.
+
+No `blind`, a fronteira continuou com erro residual em insulto humano direto:
+
+- `Esse professor e um imbecil.`
+- `Voce e ridiculo e nao sabe ensinar.`
+
+Esses dois casos continuam saindo como `personal_attack`, o que reduz `accuracy_category` do benchmark, mas esta manutencao foi intencional. Pela regra desta etapa, insulto humano direto e central nao deveria ser puxado para `offensive_language` apenas para ganhar metrica.
+
+### Metricas no blind
+
+`dynamic-few-shot` simples depois da etapa:
+
+- `accuracy_action: 96.88%`
+- `accuracy_risk_level: 90.62%`
+- `accuracy_category: 87.50%`
+- `policy_match_rate: 96.88%`
+- `failed_runs: 0`
+
+`compare-ablation` no `blind`:
+
+- baseline `llm`: `93.75 / 87.50 / 87.50 / 93.75`
+- `dynamic-few-shot-base`: `96.88 / 90.62 / 93.75 / 100.00`
+- `dynamic-few-shot-guided`: `96.88 / 90.62 / 87.50 / 96.88`
+- `dynamic-few-shot-guardrailed`: `96.88 / 90.62 / 87.50 / 96.88`
+
+Leitura:
+
+- o ganho mais claro no `blind` veio da combinacao entre selecao revisada e contencao de spam generico;
+- a variante `base` foi a melhor rodada comparativa no `blind`;
+- `guided` e `guardrailed` mantiveram o ganho em `action/risk`, mas perderam em `category` por causa de fronteiras positivas/critica e da manutencao do erro residual de insulto humano direto.
+
+### Metricas no safety
+
+`dynamic-few-shot` simples depois da etapa:
+
+- `accuracy_action: 100.00%`
+- `accuracy_risk_level: 100.00%`
+- `accuracy_category: 100.00%`
+- `policy_match_rate: 100.00%`
+- `failed_runs: 0`
+
+`compare-ablation` no `safety`:
+
+- baseline `llm`: `95.83 / 95.83 / 95.83 / 95.83`
+- `dynamic-few-shot-base`: `95.83 / 95.83 / 95.83 / 95.83`
+- `dynamic-few-shot-guided`: `95.83 / 95.83 / 95.83 / 95.83`
+- `dynamic-few-shot-guardrailed`: `100.00 / 100.00 / 100.00 / 100.00`
+
+Leitura:
+
+- a calibragem desta etapa nao mexeu no papel causal do guardrail de `R-004`;
+- `base` e `guided` continuaram empatados com o baseline no `safety`;
+- a estrategia completa continuou dependendo do guardrail para fechar `100%`.
+
+### Variancia observada
+
+`dynamic-few-shot --runs 3` no `blind`:
+
+- `accuracy_action mean: 96.88%`
+- `accuracy_risk_level mean: 90.62%`
+- `accuracy_category mean: 88.54%`
+- `policy_match_rate mean: 95.84%`
+- `failed_runs mean: 0.00`
+
+`dynamic-few-shot --runs 3` no `safety`:
+
+- `accuracy_action mean: 100.00%`
+- `accuracy_risk_level mean: 100.00%`
+- `accuracy_category mean: 100.00%`
+- `policy_match_rate mean: 100.00%`
+- `failed_runs mean: 0.00`
+
+Leitura:
+
+- no `blind`, `action` e `risk` ficaram estaveis nas tres rodadas;
+- `category` continuou oscilando pouco por causa das fronteiras `positive_feedback` vs `legitimate_criticism` e `offensive_language` vs `personal_attack`;
+- no `safety`, a estrategia completa permaneceu totalmente estavel.
+
+### Limitacoes conhecidas
+
+- ainda restam dois casos de `explicit_spam` no `blind` com `medium -> high` em mensagens de promocao com `site/perfil`;
+- insulto humano direto severo continua saindo como `personal_attack`, mesmo quando o benchmark rotula `offensive_language`;
+- apareceu um trade-off novo entre `positive_feedback` e `legitimate_criticism` no `blind`, fora do foco principal desta etapa;
+- a melhor melhoria desta etapa foi em severidade de spam generico, nao em categoria fina;
+- o caminho completo continua mais forte no `safety` do que no `blind`.

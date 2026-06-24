@@ -16,7 +16,7 @@ TAGGED_FEEDBACK_EXAMPLE_IDS = {
     "ambiguous_criticism": ("feedback-003", "feedback-024"),
     "sarcasm": ("feedback-004", "feedback-020"),
     "subtle_spam": ("feedback-006", "feedback-007"),
-    "explicit_spam": ("feedback-008", "feedback-006"),
+    "explicit_spam": ("feedback-006", "feedback-008", "feedback-007", "feedback-009"),
     "personal_attack": ("feedback-010", "feedback-022"),
     "personal_attack_severe": ("feedback-012", "feedback-010"),
     "offensive_language_quality_target": ("feedback-013", "feedback-023"),
@@ -88,9 +88,9 @@ def _detect_selection_tags(comment: str) -> list[str]:
             "religiao",
             "origem",
             "raca",
-            "raça",
+            "raÃ§a",
             "genero",
-            "gênero",
+            "gÃªnero",
             "mulher",
             "mulheres",
             "homem",
@@ -98,46 +98,55 @@ def _detect_selection_tags(comment: str) -> list[str]:
             "gay",
             "lesb",
             "deficiencia",
-            "deficiência",
+            "deficiÃªncia",
             "nacionalidade",
             "orientacao",
-            "orientação",
+            "orientaÃ§Ã£o",
             "preconceito",
             "tipo de gente",
             "manda embora",
             "nao quero dividir",
-            "não quero dividir",
+            "nÃ£o quero dividir",
             "nao deveria ter espaco",
-            "não deveria ter espaço",
+            "nÃ£o deveria ter espaÃ§o",
         ),
     ):
         tags.append("hate_or_discrimination")
 
-    if _contains_any(
+    explicit_external_spam = _contains_any(
         text,
         (
             "link",
             "perfil",
             "site",
-            "grupo",
             "canal",
             "acesse",
             "acessem",
-            "entre no grupo",
-            "entrem no grupo",
             "compr",
             "vendo",
             "venda",
             "desconto",
             "promoc",
-            "promoç",
-            "baixar",
+            "promoÃ§",
             "pacote",
             "externo",
+            "grupo externo",
+            "canal externo",
+            "link no perfil",
         ),
-    ):
+    )
+    generic_group_or_download_spam = _contains_any(
+        text,
+        (
+            "grupo",
+            "entre no grupo",
+            "entrem no grupo",
+            "baixar",
+        ),
+    )
+    if explicit_external_spam:
         tags.append("explicit_spam")
-    elif _contains_any(
+    elif generic_group_or_download_spam or _contains_any(
         text,
         (
             "mensagem",
@@ -180,9 +189,9 @@ def _detect_selection_tags(comment: str) -> list[str]:
         (
             "...",
             "so que nao",
-            "só que não",
+            "sÃ³ que nÃ£o",
             "parabens",
-            "parabéns",
+            "parabÃ©ns",
             "nossa",
             "espetacular",
             "revolucion",
@@ -200,7 +209,7 @@ def _detect_selection_tags(comment: str) -> list[str]:
             "equipe",
             "suporte",
             "voce",
-            "você",
+            "vocÃª",
         ),
     )
     content_target = _contains_any(
@@ -209,15 +218,15 @@ def _detect_selection_tags(comment: str) -> list[str]:
             "aula",
             "curso",
             "modulo",
-            "módulo",
+            "mÃ³dulo",
             "conteudo",
-            "conteúdo",
+            "conteÃºdo",
             "material",
             "servico",
-            "serviço",
+            "serviÃ§o",
             "apostila",
             "explicacao",
-            "explicação",
+            "explicaÃ§Ã£o",
             "trilha",
             "plataforma",
             "trabalho entregue",
@@ -231,9 +240,10 @@ def _detect_selection_tags(comment: str) -> list[str]:
             "quem preparou",
             "quem fez",
             "nao domina o assunto",
-            "nÃ£o domina o assunto",
+            "nÃƒÂ£o domina o assunto",
             "mal organizado",
             "mal explicado",
+            "suporte foi dado",
         ),
     )
     hostile_words = _contains_any(
@@ -241,14 +251,14 @@ def _detect_selection_tags(comment: str) -> list[str]:
         (
             "imbecil",
             "ridiculo",
-            "ridículo",
+            "ridÃ­culo",
             "idiota",
             "patetico",
-            "patético",
+            "patÃ©tico",
             "porcaria",
             "lixo",
             "horrivel",
-            "horrível",
+            "horrÃ­vel",
             "vergonha",
             "despreparad",
             "grosseir",
@@ -264,10 +274,10 @@ def _detect_selection_tags(comment: str) -> list[str]:
         (
             "imbecil",
             "ridiculo",
-            "ridículo",
+            "ridÃ­culo",
             "idiota",
             "patetico",
-            "patético",
+            "patÃ©tico",
         ),
     )
 

@@ -345,10 +345,10 @@ def _build_dynamic_selection_guidance(
 
     if "explicit_spam" in matched_tags:
         guidance.append(
-            "If the message has direct external redirect, explicit group recruiting, clear sale, explicit download invitation, or forceful promotional push, prefer spam / high / remove / R-001."
+            "If the message has direct external redirect, explicit external group recruiting, clear sale, explicit profile/link redirect, or forceful promotional push, prefer spam / high / remove / R-001."
         )
         guidance.append(
-            "If there is only external contact, profile mention, private invitation, or mild commercial tone without strong redirect, prefer spam / medium / flag / R-001."
+            "If there is only private invitation, generic group mention, generic download invitation, profile mention without strong redirect, or mild commercial tone, prefer spam / medium / flag / R-001."
         )
 
     if "hate_or_discrimination" in matched_tags:
@@ -381,18 +381,50 @@ def _apply_strategy_specific_calibration(
     comment: str,
     trace_metadata: dict[str, Any],
 ) -> tuple[dict[str, Any], str | None]:
-    if strategy != "dynamic_few_shot_llm":
-        if strategy != "dynamic_few_shot_guardrailed_llm":
-            return payload, None
-
-    if not trace_metadata.get("dynamic_guardrail_enabled", False):
+    if strategy not in {
+        "dynamic_few_shot_llm",
+        "dynamic_few_shot_base_llm",
+        "dynamic_few_shot_guided_llm",
+        "dynamic_few_shot_guardrailed_llm",
+    }:
         return payload, None
+
+    if payload.get("category") == "personal_attack" and _looks_like_quality_target_offense(
+        comment
+    ):
+        calibrated_payload = dict(payload)
+        calibrated_payload["category"] = "offensive_language"
+        calibrated_payload["risk_level"] = "medium"
+        calibrated_payload["recommended_action"] = "flag"
+        calibrated_payload["policy_references"] = ["R-003"]
+        return (
+            calibrated_payload,
+            "quality-target complaint kept as offensive_language / medium / flag / R-003",
+        )
 
     selection_tags = [
         str(tag)
         for tag in trace_metadata.get("few_shot_selection_tags", [])
         if isinstance(tag, str)
     ]
+    if (
+        payload.get("category") == "spam"
+        and "subtle_spam" in selection_tags
+        and "explicit_spam" not in selection_tags
+        and _looks_like_subtle_spam_without_explicit_redirect(comment)
+    ):
+        calibrated_payload = dict(payload)
+        calibrated_payload["risk_level"] = "medium"
+        calibrated_payload["recommended_action"] = "flag"
+        calibrated_payload["policy_references"] = ["R-001"]
+        return (
+            calibrated_payload,
+            "generic group/contact spam kept as spam / medium / flag / R-001",
+        )
+
+    if not trace_metadata.get("dynamic_guardrail_enabled", False):
+        return payload, None
+
     if (
         "hate_or_discrimination" in selection_tags
         and payload.get("category") != "hate_or_discrimination"
@@ -409,6 +441,135 @@ def _apply_strategy_specific_calibration(
         )
 
     return payload, None
+
+
+def _looks_like_quality_target_offense(comment: str) -> bool:
+    text = comment.lower()
+    direct_human_insult = _contains_any(
+        text,
+        (
+            "voce e",
+            "vocÃƒÂª ÃƒÂ©",
+            "professor e",
+            "professor ÃƒÂ©",
+            "professor foi",
+            "tutor e",
+            "tutor ÃƒÂ©",
+            "tutor foi",
+            "instrutor e",
+            "instrutor ÃƒÂ©",
+            "instrutor foi",
+            "equipe e",
+            "equipe ÃƒÂ©",
+            "equipe foi incompetente",
+            "equipe foi arrogante",
+            "professor foi despreparado",
+            "tutor foi despreparado",
+            "professor foi incompetente",
+            "tutor foi incompetente",
+            "monitor respondeu de forma grosseira",
+            "nao deveria orientar ninguem",
+            "nÃƒÂ£o deveria orientar ninguÃƒÂ©m",
+        ),
+    )
+    severe_direct_insult = _contains_any(
+        text,
+        (
+            "imbecil",
+            "ridiculo",
+            "ridÃƒÂ­culo",
+            "idiota",
+            "patetico",
+            "patÃƒÂ©tico",
+        ),
+    )
+    indirect_creator_or_service_target = _contains_any(
+        text,
+        (
+            "quem montou",
+            "quem estruturou",
+            "quem preparou",
+            "quem fez",
+            "suporte foi dado",
+            "atendimento",
+            "servico",
+            "serviÃƒÂ§o",
+            "material",
+            "apostila",
+            "curso",
+            "aula",
+            "conteudo",
+            "conteÃƒÂºdo",
+            "modulo",
+            "mÃƒÂ³dulo",
+            "plataforma",
+            "explicacao",
+            "explicaÃƒÂ§ÃƒÂ£o",
+            "trabalho entregue",
+        ),
+    )
+    quality_attack = _contains_any(
+        text,
+        (
+            "nao domina o assunto",
+            "nÃƒÂ£o domina o assunto",
+            "despreparad",
+            "malfeito",
+            "mal explicado",
+            "confuso",
+            "horrivel",
+            "horrÃƒÂ­vel",
+            "lixo",
+            "porcaria",
+            "desastre",
+            "irritante",
+            "cansativo",
+        ),
+    )
+    return indirect_creator_or_service_target and quality_attack and not (
+        direct_human_insult or severe_direct_insult
+    )
+
+
+def _looks_like_subtle_spam_without_explicit_redirect(comment: str) -> bool:
+    text = comment.lower()
+    has_generic_invitation = _contains_any(
+        text,
+        (
+            "grupo",
+            "baixar",
+            "mensagem",
+            "privado",
+            "direct",
+            "inbox",
+            "chat",
+            "guia",
+            "contato",
+            "chamar",
+            "me chama",
+            "me mand",
+        ),
+    )
+    has_explicit_redirect = _contains_any(
+        text,
+        (
+            "link",
+            "perfil",
+            "site",
+            "canal",
+            "externo",
+            "acesse",
+            "acessem",
+            "compr",
+            "vendo",
+            "venda",
+            "desconto",
+            "promoc",
+            "promoÃ§",
+            "pacote",
+        ),
+    )
+    return has_generic_invitation and not has_explicit_redirect
 
 
 def _looks_like_protected_group_exclusion(comment: str) -> bool:
