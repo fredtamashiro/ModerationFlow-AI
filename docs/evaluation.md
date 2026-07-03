@@ -1,5 +1,11 @@
 # Evaluation - ModerationFlow AI
 
+## Strategy decision record
+
+The current moderation strategy and the rationale for keeping LLM approaches experimental are documented in:
+
+`docs/architecture/adr-001-moderation-strategy-decision.md`
+
 ## Baseline inicial
 
 - total_examples: 35

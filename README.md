@@ -35,3 +35,11 @@ docker compose up --build
 ## Referencia tecnica
 
 O direcionamento atual do projeto esta documentado em [docs/development-runbook.md](docs/development-runbook.md).
+
+## Moderation strategy
+
+The current moderation flow uses a deterministic heuristic baseline combined with Human-in-the-Loop review.
+
+LLM, few-shot, dynamic few-shot, and guardrail approaches are evaluated as isolated experiments. They are not promoted automatically based on a single dataset result.
+
+The current decision record is documented in [docs/architecture/adr-001-moderation-strategy-decision.md](docs/architecture/adr-001-moderation-strategy-decision.md).
