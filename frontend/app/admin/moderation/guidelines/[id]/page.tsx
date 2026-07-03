@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { AdminPageShell } from "@/components/admin/admin-page-shell";
+import { AdminModerationNav } from "@/components/moderation/admin-moderation-nav";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, formatLabel, formatMetadata } from "@/lib/moderation";
@@ -16,8 +17,8 @@ import {
 export default function GuidelineDetailPage() {
   return (
     <AdminPageShell
-      title="Detalhe da diretriz"
-      description="Consulta administrativa de uma politica de moderacao cadastrada."
+      title="Regra da comunidade"
+      description="Referencia usada para fundamentar recomendacoes e decisoes de moderacao."
     >
       <GuidelineDetailContent />
     </AdminPageShell>
@@ -75,12 +76,14 @@ function GuidelineDetailContent() {
   }, [guidelineId]);
 
   return (
-    <>
+    <div className="grid gap-6">
+      <AdminModerationNav />
+
       <Link
         href="/admin/moderation/guidelines"
         className="text-sm font-medium text-[var(--accent-secondary)] transition hover:opacity-80"
       >
-        Voltar para diretrizes
+        Voltar para regras da comunidade
       </Link>
 
       {isLoading ? (
@@ -112,7 +115,8 @@ function GuidelineDetailContent() {
             <div>
               <CardTitle>{guideline.title}</CardTitle>
               <CardDescription>
-                Atualizada em {formatDateTime(guideline.updated_at)}
+                Atualizada em {formatDateTime(guideline.updated_at)}. Esta regra e fonte de
+                referencia para recomendacoes e decisoes.
               </CardDescription>
             </div>
           </CardHeader>
@@ -153,6 +157,6 @@ function GuidelineDetailContent() {
           </CardContent>
         </Card>
       ) : null}
-    </>
+    </div>
   );
 }

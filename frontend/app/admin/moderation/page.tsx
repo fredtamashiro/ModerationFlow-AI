@@ -3,27 +3,34 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Bot, CalendarClock, MessageSquare, UserCheck } from "lucide-react";
 
 import { AdminPageShell } from "@/components/admin/admin-page-shell";
+import { AdminModerationNav } from "@/components/moderation/admin-moderation-nav";
 import { StatusBadge } from "@/components/moderation/status-badge";
+import { ValueBadge } from "@/components/moderation/value-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/moderation";
+import { formatDateTime, formatLabel } from "@/lib/moderation";
 import {
+  listCommentDecisions,
+  listCommentRuns,
   listModerationComments,
   type ModerationComment,
+  type ModerationDecision,
+  type ModerationRun,
   type PaginatedModerationComments,
 } from "@/services/moderationApi";
 
 const statusOptions = [
   { label: "Todos", value: "all" },
-  { label: "Pendente", value: "pending" },
+  { label: "Pendentes de analise", value: "pending" },
   { label: "Em analise", value: "analyzing" },
   { label: "Revisao humana", value: "waiting_human_review" },
-  { label: "Aprovado", value: "approved" },
-  { label: "Removido", value: "removed" },
+  { label: "Aprovados", value: "approved" },
+  { label: "Removidos", value: "removed" },
   { label: "Edicao solicitada", value: "edit_requested" },
-  { label: "Falhou", value: "failed" },
+  { label: "Falhas", value: "failed" },
 ] as const;
 
 type SummaryCounts = {
@@ -33,21 +40,40 @@ type SummaryCounts = {
   closed: number;
 };
 
+type QueueItem = {
+  comment: ModerationComment;
+  latestRun: ModerationRun | null;
+  latestDecision: ModerationDecision | null;
+};
+
+function getStatusFilter(value: string): string | undefined {
+  if (value === "all") {
+    return undefined;
+  }
+
+  return value;
+}
+
 function MetricCard({
   label,
   value,
   description,
+  icon: Icon,
 }: {
   label: string;
   value: number;
   description: string;
+  icon: typeof MessageSquare;
 }) {
   return (
     <Card className="border-[var(--border)] bg-[var(--surface)]">
-      <CardContent className="space-y-2 p-5">
-        <p className="text-sm font-medium text-[var(--muted-foreground)]">{label}</p>
-        <p className="text-3xl font-semibold tracking-tight">{value}</p>
-        <p className="text-sm text-[var(--muted-foreground)]">{description}</p>
+      <CardContent className="grid gap-3 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-medium text-[var(--muted-foreground)]">{label}</p>
+          <Icon className="h-4 w-4 text-[var(--accent-secondary)]" />
+        </div>
+        <p className="text-3xl font-semibold">{value}</p>
+        <p className="text-sm leading-6 text-[var(--muted-foreground)]">{description}</p>
       </CardContent>
     </Card>
   );
@@ -57,8 +83,8 @@ export default function ModerationDashboardPage() {
   return (
     <Suspense fallback={<DashboardFallback />}>
       <AdminPageShell
-        title="Moderation Dashboard"
-        description="Visao inicial da fila de comentarios e do estado operacional da moderacao."
+        title="Fila de moderacao"
+        description="Comentarios organizados para analise assistida, decisao humana e auditoria."
       >
         <ModerationDashboardContent />
       </AdminPageShell>
@@ -76,6 +102,7 @@ function ModerationDashboardContent() {
   const offset = Number(searchParams.get("offset") ?? "0");
 
   const [data, setData] = useState<PaginatedModerationComments | null>(null);
+  const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
   const [summary, setSummary] = useState<SummaryCounts | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -91,7 +118,7 @@ function ModerationDashboardContent() {
         const [comments, allComments, pendingComments, humanReviewComments, approvedComments, removedComments] =
           await Promise.all([
             listModerationComments({
-              status: status === "all" ? undefined : status,
+              status: getStatusFilter(status),
               limit,
               offset,
             }),
@@ -106,11 +133,35 @@ function ModerationDashboardContent() {
             listModerationComments({ status: "removed", limit: 1, offset: 0 }),
           ]);
 
+        const enrichedItems = await Promise.all(
+          comments.items.map(async (comment) => {
+            const [runs, decisions] = await Promise.all([
+              listCommentRuns(comment.id),
+              listCommentDecisions(comment.id),
+            ]);
+            const sortedRuns = [...runs].sort(
+              (left, right) =>
+                new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+            );
+            const sortedDecisions = [...decisions].sort(
+              (left, right) =>
+                new Date(right.decided_at).getTime() - new Date(left.decided_at).getTime(),
+            );
+
+            return {
+              comment,
+              latestRun: sortedRuns[0] ?? null,
+              latestDecision: sortedDecisions[0] ?? null,
+            };
+          }),
+        );
+
         if (!isMounted) {
           return;
         }
 
         setData(comments);
+        setQueueItems(enrichedItems);
         setSummary({
           total: allComments.total,
           pending: pendingComments.total,
@@ -125,7 +176,7 @@ function ModerationDashboardContent() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar o dashboard de moderacao.",
+            : "Nao foi possivel carregar a fila de moderacao.",
         );
       } finally {
         if (isMounted) {
@@ -159,113 +210,104 @@ function ModerationDashboardContent() {
   const hasNextPage = data ? offset + data.items.length < data.total : false;
 
   return (
-    <>
-      <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid gap-6">
+      <AdminModerationNav />
+
+      <section className="grid gap-4 md:grid-cols-4" aria-label="Resumo da fila">
         <MetricCard
           label="Comentarios"
           value={summary?.total ?? 0}
-          description="Total cadastrado na base de moderacao."
+          description="Total cadastrado para moderacao."
+          icon={MessageSquare}
         />
         <MetricCard
           label="Pendentes"
           value={summary?.pending ?? 0}
-          description="Itens aguardando processamento ou triagem."
+          description="Aguardam analise assistida ou triagem."
+          icon={CalendarClock}
         />
         <MetricCard
           label="Revisao humana"
           value={summary?.waitingHumanReview ?? 0}
-          description="Casos que exigem decisao manual."
+          description="Precisam de decisao do moderador."
+          icon={UserCheck}
         />
         <MetricCard
-          label="Aprovados ou removidos"
+          label="Encerrados"
           value={summary?.closed ?? 0}
-          description="Comentarios ja encerrados no fluxo."
+          description="Aprovados ou removidos no fluxo."
+          icon={Bot}
         />
-      </div>
+      </section>
 
       <Card className="border-[var(--border)] bg-[var(--surface)]">
-        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <CardTitle>Fila de comentarios</CardTitle>
-            <CardDescription>
-              Lista administrativa consumindo os endpoints protegidos do backend.
-            </CardDescription>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm text-[var(--muted-foreground)]" htmlFor="status-filter">
-              Status
-            </label>
-            <select
-              id="status-filter"
-              value={status}
-              onChange={(event) =>
-                updateQuery({
-                  status: event.target.value,
-                  offset: 0,
-                })
-              }
-              className="h-11 rounded-md border border-[var(--border)] bg-white px-3 text-sm"
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+        <CardHeader className="grid gap-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <CardTitle>Fila de comentarios</CardTitle>
+              <CardDescription>
+                A IA recomenda sinais de risco. O moderador decide a acao final.
+              </CardDescription>
+            </div>
 
             <Link
               href="/admin/moderation/guidelines"
               className="text-sm font-medium text-[var(--accent-secondary)] transition hover:opacity-80"
             >
-              Ver diretrizes
+              Ver regras da comunidade
             </Link>
+          </div>
+
+          <div className="flex flex-wrap gap-2" aria-label="Filtros da fila">
+            {statusOptions.map((option) => {
+              const active = status === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => updateQuery({ status: option.value, offset: 0 })}
+                  className={`cursor-pointer rounded-md border px-3 py-2 text-sm font-medium transition ${
+                    active
+                      ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                      : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)] hover:bg-[var(--surface-soft)] hover:text-[var(--accent-secondary)]"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
           {isLoading ? (
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Carregando comentarios de moderacao...
-            </p>
+            <EmptyState title="Carregando fila" description="Buscando comentarios, recomendacoes e decisoes." />
           ) : null}
 
           {!isLoading && errorMessage ? (
-            <p className="text-sm text-[var(--danger)]">{errorMessage}</p>
+            <EmptyState title="Erro ao carregar" description={errorMessage} tone="danger" />
           ) : null}
 
-          {!isLoading && !errorMessage && data?.items.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Nenhum comentario encontrado para o filtro selecionado.
-            </p>
+          {!isLoading && !errorMessage && queueItems.length === 0 ? (
+            <EmptyState
+              title="Nenhum comentario neste agrupamento"
+              description="Altere o filtro ou aguarde novos comentarios entrarem na fila."
+            />
           ) : null}
 
-          {!isLoading && !errorMessage && data?.items.length ? (
+          {!isLoading && !errorMessage && queueItems.length > 0 ? (
             <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[var(--border)] text-sm">
-                  <thead>
-                    <tr className="text-left text-[var(--muted-foreground)]">
-                      <th className="px-3 py-3 font-medium">Autor</th>
-                      <th className="px-3 py-3 font-medium">Curso</th>
-                      <th className="px-3 py-3 font-medium">Aula</th>
-                      <th className="px-3 py-3 font-medium">Status</th>
-                      <th className="px-3 py-3 font-medium">Criado em</th>
-                      <th className="px-3 py-3 font-medium">Acao</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--border)]">
-                    {data.items.map((comment) => (
-                      <CommentRow key={comment.id} comment={comment} />
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid gap-3">
+                {queueItems.map((item) => (
+                  <QueueCard key={item.comment.id} item={item} />
+                ))}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
                 <p className="text-sm text-[var(--muted-foreground)]">
-                  Exibindo {offset + 1} a {Math.min(offset + data.items.length, data.total)} de{" "}
-                  {data.total} comentarios.
+                  Exibindo {offset + 1} a {Math.min(offset + data!.items.length, data!.total)} de{" "}
+                  {data!.total} comentarios.
                 </p>
 
                 <div className="flex items-center gap-2">
@@ -289,49 +331,136 @@ function ModerationDashboardContent() {
           ) : null}
         </CardContent>
       </Card>
-    </>
+
+      <Card
+        id="queue-audit-note"
+        className="border-[var(--border)] bg-[var(--surface)]"
+      >
+        <CardContent className="p-5 text-sm leading-7 text-[var(--muted-foreground)]">
+          A auditoria detalhada fica dentro de cada comentario: runs, steps do grafo,
+          critic agent, metadata e historico de decisoes permanecem acessiveis sem
+          competir com a fila operacional.
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
 function DashboardFallback() {
   return (
     <AdminPageShell
-      title="Moderation Dashboard"
-      description="Visao inicial da fila de comentarios e do estado operacional da moderacao."
+      title="Fila de moderacao"
+      description="Comentarios organizados para analise assistida, decisao humana e auditoria."
     >
       <Card className="border-[var(--border)] bg-[var(--surface)]">
         <CardContent className="p-6 text-sm text-[var(--muted-foreground)]">
-          Carregando dashboard...
+          Carregando fila...
         </CardContent>
       </Card>
     </AdminPageShell>
   );
 }
 
-function CommentRow({ comment }: { comment: ModerationComment }) {
+function QueueCard({ item }: { item: QueueItem }) {
+  const { comment, latestRun, latestDecision } = item;
+  const excerpt =
+    comment.content.length > 180 ? `${comment.content.slice(0, 180).trim()}...` : comment.content;
+
   return (
-    <tr className="align-top">
-      <td className="px-3 py-4 font-medium">{comment.author_name}</td>
-      <td className="px-3 py-4 text-[var(--muted-foreground)]">
-        {comment.course_name ?? "Nao informado"}
-      </td>
-      <td className="px-3 py-4 text-[var(--muted-foreground)]">
-        {comment.lesson_name ?? "Nao informada"}
-      </td>
-      <td className="px-3 py-4">
-        <StatusBadge status={comment.status} />
-      </td>
-      <td className="px-3 py-4 text-[var(--muted-foreground)]">
-        {formatDateTime(comment.created_at)}
-      </td>
-      <td className="px-3 py-4">
-        <Link
-          href={`/admin/moderation/comments/${comment.id}`}
-          className="font-medium text-[var(--accent-secondary)] transition hover:opacity-80"
-        >
-          Ver detalhes
-        </Link>
-      </td>
-    </tr>
+    <article className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={comment.status} />
+            <span className="text-sm text-[var(--muted-foreground)]">
+              {formatDateTime(comment.created_at)}
+            </span>
+          </div>
+
+          <p className="text-sm font-medium">{comment.author_name}</p>
+          <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--foreground)]">
+            {excerpt}
+          </p>
+          <p className="text-xs text-[var(--muted-foreground)]">
+            {comment.course_name ?? "Curso nao informado"} / {comment.lesson_name ?? "Aula nao informada"}
+          </p>
+        </div>
+
+        <div className="grid gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
+          <QueueFact
+            label="Categoria sugerida"
+            value={latestRun?.category ? formatLabel(latestRun.category) : "Sem analise"}
+          />
+          <QueueFact
+            label="Risco sugerido"
+            value={
+              latestRun?.risk_level ? (
+                <ValueBadge value={latestRun.risk_level} label={formatLabel(latestRun.risk_level)} />
+              ) : (
+                "Sem analise"
+              )
+            }
+          />
+          <QueueFact
+            label="Acao humana"
+            value={
+              latestDecision?.human_decision ? (
+                <ValueBadge
+                  value={latestDecision.human_decision}
+                  label={formatLabel(latestDecision.human_decision)}
+                />
+              ) : (
+                "Pendente"
+              )
+            }
+          />
+
+          <Link
+            href={`/admin/moderation/comments/${comment.id}`}
+            className="inline-flex min-h-10 items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-hover)]"
+          >
+            Revisar comentario
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function QueueFact({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-1">
+      <span className="text-xs font-medium text-[var(--muted-foreground)]">{label}</span>
+      <span className="text-sm">{value}</span>
+    </div>
+  );
+}
+
+function EmptyState({
+  title,
+  description,
+  tone = "default",
+}: {
+  title: string;
+  description: string;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <div
+      className={`rounded-lg border p-5 ${
+        tone === "danger"
+          ? "border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger)]"
+          : "border-[var(--border)] bg-[var(--surface-soft)] text-[var(--muted-foreground)]"
+      }`}
+    >
+      <p className="font-medium text-[var(--foreground)]">{title}</p>
+      <p className="mt-1 text-sm leading-6">{description}</p>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { AdminPageShell } from "@/components/admin/admin-page-shell";
+import { AdminModerationNav } from "@/components/moderation/admin-moderation-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,8 +27,8 @@ export default function ModerationGuidelinesPage() {
   return (
     <Suspense fallback={<GuidelinesFallback />}>
       <AdminPageShell
-        title="Diretrizes de moderacao"
-        description="Catalogo administrativo das regras de comunidade usadas pela plataforma."
+        title="Regras da comunidade"
+        description="Fonte de referencia usada para recomendacoes de IA e decisoes humanas."
       >
         <ModerationGuidelinesContent />
       </AdminPageShell>
@@ -110,6 +111,8 @@ function ModerationGuidelinesContent() {
 
   return (
     <>
+      <AdminModerationNav />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/admin/moderation"
@@ -144,9 +147,9 @@ function ModerationGuidelinesContent() {
 
       <Card className="border-[var(--border)] bg-[var(--surface)]">
         <CardHeader>
-          <CardTitle>Lista de diretrizes</CardTitle>
+          <CardTitle>Regras cadastradas</CardTitle>
           <CardDescription>
-            Consulta em leitura da base seedada de politicas da comunidade.
+            Cada regra orienta a analise assistida e a revisao final do moderador.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -208,8 +211,8 @@ function ModerationGuidelinesContent() {
 function GuidelinesFallback() {
   return (
     <AdminPageShell
-      title="Diretrizes de moderacao"
-      description="Catalogo administrativo das regras de comunidade usadas pela plataforma."
+      title="Regras da comunidade"
+      description="Fonte de referencia usada para recomendacoes de IA e decisoes humanas."
     >
       <Card className="border-[var(--border)] bg-[var(--surface)]">
         <CardContent className="p-6 text-sm text-[var(--muted-foreground)]">
@@ -244,6 +247,10 @@ function GuidelineCard({ guideline }: { guideline: ModerationGuideline }) {
 
       <p className="mt-4 text-sm leading-7 text-[var(--muted-foreground)]">
         {guideline.description}
+      </p>
+
+      <p className="mt-3 text-xs leading-5 text-[var(--muted-foreground)]">
+        Referencia para recomendacoes e decisoes de moderacao.
       </p>
 
       <p className="mt-4 text-xs text-[var(--muted-foreground)]">
