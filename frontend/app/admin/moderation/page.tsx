@@ -7,6 +7,7 @@ import { Bot, CalendarClock, MessageSquare, UserCheck } from "lucide-react";
 
 import { AdminPageShell } from "@/components/admin/admin-page-shell";
 import { AdminModerationNav } from "@/components/moderation/admin-moderation-nav";
+import { DemoScenarios } from "@/components/moderation/demo-scenarios";
 import { StatusBadge } from "@/components/moderation/status-badge";
 import { ValueBadge } from "@/components/moderation/value-badge";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,7 @@ function ModerationDashboardContent() {
 
   const [data, setData] = useState<PaginatedModerationComments | null>(null);
   const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
+  const [demoComments, setDemoComments] = useState<ModerationComment[]>([]);
   const [summary, setSummary] = useState<SummaryCounts | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -115,13 +117,14 @@ function ModerationDashboardContent() {
         setIsLoading(true);
         setErrorMessage("");
 
-        const [comments, allComments, pendingComments, humanReviewComments, approvedComments, removedComments] =
+        const [comments, demoSourceComments, allComments, pendingComments, humanReviewComments, approvedComments, removedComments] =
           await Promise.all([
             listModerationComments({
               status: getStatusFilter(status),
               limit,
               offset,
             }),
+            listModerationComments({ limit: 100, offset: 0 }),
             listModerationComments({ limit: 1, offset: 0 }),
             listModerationComments({ status: "pending", limit: 1, offset: 0 }),
             listModerationComments({
@@ -162,6 +165,7 @@ function ModerationDashboardContent() {
 
         setData(comments);
         setQueueItems(enrichedItems);
+        setDemoComments(demoSourceComments.items);
         setSummary({
           total: allComments.total,
           pending: pendingComments.total,
@@ -239,6 +243,8 @@ function ModerationDashboardContent() {
           icon={Bot}
         />
       </section>
+
+      <DemoScenarios comments={demoComments} />
 
       <Card className="border-[var(--border)] bg-[var(--surface)]">
         <CardHeader className="grid gap-4">

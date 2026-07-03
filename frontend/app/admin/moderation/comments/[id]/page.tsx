@@ -275,7 +275,7 @@ function AiRecommendationCard({
   const policyReferences = latestRun?.policy_references ?? [];
 
   return (
-    <Card id="audit" className="border-[var(--border)] bg-[var(--surface)]">
+    <Card className="border-[var(--border)] bg-[var(--surface)]">
       <CardHeader>
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
@@ -405,6 +405,9 @@ function HumanDecisionCard({
   comparison: RecommendationComparison;
   onSaved: () => Promise<void>;
 }) {
+  const policyReferences = latestRun?.policy_references ?? [];
+  const recommendationSummary = getOperationalRecommendationSummary(latestRun);
+
   return (
     <Card className="border-[var(--accent-border)] bg-[var(--surface)]">
       <CardHeader>
@@ -417,6 +420,63 @@ function HumanDecisionCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
+        <div className="rounded-lg border border-[var(--accent-border)] bg-[var(--accent-soft)] p-4">
+          <p className="text-sm font-semibold">Decisao recomendada</p>
+          <p className="mt-2 text-sm leading-7">{recommendationSummary}</p>
+
+          <dl className="mt-4 grid gap-3 md:grid-cols-3">
+            <Fact
+              label="Acao recomendada"
+              value={
+                latestRun?.recommended_action ? (
+                  <ValueBadge
+                    value={latestRun.recommended_action}
+                    label={formatLabel(latestRun.recommended_action)}
+                  />
+                ) : (
+                  "Sem analise"
+                )
+              }
+            />
+            <Fact
+              label="Categoria sugerida"
+              value={latestRun?.category ? formatLabel(latestRun.category) : "Sem analise"}
+            />
+            <Fact
+              label="Nivel de risco"
+              value={
+                latestRun?.risk_level ? (
+                  <ValueBadge
+                    value={latestRun.risk_level}
+                    label={formatLabel(latestRun.risk_level)}
+                  />
+                ) : (
+                  "Sem analise"
+                )
+              }
+            />
+          </dl>
+
+          <div className="mt-4">
+            <p className="text-sm font-medium text-[var(--muted-foreground)]">Regras relacionadas</p>
+            {policyReferences.length === 0 ? (
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                Nenhuma regra relacionada disponivel para esta recomendacao.
+              </p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {policyReferences.map((reference) => (
+                  <ValueBadge
+                    key={`${latestRun?.id}-${reference.code}`}
+                    value={reference.severity}
+                    label={`${reference.code} / ${reference.title}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4">
             <p className="text-sm font-medium text-[var(--muted-foreground)]">Recomendacao da IA</p>
@@ -440,6 +500,23 @@ function HumanDecisionCard({
             </p>
           </div>
         </div>
+
+        {comparison.key === "divergence" ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-900">
+            <p className="font-medium">Divergencia registrada como evidencia de revisao humana.</p>
+            <p className="mt-1">
+              IA recomendou:{" "}
+              <span className="font-semibold">
+                {latestRun?.recommended_action ? formatLabel(latestRun.recommended_action) : "-"}
+              </span>
+              . Moderador decidiu:{" "}
+              <span className="font-semibold">
+                {latestDecision?.human_decision ? formatLabel(latestDecision.human_decision) : "-"}
+              </span>
+              .
+            </p>
+          </div>
+        ) : null}
 
         {latestDecision ? (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4">
@@ -749,4 +826,16 @@ function getRecommendationComparison(
     label: "Divergencia",
     description: "O moderador escolheu uma acao diferente da recomendacao.",
   };
+}
+
+function getOperationalRecommendationSummary(latestRun: ModerationRun | null): string {
+  if (!latestRun) {
+    return "Execute ou consulte uma analise para ver a recomendacao antes da decisao final.";
+  }
+
+  if (latestRun.ai_justification?.trim()) {
+    return latestRun.ai_justification.trim();
+  }
+
+  return "A recomendacao foi gerada com base nas regras relacionadas e na analise de risco.";
 }

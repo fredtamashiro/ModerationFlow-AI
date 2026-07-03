@@ -107,6 +107,35 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
 
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
+      <fieldset className="grid gap-3">
+        <legend className="text-sm font-medium">Acao final do moderador *</legend>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {decisionOptions.map((option) => {
+            const active = humanDecision === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setHumanDecision(option.value)}
+                disabled={isSaving}
+                aria-pressed={active}
+                className={`min-h-12 cursor-pointer rounded-md border px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  active
+                    ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)] hover:bg-[var(--surface-soft)] hover:text-[var(--accent-secondary)]"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs leading-5 text-[var(--muted-foreground)]">
+          A IA pode sugerir uma acao, mas esta escolha e a decisao final registrada.
+        </p>
+      </fieldset>
+
       <div className="grid gap-4 md:grid-cols-3">
         <Field label="Decisao" htmlFor="human-decision" required>
           <Select
