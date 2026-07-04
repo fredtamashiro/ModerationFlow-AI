@@ -1,10 +1,38 @@
-const browserApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const configuredBrowserApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const serverApiUrl = process.env.INTERNAL_API_URL ?? configuredBrowserApiUrl;
 
-const serverApiUrl =
-  process.env.INTERNAL_API_URL ?? browserApiUrl;
+function resolveBrowserApiUrl(): string | undefined {
+  if (!configuredBrowserApiUrl || typeof window === "undefined") {
+    return configuredBrowserApiUrl;
+  }
 
-export const API_URL =
-  typeof window === "undefined" ? serverApiUrl : browserApiUrl;
+  const pageHost = window.location.hostname;
+  const isLocalPageHost = pageHost === "localhost" || pageHost === "127.0.0.1";
+
+  if (!isLocalPageHost) {
+    return configuredBrowserApiUrl;
+  }
+
+  try {
+    const apiUrl = new URL(configuredBrowserApiUrl);
+    const isLocalApiHost = apiUrl.hostname === "localhost" || apiUrl.hostname === "127.0.0.1";
+
+    if (isLocalApiHost && apiUrl.hostname !== pageHost) {
+      apiUrl.hostname = pageHost;
+      return apiUrl.toString().replace(/\/$/, "");
+    }
+  } catch {
+    return configuredBrowserApiUrl;
+  }
+
+  return configuredBrowserApiUrl;
+}
+
+export function getApiBaseUrl(): string | undefined {
+  return typeof window === "undefined" ? serverApiUrl : resolveBrowserApiUrl();
+}
+
+export const API_URL = getApiBaseUrl();
 
 type JsonValue =
   | string
@@ -15,13 +43,15 @@ type JsonValue =
   | { [key: string]: JsonValue };
 
 function createApiUrl(path: string): string {
-  if (!API_URL) {
+  const apiUrl = getApiBaseUrl();
+
+  if (!apiUrl) {
     throw new Error(
       "API URL is not configured. Set NEXT_PUBLIC_API_URL for browser requests and INTERNAL_API_URL for server requests.",
     );
   }
 
-  return `${API_URL}${path}`;
+  return `${apiUrl}${path}`;
 }
 
 async function getErrorMessage(

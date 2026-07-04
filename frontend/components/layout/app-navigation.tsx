@@ -7,14 +7,13 @@ import { cn } from "@/lib/utils";
 
 export const appNavItems = [
   { label: "Início", href: "/" },
-  { label: "Demo", href: "/#demo" },
-  { label: "Avaliações", href: "/admin/moderation/evaluations" },
-  { label: "Moderação", href: "/admin/moderation" },
+  { label: "Demonstração", href: "/demo/moderation" },
+  { label: "Avaliações", href: "/demo/evaluations" },
 ] as const;
 
 function isActiveItem(href: string, pathname: string): boolean {
-  if (href.startsWith("/#")) {
-    return pathname === "/";
+  if (href === "/") {
+    return pathname === href;
   }
 
   if (href !== "/" && pathname.startsWith(`${href}/`)) {

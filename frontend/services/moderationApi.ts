@@ -1,4 +1,4 @@
-import { API_URL } from "@/services/api";
+import { getApiBaseUrl } from "@/services/api";
 
 type JsonValue =
   | string
@@ -129,13 +129,15 @@ type ListGuidelinesParams = {
 };
 
 function createApiUrl(path: string): string {
-  if (!API_URL) {
+  const apiUrl = getApiBaseUrl();
+
+  if (!apiUrl) {
     throw new Error(
       "API URL is not configured. Set NEXT_PUBLIC_API_URL for browser requests and INTERNAL_API_URL for server requests.",
     );
   }
 
-  return `${API_URL}${path}`;
+  return `${apiUrl}${path}`;
 }
 
 function createSearchParams(params: Record<string, string | number | undefined>) {

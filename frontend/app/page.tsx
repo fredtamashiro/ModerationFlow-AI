@@ -31,18 +31,21 @@ const moderationFlow = [
 const demoScenarios = [
   {
     title: "Crítica ambígua",
+    demoId: "ambiguous-sarcasm",
     seedCase: "ambiguous_sarcasm",
     demonstrates: "Distingue crítica forte, sarcasmo e risco de remoção indevida.",
     decision: "A decisão em jogo é aprovar, sinalizar ou pedir revisão com contexto.",
   },
   {
     title: "Spam explícito",
+    demoId: "clear-spam",
     seedCase: "clear_spam",
     demonstrates: "Mostra sinais de promoção externa, regras relacionadas e ação sugerida.",
     decision: "O risco em jogo é diferenciar flag e remove sem automatizar a decisão final.",
   },
   {
     title: "Conteúdo discriminatório",
+    demoId: "potentially-discriminatory",
     seedCase: "potentially_discriminatory",
     demonstrates: "Evidencia casos sensíveis em que falso positivo e falso negativo importam.",
     decision: "O moderador revisa R-004, justificativa, risco e trilha de auditoria.",
@@ -126,12 +129,12 @@ export default function Home() {
                 e avaliação comparativa de estratégias.
               </p>
               <div className="flex flex-wrap gap-3">
-                <LandingButton href="/admin/moderation" label="Ver demonstração" />
-                <LandingButton href="/admin/moderation/evaluations" label="Explorar avaliações" variant="secondary" />
+                <LandingButton href="/demo/moderation" label="Ver demonstração" />
+                <LandingButton href="/demo/evaluations" label="Explorar avaliações" variant="secondary" />
               </div>
               <p className="max-w-2xl text-sm leading-6 text-[var(--muted-foreground)]">
-                Os links abrem a área administrativa de demonstração. Se a sessão não estiver
-                autenticada, use o login local configurado para o ambiente de desenvolvimento.
+                Os links abrem a demonstração pública somente leitura. Para operar como moderador,
+                use o login administrativo e acesse as rotas protegidas.
               </p>
             </div>
 
@@ -194,8 +197,8 @@ export default function Home() {
           <PageContainer className="grid gap-8">
             <SectionTitle
               eyebrow="Demo guiada"
-              title="Tres cenarios demonstraveis"
-              description="Os cards apontam para a fila operacional, onde os comentários existentes podem ser abertos pelos cenários da etapa 043."
+              title="Três cenários demonstráveis"
+              description="Os cards apontam para a demonstração pública, onde a recomendação da IA pode ser comparada com a decisão humana registrada."
             />
             <div className="grid gap-4 lg:grid-cols-3">
               {demoScenarios.map((scenario) => (
@@ -214,7 +217,7 @@ export default function Home() {
                       {scenario.decision}
                     </p>
                     <Link
-                      href="/admin/moderation"
+                      href={`/demo/moderation/comments/${scenario.demoId}`}
                       className="inline-flex min-h-10 w-fit items-center gap-2 rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium transition hover:bg-[var(--surface-soft)] hover:text-[var(--accent-secondary)]"
                     >
                       Abrir na fila
@@ -261,7 +264,7 @@ export default function Home() {
                 </Card>
               ))}
             </div>
-            <LandingButton href="/admin/moderation/evaluations" label="Ver avaliações e experimentos" variant="secondary" />
+            <LandingButton href="/demo/evaluations" label="Ver avaliações e experimentos" variant="secondary" />
           </PageContainer>
         </section>
 
@@ -309,12 +312,12 @@ export default function Home() {
             <div>
               <p className="text-2xl font-semibold">Explore o produto em funcionamento</p>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--muted-foreground)]">
-                Comece pela fila operacional e depois abra as avaliações para discutir a decisão técnica.
+                Comece pela fila demonstrativa e depois abra as avaliações para discutir a decisão técnica.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <LandingButton href="/admin/moderation" label="Explorar a fila de moderação" />
-              <LandingButton href="/admin/moderation/evaluations" label="Ver avaliações e experimentos" variant="secondary" />
+              <LandingButton href="/demo/moderation" label="Explorar a fila de moderação" />
+              <LandingButton href="/demo/evaluations" label="Ver avaliações e experimentos" variant="secondary" />
             </div>
           </PageContainer>
         </section>
@@ -322,8 +325,8 @@ export default function Home() {
 
       <AppFooter
         links={[
-          { label: "Fila de moderação", href: "/admin/moderation" },
-          { label: "Avaliações", href: "/admin/moderation/evaluations" },
+          { label: "Demonstração", href: "/demo/moderation" },
+          { label: "Avaliações", href: "/demo/evaluations" },
         ]}
       />
     </>

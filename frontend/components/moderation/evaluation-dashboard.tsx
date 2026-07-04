@@ -35,7 +35,11 @@ const errorPatterns = [
   "hate_or_discrimination -> personal_attack",
 ];
 
-export function EvaluationDashboard() {
+export function EvaluationDashboard({
+  showAdminNav = true,
+}: {
+  showAdminNav?: boolean;
+}) {
   const [selectedDataset, setSelectedDataset] = useState<EvaluationDatasetKey>("blind");
   const dataset = getDataset(selectedDataset);
   const featuredResult = getFeaturedResult(selectedDataset);
@@ -43,7 +47,7 @@ export function EvaluationDashboard() {
 
   return (
     <div className="grid gap-6">
-      <AdminModerationNav />
+      {showAdminNav ? <AdminModerationNav /> : null}
 
       <section className="grid gap-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
