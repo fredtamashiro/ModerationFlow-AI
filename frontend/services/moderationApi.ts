@@ -129,6 +129,12 @@ type ListGuidelinesParams = {
 };
 
 function createApiUrl(path: string): string {
+  if (!API_URL) {
+    throw new Error(
+      "API URL is not configured. Set NEXT_PUBLIC_API_URL for browser requests and INTERNAL_API_URL for server requests.",
+    );
+  }
+
   return `${API_URL}${path}`;
 }
 

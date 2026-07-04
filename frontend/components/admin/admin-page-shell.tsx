@@ -72,7 +72,7 @@ export function AdminPageShell({
           {isCheckingSession ? (
             <Card className="border-[var(--border)] bg-[var(--surface)]">
               <CardContent className="p-6 text-sm text-[var(--muted-foreground)]">
-                Verificando sessao administrativa...
+                Verificando sessão administrativa...
               </CardContent>
             </Card>
           ) : null}
@@ -82,7 +82,7 @@ export function AdminPageShell({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5" />
-                  Login admin necessario
+                  Login admin necessário
                 </CardTitle>
                 <CardDescription>
                   Estas telas consomem endpoints administrativos protegidos.
@@ -96,7 +96,7 @@ export function AdminPageShell({
                   href="/"
                   className="text-sm font-medium text-[var(--accent-secondary)] transition hover:opacity-80"
                 >
-                  Voltar para a pagina inicial
+                  Voltar para a página inicial
                 </Link>
               </CardContent>
             </Card>
@@ -110,3 +110,4 @@ export function AdminPageShell({
     </>
   );
 }
+

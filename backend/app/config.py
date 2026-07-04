@@ -8,8 +8,11 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Centraliza as configuracoes da aplicacao lidas do ambiente."""
 
-    app_env: str = "local"
+    app_env: str = "development"
     app_name: str = "ModerationFlow AI"
+    app_public_url: str = "http://localhost:3003"
+    api_public_url: str = "http://localhost:8000"
+    demo_mode: bool = False
     openai_api_key: str | None = None
     app_api_key: str | None = None
     openai_chat_model: str = "gpt-5-mini"
@@ -18,7 +21,7 @@ class Settings(BaseSettings):
     langsmith_api_key: str | None = None
     langsmith_project: str = "moderation-flow-ai-dev"
     langsmith_endpoint: str | None = None
-    database_url: str = "postgresql://postgres:postgres@postgres:5432/moderation_flow"
+    database_url: str = ""
     jwt_secret_key: str = "change-me-local"
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 720
@@ -27,11 +30,20 @@ class Settings(BaseSettings):
     cookie_domain: str | None = None
     cookie_secure: bool = False
     cookie_samesite: str = "lax"
-    admin_seed_email: str = "admin@example.com"
-    admin_seed_password: str = "admin123"
-    admin_seed_name: str = "Local Admin"
+    admin_seed_email: str = ""
+    admin_seed_password: str = ""
+    admin_seed_name: str = "Demo Admin"
+    admin_demo_email: str | None = None
+    admin_demo_password: str | None = None
 
-    @field_validator("cookie_domain", "langsmith_api_key", "langsmith_endpoint", mode="before")
+    @field_validator(
+        "admin_demo_email",
+        "admin_demo_password",
+        "cookie_domain",
+        "langsmith_api_key",
+        "langsmith_endpoint",
+        mode="before",
+    )
     @classmethod
     def normalize_optional_text(cls, value: str | None) -> str | None:
         if value is None:

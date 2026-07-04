@@ -43,3 +43,11 @@ The current moderation flow uses a deterministic heuristic baseline combined wit
 LLM, few-shot, dynamic few-shot, and guardrail approaches are evaluated as isolated experiments. They are not promoted automatically based on a single dataset result.
 
 The current decision record is documented in [docs/architecture/adr-001-moderation-strategy-decision.md](docs/architecture/adr-001-moderation-strategy-decision.md).
+
+## Portfolio and deployment readiness
+
+The public landing page is available at `/`. The moderation queue and evaluation dashboard are administrative areas and must stay protected by the existing admin authentication flow.
+
+Demo data should be synthetic and seeded. LLM execution and LangSmith observability are optional; the app can start with `LANGSMITH_TRACING=false` and without `LANGSMITH_API_KEY`.
+
+Deployment, demo-mode, environment, privacy, and security notes are documented in [docs/deployment-and-portfolio-readiness.md](docs/deployment-and-portfolio-readiness.md).

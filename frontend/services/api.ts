@@ -1,5 +1,4 @@
-const browserApiUrl =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const browserApiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 const serverApiUrl =
   process.env.INTERNAL_API_URL ?? browserApiUrl;
@@ -16,6 +15,12 @@ type JsonValue =
   | { [key: string]: JsonValue };
 
 function createApiUrl(path: string): string {
+  if (!API_URL) {
+    throw new Error(
+      "API URL is not configured. Set NEXT_PUBLIC_API_URL for browser requests and INTERNAL_API_URL for server requests.",
+    );
+  }
+
   return `${API_URL}${path}`;
 }
 
