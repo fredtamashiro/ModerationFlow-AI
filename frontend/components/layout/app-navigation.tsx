@@ -11,9 +11,19 @@ export const appNavItems = [
   { label: "Avaliações", href: "/demo/evaluations" },
 ] as const;
 
+const adminNavItems = [
+  { label: "Início", href: "/" },
+  { label: "Moderação", href: "/admin/moderation" },
+  { label: "Avaliações", href: "/admin/moderation/evaluations" },
+] as const;
+
 function isActiveItem(href: string, pathname: string): boolean {
   if (href === "/") {
     return pathname === href;
+  }
+
+  if (href === "/admin/moderation") {
+    return pathname === href || pathname.startsWith("/admin/moderation/comments/");
   }
 
   if (href !== "/" && pathname.startsWith(`${href}/`)) {
@@ -23,12 +33,17 @@ function isActiveItem(href: string, pathname: string): boolean {
   return pathname === href;
 }
 
-export function AppNavigation() {
+export function AppNavigation({
+  isAdmin = false,
+}: {
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
+  const navItems = isAdmin ? adminNavItems : appNavItems;
 
   return (
     <nav className="hidden items-center gap-8 md:flex">
-      {appNavItems.map((item) => {
+      {navItems.map((item) => {
         const isActive = isActiveItem(item.href, pathname);
 
         return (

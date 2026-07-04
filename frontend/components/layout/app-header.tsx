@@ -61,7 +61,7 @@ export function AppHeader({
           </span>
         </Link>
 
-        <AppNavigation />
+        <AppNavigation isAdmin={Boolean(adminUser)} />
 
         {adminUser ? (
           <div className="relative" ref={menuRef}>
