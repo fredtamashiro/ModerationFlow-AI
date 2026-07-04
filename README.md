@@ -51,3 +51,11 @@ The public landing page is available at `/`. The moderation queue and evaluation
 Demo data should be synthetic and seeded. LLM execution and LangSmith observability are optional; the app can start with `LANGSMITH_TRACING=false` and without `LANGSMITH_API_KEY`.
 
 Deployment, demo-mode, environment, privacy, and security notes are documented in [docs/deployment-and-portfolio-readiness.md](docs/deployment-and-portfolio-readiness.md).
+
+## CI/CD
+
+GitHub Actions validates backend and frontend changes on pull requests and pushes to `main`.
+
+Railway is configured to deploy the `main` branch automatically after CI passes.
+
+See [docs/ci-cd.md](docs/ci-cd.md) for setup details.

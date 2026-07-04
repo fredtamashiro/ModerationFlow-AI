@@ -8,6 +8,7 @@ It explains:
 
 - the moderation problem;
 - the operational moderation flow;
+- the public demonstration video hosted on YouTube;
 - why Human-in-the-Loop is mandatory;
 - how demo scenarios should be shown;
 - how offline evaluation supports strategy decisions;
@@ -33,19 +34,20 @@ These routes are public and read-only. Administrative moderation remains availab
 1. Start on `/`.
 2. Explain the problem: education comments include spam, attacks, offensive language, discrimination, legitimate criticism, and support requests.
 3. Show the moderation flow section: comment, analysis, rules, human decision, audit.
-4. Open `/demo/moderation`.
-5. Use the demo scenario cards:
+4. Play or reference the public video embedded on the landing page.
+5. Open `/demo/moderation`.
+6. Use the demo scenario cards:
    - `ambiguous_sarcasm`;
    - `clear_spam`;
    - `potentially_discriminatory`.
-6. Open `/demo/moderation/comments/[id]` and show:
+7. Open `/demo/moderation/comments/[id]` and show:
    - original comment;
    - AI recommendation;
    - policy references;
    - registered human decision;
    - summarized audit history.
-7. Open `/demo/evaluations`.
-8. Explain that strategies are measured offline and are not promoted automatically.
+8. Open `/demo/evaluations`.
+9. Explain that strategies are measured offline and are not promoted automatically.
 
 ## Three To Five Minute Script
 

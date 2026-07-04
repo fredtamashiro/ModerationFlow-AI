@@ -193,6 +193,30 @@ export default function Home() {
           </PageContainer>
         </section>
 
+        <section id="video-demo" className="py-14">
+          <PageContainer className="grid gap-8">
+            <SectionTitle
+              eyebrow="Vídeo de demonstração"
+              title="Veja o ModerationFlow AI em funcionamento"
+              description="Uma demonstração curta do fluxo de moderação assistida por IA, da revisão humana e da área de avaliações técnicas do projeto."
+            />
+            <div className="mx-auto grid w-full max-w-5xl gap-3">
+              <div className="aspect-video overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+                <iframe
+                  src="https://www.youtube-nocookie.com/embed/q_43B1VPKDw"
+                  title="Demonstração do ModerationFlow AI"
+                  className="h-full w-full"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Vídeo demonstrativo hospedado no YouTube.
+              </p>
+            </div>
+          </PageContainer>
+        </section>
+
         <section id="demo" className="py-14">
           <PageContainer className="grid gap-8">
             <SectionTitle
