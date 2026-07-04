@@ -18,7 +18,7 @@ export default function GuidelineDetailPage() {
   return (
     <AdminPageShell
       title="Regra da comunidade"
-      description="Referencia usada para fundamentar recomendacoes e decisoes de moderacao."
+      description="Referência usada para fundamentar recomendações e decisões de moderação."
     >
       <GuidelineDetailContent />
     </AdminPageShell>
@@ -59,7 +59,7 @@ function GuidelineDetailContent() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar a diretriz de moderacao.",
+            : "Não foi possível carregar a diretriz de moderação.",
         );
       } finally {
         if (isMounted) {
@@ -124,7 +124,7 @@ function GuidelineDetailContent() {
           <CardContent className="grid gap-6">
             <div>
               <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                Descricao
+                Descrição
               </p>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-7">
                 {guideline.description}

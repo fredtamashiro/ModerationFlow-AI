@@ -25,12 +25,12 @@ import {
 
 const statusOptions = [
   { label: "Todos", value: "all" },
-  { label: "Pendentes de analise", value: "pending" },
-  { label: "Em analise", value: "analyzing" },
-  { label: "Revisao humana", value: "waiting_human_review" },
+  { label: "Pendentes de análise", value: "pending" },
+  { label: "Em análise", value: "analyzing" },
+  { label: "Revisão humana", value: "waiting_human_review" },
   { label: "Aprovados", value: "approved" },
   { label: "Removidos", value: "removed" },
-  { label: "Edicao solicitada", value: "edit_requested" },
+  { label: "Edição solicitada", value: "edit_requested" },
   { label: "Falhas", value: "failed" },
 ] as const;
 
@@ -84,8 +84,8 @@ export default function ModerationDashboardPage() {
   return (
     <Suspense fallback={<DashboardFallback />}>
       <AdminPageShell
-        title="Fila de moderacao"
-        description="Comentarios organizados para analise assistida, decisao humana e auditoria."
+        title="Fila de moderação"
+        description="Comentários organizados para análise assistida, decisão humana e auditoria."
       >
         <ModerationDashboardContent />
       </AdminPageShell>
@@ -180,7 +180,7 @@ function ModerationDashboardContent() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar a fila de moderacao.",
+            : "Não foi possível carregar a fila de moderação.",
         );
       } finally {
         if (isMounted) {
@@ -219,21 +219,21 @@ function ModerationDashboardContent() {
 
       <section className="grid gap-4 md:grid-cols-4" aria-label="Resumo da fila">
         <MetricCard
-          label="Comentarios"
+          label="Comentários"
           value={summary?.total ?? 0}
-          description="Total cadastrado para moderacao."
+          description="Total cadastrado para moderação."
           icon={MessageSquare}
         />
         <MetricCard
           label="Pendentes"
           value={summary?.pending ?? 0}
-          description="Aguardam analise assistida ou triagem."
+          description="Aguardam análise assistida ou triagem."
           icon={CalendarClock}
         />
         <MetricCard
-          label="Revisao humana"
+          label="Revisão humana"
           value={summary?.waitingHumanReview ?? 0}
-          description="Precisam de decisao do moderador."
+          description="Precisam de decisão do moderador."
           icon={UserCheck}
         />
         <MetricCard
@@ -250,9 +250,9 @@ function ModerationDashboardContent() {
         <CardHeader className="grid gap-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
-              <CardTitle>Fila de comentarios</CardTitle>
+              <CardTitle>Fila de comentários</CardTitle>
               <CardDescription>
-                A IA recomenda sinais de risco. O moderador decide a acao final.
+                A IA recomenda sinais de risco. O moderador decide a ação final.
               </CardDescription>
             </div>
 
@@ -288,7 +288,7 @@ function ModerationDashboardContent() {
 
         <CardContent className="space-y-4">
           {isLoading ? (
-            <EmptyState title="Carregando fila" description="Buscando comentarios, recomendacoes e decisoes." />
+            <EmptyState title="Carregando fila" description="Buscando comentários, recomendações e decisões." />
           ) : null}
 
           {!isLoading && errorMessage ? (
@@ -297,8 +297,8 @@ function ModerationDashboardContent() {
 
           {!isLoading && !errorMessage && queueItems.length === 0 ? (
             <EmptyState
-              title="Nenhum comentario neste agrupamento"
-              description="Altere o filtro ou aguarde novos comentarios entrarem na fila."
+              title="Nenhum comentário neste agrupamento"
+              description="Altere o filtro ou aguarde novos comentários entrarem na fila."
             />
           ) : null}
 
@@ -313,7 +313,7 @@ function ModerationDashboardContent() {
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
                 <p className="text-sm text-[var(--muted-foreground)]">
                   Exibindo {offset + 1} a {Math.min(offset + data!.items.length, data!.total)} de{" "}
-                  {data!.total} comentarios.
+                  {data!.total} comentários.
                 </p>
 
                 <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ function ModerationDashboardContent() {
                     onClick={() => updateQuery({ offset: offset + limit })}
                     disabled={!hasNextPage}
                   >
-                    Proxima
+                    Próxima
                   </Button>
                 </div>
               </div>
@@ -343,8 +343,8 @@ function ModerationDashboardContent() {
         className="border-[var(--border)] bg-[var(--surface)]"
       >
         <CardContent className="p-5 text-sm leading-7 text-[var(--muted-foreground)]">
-          A auditoria detalhada fica dentro de cada comentario: runs, steps do grafo,
-          critic agent, metadata e historico de decisoes permanecem acessiveis sem
+          A auditoria detalhada fica dentro de cada comentário: runs, steps do grafo,
+          critic agent, metadata e histórico de decisões permanecem acessíveis sem
           competir com a fila operacional.
         </CardContent>
       </Card>
@@ -355,8 +355,8 @@ function ModerationDashboardContent() {
 function DashboardFallback() {
   return (
     <AdminPageShell
-      title="Fila de moderacao"
-      description="Comentarios organizados para analise assistida, decisao humana e auditoria."
+      title="Fila de moderação"
+      description="Comentários organizados para análise assistida, decisão humana e auditoria."
     >
       <Card className="border-[var(--border)] bg-[var(--surface)]">
         <CardContent className="p-6 text-sm text-[var(--muted-foreground)]">
@@ -388,14 +388,14 @@ function QueueCard({ item }: { item: QueueItem }) {
             {excerpt}
           </p>
           <p className="text-xs text-[var(--muted-foreground)]">
-            {comment.course_name ?? "Curso nao informado"} / {comment.lesson_name ?? "Aula nao informada"}
+            {comment.course_name ?? "Curso não informado"} / {comment.lesson_name ?? "Aula não informada"}
           </p>
         </div>
 
         <div className="grid gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
           <QueueFact
             label="Categoria sugerida"
-            value={latestRun?.category ? formatLabel(latestRun.category) : "Sem analise"}
+            value={latestRun?.category ? formatLabel(latestRun.category) : "Sem análise"}
           />
           <QueueFact
             label="Risco sugerido"
@@ -403,12 +403,12 @@ function QueueCard({ item }: { item: QueueItem }) {
               latestRun?.risk_level ? (
                 <ValueBadge value={latestRun.risk_level} label={formatLabel(latestRun.risk_level)} />
               ) : (
-                "Sem analise"
+                "Sem análise"
               )
             }
           />
           <QueueFact
-            label="Acao humana"
+            label="Ação humana"
             value={
               latestDecision?.human_decision ? (
                 <ValueBadge
@@ -425,7 +425,7 @@ function QueueCard({ item }: { item: QueueItem }) {
             href={`/admin/moderation/comments/${comment.id}`}
             className="inline-flex min-h-10 items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-hover)]"
           >
-            Revisar comentario
+            Revisar comentário
           </Link>
         </div>
       </div>

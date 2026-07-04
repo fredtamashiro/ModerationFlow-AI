@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ModerationFlow AI",
   description:
-    "Sistema de moderacao assistida por IA com LangGraph, Human-in-the-Loop e auditoria.",
+    "Sistema de moderação assistida por IA com LangGraph, Human-in-the-Loop e auditoria.",
   robots: {
     index: false,
     follow: false,

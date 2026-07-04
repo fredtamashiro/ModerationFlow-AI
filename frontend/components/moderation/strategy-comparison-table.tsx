@@ -12,7 +12,7 @@ import type {
 
 function formatPercent(value: MetricValue): string {
   if (value === null) {
-    return "Nao avaliado";
+    return "Não avaliado";
   }
 
   return `${value.toFixed(value % 1 === 0 ? 0 : 2)}%`;
@@ -20,7 +20,7 @@ function formatPercent(value: MetricValue): string {
 
 function formatLatency(value: MetricValue): string {
   if (value === null) {
-    return "Nao avaliado";
+    return "Não avaliado";
   }
 
   return `${Math.round(value)}ms`;
@@ -36,7 +36,7 @@ function roleLabel(strategy: EvaluationStrategy): string {
   }
 
   if (strategy.role === "historical_experiment") {
-    return "Experimento historico";
+    return "Experimento histórico";
   }
 
   return "Experimento";
@@ -56,7 +56,7 @@ function roleClass(strategy: EvaluationStrategy): string {
 
 function ObservationCell({ result }: { result: EvaluationResult | null }) {
   if (!result) {
-    return <span className="text-[var(--muted-foreground)]">Sem metrica documentada nesta combinacao.</span>;
+    return <span className="text-[var(--muted-foreground)]">Sem métrica documentada nesta combinação.</span>;
   }
 
   return (
@@ -72,7 +72,7 @@ export function StrategyComparisonTable({ dataset }: { dataset: EvaluationDatase
       <table className="min-w-[920px] divide-y divide-[var(--border)] text-left text-sm">
         <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
           <tr>
-            <th className="px-4 py-3 font-semibold">Estrategia</th>
+            <th className="px-4 py-3 font-semibold">Estratégia</th>
             <th className="px-4 py-3 font-semibold">Action</th>
             <th className="px-4 py-3 font-semibold">Risk</th>
             <th className="px-4 py-3 font-semibold">Category</th>
@@ -111,7 +111,7 @@ export function StrategyComparisonTable({ dataset }: { dataset: EvaluationDatase
                 <td className="px-4 py-4">{formatLatency(result?.averageLatencyMs ?? null)}</td>
                 <td className="px-4 py-4">
                   {result?.failedRuns === null || result?.failedRuns === undefined
-                    ? "Nao avaliado"
+                    ? "Não avaliado"
                     : result.failedRuns}
                 </td>
                 <td className="max-w-[24rem] px-4 py-4 leading-6">
@@ -125,4 +125,3 @@ export function StrategyComparisonTable({ dataset }: { dataset: EvaluationDatase
     </div>
   );
 }
-

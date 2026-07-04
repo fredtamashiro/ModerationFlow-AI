@@ -27,25 +27,25 @@ import {
 } from "@/services/moderationApi";
 
 const STEP_DESCRIPTIONS: Record<string, string> = {
-  input_guard: "Valida se o comentario tem conteudo minimo e pode seguir para analise.",
+  input_guard: "Valida se o comentário tem conteúdo mínimo e pode seguir para análise.",
   intent_router: "Define a rota inicial do grafo.",
   spam_fast_path: "Aplica caminho rapido para spam evidente.",
   toxic_fast_path: "Aplica caminho rapido para ofensa evidente.",
-  low_risk_path: "Classifica comentarios de baixo risco.",
-  ambiguous_deep_review: "Mantem casos ambiguos em revisao conservadora.",
-  fallback_human_review: "Encaminha para decisao humana quando nao ha rota segura.",
-  guideline_retriever: "Relaciona o comentario com regras da comunidade.",
-  risk_analyzer: "Consolida categoria, risco e acao recomendada.",
-  confidence_gate: "Decide se o critic agent deve revisar a recomendacao.",
+  low_risk_path: "Classifica comentários de baixo risco.",
+  ambiguous_deep_review: "Mantém casos ambíguos em revisão conservadora.",
+  fallback_human_review: "Encaminha para decisão humana quando não há rota segura.",
+  guideline_retriever: "Relaciona o comentário com regras da comunidade.",
+  risk_analyzer: "Consolida categoria, risco e ação recomendada.",
+  confidence_gate: "Decide se o critic agent deve revisar a recomendação.",
   critic_agent: "Reavalia proporcionalidade e risco de falso positivo.",
-  decision_builder: "Monta a recomendacao final da analise.",
+  decision_builder: "Monta a recomendação final da análise.",
 };
 
 export default function CommentDetailPage() {
   return (
     <AdminPageShell
-      title="Revisao de comentario"
-      description="Revise o comentario, consulte a recomendacao da IA e registre a decisao humana final."
+      title="Revisão de comentário"
+      description="Revise o comentário, consulte a recomendação da IA e registre a decisão humana final."
     >
       <CommentDetailContent />
     </AdminPageShell>
@@ -131,7 +131,7 @@ function CommentDetailContent() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar o comentario de moderacao.",
+            : "Não foi possível carregar o comentário de moderação.",
         );
       } finally {
         if (isMounted) {
@@ -161,13 +161,13 @@ function CommentDetailContent() {
       setLatestDetailedRun(analyzedRun);
       await loadData();
       setAnalysisSuccessMessage(
-        "Analise concluida. Revise a recomendacao antes de registrar a decisao humana.",
+        "Análise concluída. Revise a recomendação antes de registrar a decisão humana.",
       );
     } catch (error) {
       setAnalysisErrorMessage(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel executar a analise de moderacao.",
+          : "Não foi possível executar a análise de moderação.",
       );
     } finally {
       setIsAnalyzing(false);
@@ -186,7 +186,7 @@ function CommentDetailContent() {
       </Link>
 
       {isLoading ? (
-        <StatePanel title="Carregando comentario" description="Buscando comentario, runs e decisoes." />
+        <StatePanel title="Carregando comentário" description="Buscando comentário, runs e decisões." />
       ) : null}
 
       {!isLoading && errorMessage ? (
@@ -234,10 +234,10 @@ function OriginalCommentCard({ comment }: { comment: ModerationComment }) {
           <div>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-[var(--accent-secondary)]" />
-              Comentario original
+              Comentário original
             </CardTitle>
             <CardDescription>
-              {comment.course_name ?? "Curso nao informado"} / {comment.lesson_name ?? "Aula nao informada"}
+              {comment.course_name ?? "Curso não informado"} / {comment.lesson_name ?? "Aula não informada"}
             </CardDescription>
           </div>
           <StatusBadge status={comment.status} />
@@ -281,14 +281,14 @@ function AiRecommendationCard({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-[var(--accent-secondary)]" />
-              Analise e recomendacao da IA
+              Análise e recomendação da IA
             </CardTitle>
             <CardDescription>
-              A recomendacao ajuda a priorizar a revisao. Ela nao decide pelo moderador.
+              A recomendação ajuda a priorizar a revisão. Ela não decide pelo moderador.
             </CardDescription>
           </div>
           <Button type="button" onClick={onAnalyze} disabled={isAnalyzing}>
-            {isAnalyzing ? "Executando analise..." : "Executar analise"}
+            {isAnalyzing ? "Executando análise..." : "Executar análise"}
           </Button>
         </div>
       </CardHeader>
@@ -311,8 +311,8 @@ function AiRecommendationCard({
 
         {latestRun === null ? (
           <StatePanel
-            title="Sem analise"
-            description="Execute a analise para ver categoria sugerida, risco, acao recomendada e regras relacionadas."
+            title="Sem análise"
+            description="Execute a análise para ver categoria sugerida, risco, ação recomendada e regras relacionadas."
           />
         ) : (
           <div className="grid gap-5">
@@ -320,7 +320,7 @@ function AiRecommendationCard({
               <Fact label="Status" value={<StatusBadge status={latestRun.status} />} />
               <Fact label="Rota" value={latestRun.route ?? "-"} />
               <Fact
-                label="Acao recomendada"
+                label="Ação recomendada"
                 value={
                   latestRun.recommended_action ? (
                     <ValueBadge
@@ -350,10 +350,10 @@ function AiRecommendationCard({
                 label="Confianca"
                 value={latestRun.confidence === null ? "-" : latestRun.confidence.toFixed(2)}
               />
-              <Fact label="Critic agent" value={latestRun.critic_applied ? "Aplicado" : "Nao aplicado"} />
+              <Fact label="Critic agent" value={latestRun.critic_applied ? "Aplicado" : "Não aplicado"} />
               <Fact
-                label="Revisao humana"
-                value={latestRun.requires_human_review ? "Obrigatoria" : "Nao sinalizada"}
+                label="Revisão humana"
+                value={latestRun.requires_human_review ? "Obrigatória" : "Não sinalizada"}
               />
               <Fact label="Criado em" value={formatDateTime(latestRun.created_at)} />
             </div>
@@ -413,20 +413,20 @@ function HumanDecisionCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserCheck className="h-5 w-5 text-[var(--accent-secondary)]" />
-          Decisao humana
+          Decisão humana
         </CardTitle>
         <CardDescription>
-          A decisao final pertence ao moderador e fica registrada para auditoria.
+          A decisão final pertence ao moderador e fica registrada para auditoria.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
         <div className="rounded-lg border border-[var(--accent-border)] bg-[var(--accent-soft)] p-4">
-          <p className="text-sm font-semibold">Decisao recomendada</p>
+          <p className="text-sm font-semibold">Decisão recomendada</p>
           <p className="mt-2 text-sm leading-7">{recommendationSummary}</p>
 
           <dl className="mt-4 grid gap-3 md:grid-cols-3">
             <Fact
-              label="Acao recomendada"
+              label="Ação recomendada"
               value={
                 latestRun?.recommended_action ? (
                   <ValueBadge
@@ -434,16 +434,16 @@ function HumanDecisionCard({
                     label={formatLabel(latestRun.recommended_action)}
                   />
                 ) : (
-                  "Sem analise"
+                  "Sem análise"
                 )
               }
             />
             <Fact
               label="Categoria sugerida"
-              value={latestRun?.category ? formatLabel(latestRun.category) : "Sem analise"}
+              value={latestRun?.category ? formatLabel(latestRun.category) : "Sem análise"}
             />
             <Fact
-              label="Nivel de risco"
+              label="Nível de risco"
               value={
                 latestRun?.risk_level ? (
                   <ValueBadge
@@ -451,7 +451,7 @@ function HumanDecisionCard({
                     label={formatLabel(latestRun.risk_level)}
                   />
                 ) : (
-                  "Sem analise"
+                  "Sem análise"
                 )
               }
             />
@@ -461,7 +461,7 @@ function HumanDecisionCard({
             <p className="text-sm font-medium text-[var(--muted-foreground)]">Regras relacionadas</p>
             {policyReferences.length === 0 ? (
               <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                Nenhuma regra relacionada disponivel para esta recomendacao.
+                Nenhuma regra relacionada disponível para esta recomendação.
               </p>
             ) : (
               <div className="mt-2 flex flex-wrap gap-2">
@@ -479,19 +479,19 @@ function HumanDecisionCard({
 
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4">
-            <p className="text-sm font-medium text-[var(--muted-foreground)]">Recomendacao da IA</p>
+            <p className="text-sm font-medium text-[var(--muted-foreground)]">Recomendação da IA</p>
             <p className="mt-2 text-sm">
-              {latestRun?.recommended_action ? formatLabel(latestRun.recommended_action) : "Sem analise"}
+              {latestRun?.recommended_action ? formatLabel(latestRun.recommended_action) : "Sem análise"}
             </p>
           </div>
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4">
-            <p className="text-sm font-medium text-[var(--muted-foreground)]">Decisao humana final</p>
+            <p className="text-sm font-medium text-[var(--muted-foreground)]">Decisão humana final</p>
             <p className="mt-2 text-sm">
               {latestDecision?.human_decision ? formatLabel(latestDecision.human_decision) : "Pendente"}
             </p>
           </div>
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4">
-            <p className="text-sm font-medium text-[var(--muted-foreground)]">Comparacao</p>
+            <p className="text-sm font-medium text-[var(--muted-foreground)]">Comparação</p>
             <div className="mt-2">
               <ValueBadge value={comparison.key} label={comparison.label} />
             </div>
@@ -503,7 +503,7 @@ function HumanDecisionCard({
 
         {comparison.key === "divergence" ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-900">
-            <p className="font-medium">Divergencia registrada como evidencia de revisao humana.</p>
+            <p className="font-medium">Divergência registrada como evidência de revisão humana.</p>
             <p className="mt-1">
               IA recomendou:{" "}
               <span className="font-semibold">
@@ -520,9 +520,9 @@ function HumanDecisionCard({
 
         {latestDecision ? (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4">
-            <p className="text-sm font-medium text-[var(--muted-foreground)]">Ultima decisao registrada</p>
+            <p className="text-sm font-medium text-[var(--muted-foreground)]">Última decisão registrada</p>
             <dl className="mt-3 grid gap-3 md:grid-cols-2">
-              <Fact label="Decisao" value={formatLabel(latestDecision.human_decision)} />
+              <Fact label="Decisão" value={formatLabel(latestDecision.human_decision)} />
               <Fact
                 label="Categoria final"
                 value={latestDecision.human_category ? formatLabel(latestDecision.human_category) : "-"}
@@ -539,13 +539,13 @@ function HumanDecisionCard({
             ) : null}
 
             {latestDecision.final_content ? (
-              <TextBlock label="Conteudo final editado" value={latestDecision.final_content} />
+              <TextBlock label="Conteúdo final editado" value={latestDecision.final_content} />
             ) : null}
           </div>
         ) : (
           <StatePanel
-            title="Sem decisao humana"
-            description="Registre a decisao final depois de revisar o comentario e a recomendacao."
+            title="Sem decisão humana"
+            description="Registre a decisão final depois de revisar o comentário e a recomendação."
           />
         )}
 
@@ -573,10 +573,10 @@ function AuditCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileClock className="h-5 w-5 text-[var(--accent-secondary)]" />
-          Auditoria e historico
+          Auditoria e histórico
         </CardTitle>
         <CardDescription>
-          Dados tecnicos ficam acessiveis sem competir com a decisao operacional.
+          Dados técnicos ficam acessíveis sem competir com a decisão operacional.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -588,21 +588,21 @@ function AuditCard({
                 <Fact label="Status" value={latestRun.status} />
                 <Fact label="Rota" value={latestRun.route ?? "-"} />
                 <Fact label="Atualizado em" value={formatDateTime(latestRun.updated_at)} />
-                <Fact label="Inicio" value={latestRun.started_at ? formatDateTime(latestRun.started_at) : "-"} />
+                <Fact label="Início" value={latestRun.started_at ? formatDateTime(latestRun.started_at) : "-"} />
                 <Fact label="Fim" value={latestRun.finished_at ? formatDateTime(latestRun.finished_at) : "-"} />
               </dl>
               <CodeBlock value={formatMetadata(latestRun.metadata ?? {})} />
             </div>
           ) : (
-            <StatePanel title="Sem run" description="Nenhuma analise foi registrada para este comentario." />
+            <StatePanel title="Sem run" description="Nenhuma análise foi registrada para este comentário." />
           )}
         </AuditSection>
 
         <AuditSection title="Steps do grafo" defaultOpen={false}>
           {latestRun === null ? (
-            <StatePanel title="Sem steps" description="Execute uma analise para visualizar os steps do grafo." />
+            <StatePanel title="Sem steps" description="Execute uma análise para visualizar os steps do grafo." />
           ) : latestRunSteps.length === 0 ? (
-            <StatePanel title="Sem steps" description="Nenhum step registrado para esta analise." />
+            <StatePanel title="Sem steps" description="Nenhum step registrado para esta análise." />
           ) : (
             <div className="grid gap-3">
               {latestRunSteps.map((step) => (
@@ -640,7 +640,7 @@ function AuditCard({
 
         <AuditSection title="Runs anteriores" defaultOpen={false}>
           {previousRuns.length === 0 ? (
-            <StatePanel title="Sem historico de runs" description="Nenhum run anterior registrado ainda." />
+            <StatePanel title="Sem histórico de runs" description="Nenhum run anterior registrado ainda." />
           ) : (
             <div className="grid gap-3">
               {previousRuns.map((run) => (
@@ -657,8 +657,8 @@ function AuditCard({
                   <dl className="mt-3 grid gap-3 md:grid-cols-4">
                     <Fact label="Rota" value={run.route ?? "-"} />
                     <Fact label="Risco" value={run.risk_level ?? "-"} />
-                    <Fact label="Acao" value={run.recommended_action ?? "-"} />
-                    <Fact label="Critic agent" value={run.critic_applied ? "Sim" : "Nao"} />
+                    <Fact label="Ação" value={run.recommended_action ?? "-"} />
+                    <Fact label="Critic agent" value={run.critic_applied ? "Sim" : "Não"} />
                   </dl>
                 </div>
               ))}
@@ -666,9 +666,9 @@ function AuditCard({
           )}
         </AuditSection>
 
-        <AuditSection title="Historico de decisoes" defaultOpen={false}>
+        <AuditSection title="Histórico de decisões" defaultOpen={false}>
           {decisions.length === 0 ? (
-            <StatePanel title="Sem historico" description="Nenhuma decisao humana registrada ainda." />
+            <StatePanel title="Sem histórico" description="Nenhuma decisão humana registrada ainda." />
           ) : (
             <div className="grid gap-3">
               {decisions.map((decision) => (
@@ -677,19 +677,19 @@ function AuditCard({
                   className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4"
                 >
                   <dl className="grid gap-3 md:grid-cols-3">
-                    <Fact label="Decisao" value={formatLabel(decision.human_decision)} />
+                    <Fact label="Decisão" value={formatLabel(decision.human_decision)} />
                     <Fact
-                      label="Recomendacao IA"
+                      label="Recomendação IA"
                       value={decision.ai_recommendation ? formatLabel(decision.ai_recommendation) : "-"}
                     />
                     <Fact
                       label="IA correta"
                       value={
                         decision.was_ai_correct === null
-                          ? "Nao aplicavel"
+                          ? "Não aplicável"
                           : decision.was_ai_correct
                             ? "Sim"
-                            : "Nao"
+                            : "Não"
                       }
                     />
                     <Fact
@@ -708,7 +708,7 @@ function AuditCard({
           )}
         </AuditSection>
 
-        <AuditSection title="Metadata do comentario" defaultOpen={false}>
+        <AuditSection title="Metadata do comentário" defaultOpen={false}>
           <CodeBlock value={formatMetadata(comment.metadata)} />
         </AuditSection>
       </CardContent>
@@ -801,15 +801,15 @@ function getRecommendationComparison(
     return {
       key: "pending",
       label: "Pendente",
-      description: "Ainda falta analise, decisao humana ou ambos.",
+      description: "Ainda falta análise, decisão humana ou ambos.",
     };
   }
 
   if (recommendedAction === "needs_human_review") {
     return {
       key: "not_applicable",
-      label: "Nao aplicavel",
-      description: "A IA encaminhou para revisao em vez de sugerir uma acao objetiva.",
+      label: "Não aplicável",
+      description: "A IA encaminhou para revisão em vez de sugerir uma ação objetiva.",
     };
   }
 
@@ -817,25 +817,25 @@ function getRecommendationComparison(
     return {
       key: "agreement",
       label: "Concordancia",
-      description: "A decisao humana confirmou a acao recomendada pela IA.",
+      description: "A decisão humana confirmou a ação recomendada pela IA.",
     };
   }
 
   return {
     key: "divergence",
     label: "Divergencia",
-    description: "O moderador escolheu uma acao diferente da recomendacao.",
+    description: "O moderador escolheu uma ação diferente da recomendação.",
   };
 }
 
 function getOperationalRecommendationSummary(latestRun: ModerationRun | null): string {
   if (!latestRun) {
-    return "Execute ou consulte uma analise para ver a recomendacao antes da decisao final.";
+    return "Execute ou consulte uma análise para ver a recomendação antes da decisão final.";
   }
 
   if (latestRun.ai_justification?.trim()) {
     return latestRun.ai_justification.trim();
   }
 
-  return "A recomendacao foi gerada com base nas regras relacionadas e na analise de risco.";
+  return "A recomendação foi gerada com base nas regras relacionadas e na análise de risco.";
 }

@@ -65,7 +65,7 @@ export function AdminLogin({
       onLoggedIn(result.user);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Nao foi possivel fazer login.",
+        error instanceof Error ? error.message : "Não foi possível fazer login.",
       );
     } finally {
       setIsSubmitting(false);

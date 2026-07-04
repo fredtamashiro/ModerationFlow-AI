@@ -53,7 +53,7 @@ export function AdminPageShell({
         <PageContainer className="grid gap-6 py-12">
           <div className="space-y-2">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-secondary)]">
-              Area administrativa
+              Área administrativa
             </p>
             <h1 className="text-4xl font-semibold tracking-tight">{title}</h1>
             <p className="max-w-3xl text-base leading-7 text-[var(--muted-foreground)]">

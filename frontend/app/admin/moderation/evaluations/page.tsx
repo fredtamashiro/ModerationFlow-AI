@@ -4,11 +4,10 @@ import { EvaluationDashboard } from "@/components/moderation/evaluation-dashboar
 export default function ModerationEvaluationsPage() {
   return (
     <AdminPageShell
-      title="Avaliacoes e experimentos"
-      description="Comparacao offline de estrategias de moderacao para orientar decisoes tecnicas."
+      title="Avaliações e experimentos"
+      description="Comparação offline de estratégias de moderação para orientar decisões técnicas."
     >
       <EvaluationDashboard />
     </AdminPageShell>
   );
 }
-

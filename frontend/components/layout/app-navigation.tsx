@@ -6,10 +6,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export const appNavItems = [
-  { label: "Inicio", href: "/" },
+  { label: "Início", href: "/" },
   { label: "Demo", href: "/#demo" },
-  { label: "Avaliacoes", href: "/admin/moderation/evaluations" },
-  { label: "Moderacao", href: "/admin/moderation" },
+  { label: "Avaliações", href: "/admin/moderation/evaluations" },
+  { label: "Moderação", href: "/admin/moderation" },
 ] as const;
 
 function isActiveItem(href: string, pathname: string): boolean {

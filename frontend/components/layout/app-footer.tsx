@@ -22,8 +22,8 @@ export function AppFooter({ links = [] }: AppFooterProps) {
         <div>
           <p className="heading-4 text-[var(--foreground)]">ModerationFlow AI</p>
           <p className="mt-3 max-w-xl text-sm leading-7 text-[var(--muted-foreground)]">
-            Aplicacao full stack de moderacao assistida por IA com LangGraph,
-            analise de comentarios, revisao humana e trilha de auditoria.
+            Aplicação full stack de moderação assistida por IA com LangGraph,
+            análise de comentários, revisão humana e trilha de auditoria.
           </p>
           <p className="mt-4 text-xs text-[var(--muted-foreground)]">
             © {currentYear} Fred Tamashiro. Projeto em desenvolvimento.

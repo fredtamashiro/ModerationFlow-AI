@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 
 const statusLabelMap: Record<string, string> = {
   pending: "Pendente",
-  analyzing: "Em analise",
-  waiting_human_review: "Aguardando revisao humana",
+  analyzing: "Em análise",
+  waiting_human_review: "Aguardando revisão humana",
   approved: "Aprovado",
   removed: "Removido",
-  edit_requested: "Edicao solicitada",
+  edit_requested: "Edição solicitada",
   failed: "Falhou",
   completed: "Concluido",
 };

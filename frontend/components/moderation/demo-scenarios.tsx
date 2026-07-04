@@ -14,21 +14,21 @@ type DemoScenario = {
 const demoScenarios: DemoScenario[] = [
   {
     seedCase: "ambiguous_sarcasm",
-    title: "Critica ambigua",
-    summary: "Comentario com tom negativo e sarcasmo, mas sem violacao obvia.",
-    demonstrates: "Mostra por que casos limitrofes precisam de revisao humana.",
+    title: "Crítica ambígua",
+    summary: "Comentário com tom negativo e sarcasmo, mas sem violação óbvia.",
+    demonstrates: "Mostra por que casos limítrofes precisam de revisão humana.",
   },
   {
     seedCase: "clear_spam",
-    title: "Spam explicito",
-    summary: "Comentario promocional que tenta puxar atencao para outro curso ou perfil.",
-    demonstrates: "Mostra recomendacao apoiada por regras de spam e autopromocao.",
+    title: "Spam explícito",
+    summary: "Comentário promocional que tenta puxar atenção para outro curso ou perfil.",
+    demonstrates: "Mostra recomendação apoiada por regras de spam e autopromoção.",
   },
   {
     seedCase: "potentially_discriminatory",
-    title: "Conteudo discriminatorio",
-    summary: "Comentario sensivel com generalizacao sobre um grupo.",
-    demonstrates: "Mostra cuidado com risco, regra relacionada e decisao auditavel.",
+    title: "Conteúdo discriminatório",
+    summary: "Comentário sensível com generalização sobre um grupo.",
+    demonstrates: "Mostra cuidado com risco, regra relacionada e decisão auditável.",
   },
 ];
 
@@ -43,10 +43,10 @@ export function DemoScenarios({ comments }: { comments: ModerationComment[] }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquareWarning className="h-5 w-5 text-[var(--accent-secondary)]" />
-          Cenarios para demonstracao
+          Cenários para demonstração
         </CardTitle>
         <CardDescription>
-          Atalhos para explicar a jornada: comentario, recomendacao da IA, decisao humana e auditoria.
+          Atalhos para explicar a jornada: comentário, recomendação da IA, decisão humana e auditoria.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 lg:grid-cols-3">
@@ -77,12 +77,12 @@ export function DemoScenarios({ comments }: { comments: ModerationComment[] }) {
                   href={`/admin/moderation/comments/${comment.id}`}
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium transition hover:bg-[var(--surface-alt)] hover:text-[var(--accent-secondary)]"
                 >
-                  Abrir comentario
+                  Abrir comentário
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               ) : (
                 <p className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--muted-foreground)]">
-                  Comentario demonstravel nao encontrado nos dados atuais.
+                  Comentário demonstrável não encontrado nos dados atuais.
                 </p>
               )}
             </article>

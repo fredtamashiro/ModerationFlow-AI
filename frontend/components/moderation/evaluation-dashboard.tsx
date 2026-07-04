@@ -21,17 +21,17 @@ import { cn } from "@/lib/utils";
 import type { EvaluationDatasetKey } from "@/types/moderation-evaluation";
 
 const learningPoints = [
-  "O heuristico e rapido, deterministico e auditavel.",
-  "O baseline LLM generalizou bem em validacao adversarial.",
-  "Few-shot estatico nao trouxe ganho consistente.",
-  "Dynamic few-shot ajudou em alguns cenarios, mas nao mostrou ganho universal.",
+  "O heurístico é rápido, determinístico e auditável.",
+  "O baseline LLM generalizou bem em validação adversarial.",
+  "Few-shot estático não trouxe ganho consistente.",
+  "Dynamic few-shot ajudou em alguns cenários, mas não mostrou ganho universal.",
   "O guardrail R-004 melhorou o dataset safety, com trade-offs fora dele.",
-  "Human-in-the-Loop continua obrigatorio.",
+  "Human-in-the-Loop continua obrigatório.",
 ];
 
 const errorPatterns = [
   "offensive_language -> personal_attack",
-  "medium -> high em spam explicito",
+  "medium -> high em spam explícito",
   "hate_or_discrimination -> personal_attack",
 ];
 
@@ -49,11 +49,11 @@ export function EvaluationDashboard() {
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="grid gap-2">
             <Badge className="w-fit border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--foreground)]">
-              Snapshot de avaliacao
+              Snapshot de avaliação
             </Badge>
             <p className="max-w-3xl text-sm leading-7 text-[var(--muted-foreground)]">
-              Comparacao offline de estrategias de moderacao. Estes resultados orientam
-              decisoes tecnicas, mas nao substituem a revisao humana.
+              Comparação offline de estratégias de moderação. Estes resultados orientam
+              decisões técnicas, mas não substituem a revisão humana.
             </p>
           </div>
           <Badge className="w-fit border-[var(--border)] bg-[var(--surface-soft)] text-[var(--muted-foreground)]">
@@ -66,10 +66,10 @@ export function EvaluationDashboard() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-[var(--accent-secondary)]" />
-            <CardTitle>Estrategia atual do projeto</CardTitle>
+            <CardTitle>Estratégia atual do projeto</CardTitle>
           </div>
           <CardDescription>
-            A decisao registrada no ADR-001 separa operacao, pesquisa e experimento.
+            A decisão registrada no ADR-001 separa operação, pesquisa e experimento.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
@@ -77,7 +77,7 @@ export function EvaluationDashboard() {
           <DecisionBlock label="Pesquisa principal" value="Baseline LLM" />
           <DecisionBlock label="Experimentos" value="Dynamic few-shot e guardrail R-004" />
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4 text-sm leading-6 text-[var(--muted-foreground)] md:col-span-3">
-            Referencia tecnica: docs/architecture/adr-001-moderation-strategy-decision.md.
+            Referência técnica: docs/architecture/adr-001-moderation-strategy-decision.md.
             A regra central permanece: o modelo recomenda; o moderador decide.
           </div>
         </CardContent>
@@ -88,7 +88,7 @@ export function EvaluationDashboard() {
           <div>
             <CardTitle>Metricas principais</CardTitle>
             <CardDescription>
-              Dataset selecionado: {dataset.label}. Estrategia exibida: {featuredStrategy.label}.
+              Dataset selecionado: {dataset.label}. Estratégia exibida: {featuredStrategy.label}.
             </CardDescription>
           </div>
 
@@ -119,7 +119,7 @@ export function EvaluationDashboard() {
             <MetricCard
               label="Action accuracy"
               value={featuredResult.accuracyAction}
-              helper="Acerto da acao recomendada no snapshot documentado."
+              helper="Acerto da ação recomendada no snapshot documentado."
             />
             <MetricCard
               label="Risk accuracy"
@@ -129,7 +129,7 @@ export function EvaluationDashboard() {
             <MetricCard
               label="Category accuracy"
               value={featuredResult.accuracyCategory}
-              helper="Acerto da categoria de moderacao."
+              helper="Acerto da categoria de moderação."
             />
             <MetricCard
               label="Policy match rate"
@@ -158,7 +158,7 @@ export function EvaluationDashboard() {
             <CardTitle>Tabela comparativa de estrategias</CardTitle>
           </div>
           <CardDescription>
-            Lacunas aparecem como Nao avaliado. A variante guardrailed nao e tratada como melhor modelo geral.
+            Lacunas aparecem como Não avaliado. A variante guardrailed não é tratada como melhor modelo geral.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -170,8 +170,8 @@ export function EvaluationDashboard() {
         <div>
           <h2 className="text-xl font-semibold">Datasets e metodologia</h2>
           <p className="mt-1 text-sm leading-7 text-[var(--muted-foreground)]">
-            Cada conjunto tem funcao diferente. Feedback examples nao e benchmark, e adversarial
-            pos-tuning nao deve virar fonte imediata de novo tuning.
+            Cada conjunto tem função diferente. Feedback examples não é benchmark, e adversarial
+            pós-tuning não deve virar fonte imediata de novo tuning.
           </p>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
@@ -185,7 +185,7 @@ export function EvaluationDashboard() {
         <Card className="border-[var(--border)] bg-[var(--surface)]">
           <CardHeader>
             <CardTitle>Principais aprendizados</CardTitle>
-            <CardDescription>Leitura consolidada do ADR e das avaliacoes offline.</CardDescription>
+            <CardDescription>Leitura consolidada do ADR e das avaliações offline.</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="grid gap-3 text-sm leading-6 text-[var(--muted-foreground)]">
@@ -220,8 +220,8 @@ export function EvaluationDashboard() {
               ))}
             </div>
             <p className="text-sm leading-7 text-[var(--muted-foreground)]">
-              Esses padroes vem da analise offline e ajudam a orientar calibracao futura.
-              Eles nao promovem uma estrategia automaticamente nem removem a revisao humana.
+              Esses padrões vêm da análise offline e ajudam a orientar calibração futura.
+              Eles não promovem uma estratégia automaticamente nem removem a revisão humana.
             </p>
           </CardContent>
         </Card>
@@ -238,4 +238,3 @@ function DecisionBlock({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-

@@ -17,16 +17,16 @@ const decisionOptions = [
   { label: "Aprovar", value: "approve" },
   { label: "Sinalizar", value: "flag" },
   { label: "Remover", value: "remove" },
-  { label: "Solicitar edicao", value: "request_edit" },
+  { label: "Solicitar edição", value: "request_edit" },
 ] as const;
 
 const categoryOptions = [
   { label: "Spam", value: "spam" },
   { label: "Ataque pessoal", value: "personal_attack" },
   { label: "Linguagem ofensiva", value: "offensive_language" },
-  { label: "Odio ou discriminacao", value: "hate_or_discrimination" },
-  { label: "Conteudo perigoso ou ilegal", value: "dangerous_or_illegal_content" },
-  { label: "Critica legitima", value: "legitimate_criticism" },
+  { label: "Ódio ou discriminação", value: "hate_or_discrimination" },
+  { label: "Conteúdo perigoso ou ilegal", value: "dangerous_or_illegal_content" },
+  { label: "Crítica legítima", value: "legitimate_criticism" },
   { label: "Duvida ou suporte", value: "question_or_support_request" },
   { label: "Feedback positivo", value: "positive_feedback" },
   { label: "Ambiguo", value: "ambiguous" },
@@ -85,20 +85,20 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
       setHumanRiskLevel("");
       setModeratorNote("");
       setFinalContent("");
-      setSuccessMessage("Decisao humana registrada com sucesso.");
+      setSuccessMessage("Decisão humana registrada com sucesso.");
 
       try {
         await onSaved();
       } catch {
         setErrorMessage(
-          "A decisao foi salva, mas os dados da tela nao puderam ser atualizados.",
+          "A decisão foi salva, mas os dados da tela não puderam ser atualizados.",
         );
       }
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel registrar a decisao humana.",
+          : "Não foi possível registrar a decisão humana.",
       );
     } finally {
       setIsSaving(false);
@@ -108,7 +108,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
       <fieldset className="grid gap-3">
-        <legend className="text-sm font-medium">Acao final do moderador *</legend>
+        <legend className="text-sm font-medium">Ação final do moderador *</legend>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {decisionOptions.map((option) => {
             const active = humanDecision === option.value;
@@ -132,12 +132,12 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
           })}
         </div>
         <p className="text-xs leading-5 text-[var(--muted-foreground)]">
-          A IA pode sugerir uma acao, mas esta escolha e a decisao final registrada.
+          A IA pode sugerir uma ação, mas esta escolha é a decisão final registrada.
         </p>
       </fieldset>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Field label="Decisao" htmlFor="human-decision" required>
+        <Field label="Decisão" htmlFor="human-decision" required>
           <Select
             id="human-decision"
             value={humanDecision}
@@ -147,7 +147,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
             disabled={isSaving}
             required
           >
-            <option value="">Selecione uma decisao</option>
+            <option value="">Selecione uma decisão</option>
             {decisionOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -163,7 +163,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
             onChange={(event) => setHumanCategory(event.target.value)}
             disabled={isSaving}
           >
-            <option value="">Nao informada</option>
+            <option value="">Não informada</option>
             {categoryOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -173,7 +173,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
         </Field>
 
         <Field
-          label="Nivel de risco"
+          label="Nível de risco"
           htmlFor="human-risk-level"
           action={
             <button
@@ -195,7 +195,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
             }
             disabled={isSaving}
           >
-            <option value="">Nao informado</option>
+            <option value="">Não informado</option>
             {riskOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -210,7 +210,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
           id="moderator-note"
           value={moderatorNote}
           onChange={(event) => setModeratorNote(event.target.value)}
-          placeholder="Descreva brevemente o motivo da decisao..."
+          placeholder="Descreva brevemente o motivo da decisão..."
           disabled={isSaving}
           rows={4}
           className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
@@ -223,7 +223,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
             id="final-content"
             value={finalContent}
             onChange={(event) => setFinalContent(event.target.value)}
-            placeholder="Versao sugerida do comentario, se aplicavel..."
+            placeholder="Versão sugerida do comentário, se aplicável..."
             disabled={isSaving}
             rows={4}
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
@@ -245,7 +245,7 @@ export function HumanReviewForm({ commentId, onSaved }: HumanReviewFormProps) {
 
       <div>
         <Button type="submit" disabled={!humanDecision || isSaving}>
-          {isSaving ? "Salvando..." : "Registrar decisao"}
+          {isSaving ? "Salvando..." : "Registrar decisão"}
         </Button>
       </div>
 

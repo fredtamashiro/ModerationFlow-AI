@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   {
-    label: "Comentarios",
+    label: "Comentários",
     href: "/admin/moderation",
     icon: ClipboardList,
   },
@@ -21,7 +21,7 @@ const navItems = [
 
 const technicalNavItems = [
   {
-    label: "Avaliacoes",
+    label: "Avaliações",
     href: "/admin/moderation/evaluations",
     icon: BarChart3,
   },
@@ -54,7 +54,7 @@ export function AdminModerationNav({
 
   return (
     <nav
-      aria-label="Navegacao de moderacao"
+      aria-label="Navegação de moderação"
       className="flex flex-wrap gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2"
     >
       {items.map((item) => {

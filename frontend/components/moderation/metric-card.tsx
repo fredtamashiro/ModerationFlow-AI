@@ -3,7 +3,7 @@ import type { MetricValue } from "@/types/moderation-evaluation";
 
 function formatMetric(value: MetricValue, unit: "percent" | "ms"): string {
   if (value === null) {
-    return "Nao avaliado";
+    return "Não avaliado";
   }
 
   if (unit === "ms") {
@@ -38,4 +38,3 @@ export function MetricCard({
     </Card>
   );
 }
-

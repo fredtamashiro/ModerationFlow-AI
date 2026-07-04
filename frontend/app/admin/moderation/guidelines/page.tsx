@@ -19,7 +19,7 @@ import {
 const severityOptions = [
   { label: "Todas", value: "all" },
   { label: "Baixa", value: "low" },
-  { label: "Media", value: "medium" },
+  { label: "Média", value: "medium" },
   { label: "Alta", value: "high" },
 ] as const;
 
@@ -76,7 +76,7 @@ function ModerationGuidelinesContent() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar as diretrizes de moderacao.",
+            : "Não foi possível carregar as diretrizes de moderação.",
         );
       } finally {
         if (isMounted) {
@@ -118,7 +118,7 @@ function ModerationGuidelinesContent() {
           href="/admin/moderation"
           className="text-sm font-medium text-[var(--accent-secondary)] transition hover:opacity-80"
         >
-          Voltar para comentarios
+          Voltar para comentários
         </Link>
 
         <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ function ModerationGuidelinesContent() {
         <CardHeader>
           <CardTitle>Regras cadastradas</CardTitle>
           <CardDescription>
-            Cada regra orienta a analise assistida e a revisao final do moderador.
+            Cada regra orienta a análise assistida e a revisão final do moderador.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -196,7 +196,7 @@ function ModerationGuidelinesContent() {
                     onClick={() => updateQuery({ offset: offset + limit })}
                     disabled={!hasNextPage}
                   >
-                    Proxima
+                    Próxima
                   </Button>
                 </div>
               </div>
@@ -250,7 +250,7 @@ function GuidelineCard({ guideline }: { guideline: ModerationGuideline }) {
       </p>
 
       <p className="mt-3 text-xs leading-5 text-[var(--muted-foreground)]">
-        Referencia para recomendacoes e decisoes de moderacao.
+        Referência para recomendações e decisões de moderação.
       </p>
 
       <p className="mt-4 text-xs text-[var(--muted-foreground)]">
