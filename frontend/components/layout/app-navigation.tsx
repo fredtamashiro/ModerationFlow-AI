@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 
 export const appNavItems = [
   { label: "Inicio", href: "/" },
-  { label: "Runbook", href: "/#runbook" },
+  { label: "Demo", href: "/#demo" },
+  { label: "Avaliacoes", href: "/admin/moderation/evaluations" },
   { label: "Moderacao", href: "/admin/moderation" },
 ] as const;
 
