@@ -28,6 +28,16 @@ export const metadata: Metadata = {
     description: "Moderação de conteúdo com agentes de IA e revisão humana.",
     images: ["/og-image.png"],
   },
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
 };
 
 export default function RootLayout({
