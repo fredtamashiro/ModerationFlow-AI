@@ -44,9 +44,9 @@ export function AppHeader({
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-4">
-        <Link href="/" className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center overflow-hidden">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+        <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden sm:h-11 sm:w-11">
             <Image
               src="/logo-header.png"
               alt="ModerationFlow AI"
@@ -56,7 +56,7 @@ export function AppHeader({
               unoptimized
             />
           </span>
-          <span className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+          <span className="text-lg font-semibold tracking-tight text-[var(--foreground)] sm:text-2xl">
             ModerationFlow AI
           </span>
         </Link>
@@ -109,12 +109,13 @@ export function AppHeader({
             type="button"
             onClick={onLoginClick}
             disabled={isCheckingSession}
-            className="h-12 rounded-md bg-[var(--accent)] px-6 text-[var(--accent-foreground)] hover:brightness-95"
+            className="h-12 shrink-0 rounded-md bg-[var(--accent)] px-3 text-[var(--accent-foreground)] hover:brightness-95 sm:px-6"
           >
             {isCheckingSession ? "Verificando..." : "Login"}
           </Button>
         )}
       </div>
+      <AppNavigation isAdmin={Boolean(adminUser)} mobile />
     </header>
   );
 }

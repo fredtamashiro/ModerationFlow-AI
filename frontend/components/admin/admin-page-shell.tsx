@@ -49,7 +49,7 @@ export function AdminPageShell({
         onLoggedIn={handleLoggedIn}
       />
 
-      <main className="min-h-screen bg-[var(--background)] pt-28 text-[var(--foreground)]">
+      <main className="min-h-screen bg-[var(--background)] pt-44 text-[var(--foreground)] sm:pt-28">
         <PageContainer className="grid gap-6 py-12">
           <div className="space-y-2">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-secondary)]">

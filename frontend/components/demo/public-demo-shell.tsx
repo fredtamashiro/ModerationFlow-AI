@@ -10,8 +10,10 @@ import { useAdminSession } from "@/hooks/use-admin-session";
 
 export function PublicDemoShell({
   children,
+  contentClassName,
 }: {
   children: ReactNode;
+  contentClassName?: string;
 }) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const {
@@ -36,13 +38,14 @@ export function PublicDemoShell({
         onOpenChange={setIsLoginModalOpen}
         onLoggedIn={handleLoggedIn}
       />
-      <main className="min-h-screen bg-[var(--background)] pt-28 text-[var(--foreground)]">
-        <PageContainer className="grid gap-6 py-12">{children}</PageContainer>
+      <main className="min-h-screen bg-[var(--background)] pt-44 text-[var(--foreground)] sm:pt-28">
+        <PageContainer className={`grid gap-6 py-12 ${contentClassName ?? ""}`}>{children}</PageContainer>
       </main>
       <AppFooter
         links={[
           { label: "Demonstração", href: "/demo/moderation" },
           { label: "Avaliações", href: "/demo/evaluations" },
+          { label: "Outros projetos de IA", href: "/outros-projetos" },
         ]}
       />
     </>

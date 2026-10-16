@@ -114,7 +114,7 @@ export default function Home() {
         onLoggedIn={handleLoggedIn}
       />
 
-      <main className="min-h-screen bg-[var(--background)] pt-24 text-[var(--foreground)]">
+      <main className="min-h-screen bg-[var(--background)] pt-44 text-[var(--foreground)] sm:pt-24">
         <section id="home" className="border-b border-[var(--border)] bg-[var(--surface)] py-14 md:py-20">
           <PageContainer className="grid gap-10">
             <div className="grid max-w-4xl gap-5">
@@ -351,6 +351,7 @@ export default function Home() {
         links={[
           { label: "Demonstração", href: "/demo/moderation" },
           { label: "Avaliações", href: "/demo/evaluations" },
+          { label: "Outros projetos de IA", href: "/outros-projetos" },
         ]}
       />
     </>
